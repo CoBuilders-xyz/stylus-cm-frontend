@@ -3,7 +3,7 @@
 import {
   darkTheme,
   getDefaultConfig,
-  RainbowKitProvider,
+  RainbowKitProvider as RKP,
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
@@ -14,17 +14,21 @@ const queryClient = new QueryClient();
 
 // Create the Wagmi config
 const config = getDefaultConfig({
-  appName: 'My RainbowKit App',
+  appName: 'RainbowKit Connection',
   projectId: '4e32b2a9d664968a074a03167e046cbd',
   chains: [arbitrum, arbitrumSepolia, arbitrumLocal],
   ssr: true,
 });
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function RainbowKitProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
+        <RKP
           theme={darkTheme({
             accentColor: '#FFFFFF',
             accentColorForeground: 'black',
@@ -32,7 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           })}
         >
           {children}
-        </RainbowKitProvider>
+        </RKP>
       </QueryClientProvider>
     </WagmiProvider>
   );
