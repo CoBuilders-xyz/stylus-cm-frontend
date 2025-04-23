@@ -4,6 +4,7 @@ import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
+import ConnectionBanner from '@/components/ConnectionBanner';
 import { AuthenticationProvider } from '../context/AuthenticationProvider';
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
         <RainbowKitProvider>
           <AuthenticationProvider>
             <Header />
+            <ConnectionBanner />
             {children}
           </AuthenticationProvider>
         </RainbowKitProvider>
