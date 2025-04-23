@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
-import { RainbowKitProvider } from '../components/RainbowKitProvider';
+import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
-
+import { AuthenticationProvider } from '../context/AuthenticationProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -21,9 +21,11 @@ export default function RootLayout({
     <html lang='en'>
       <body className={inter.className}>
         <RainbowKitProvider>
-          <Header />
+          <AuthenticationProvider>
+            <Header />
+            {children}
+          </AuthenticationProvider>
         </RainbowKitProvider>
-        {children}
       </body>
     </html>
   );
