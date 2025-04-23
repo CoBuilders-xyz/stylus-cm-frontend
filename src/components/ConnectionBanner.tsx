@@ -9,8 +9,9 @@ import { useAuthentication } from '@/context/AuthenticationProvider';
 
 export default function ConnectionBanner() {
   const { isConnecting } = useAccount();
-  const { isLoading: isAuthLoading } = useAuthentication();
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuthentication();
   const [isOnline, setIsOnline] = useState(true);
+  const [showConnectedBanner, setShowConnectedBanner] = useState(false);
 
   // Check internet connection
   useEffect(() => {
@@ -47,8 +48,21 @@ export default function ConnectionBanner() {
     };
   }, []);
 
+  // Show connected banner for 3 seconds
+  useEffect(() => {
+    console.log('isAuthenticated', isAuthenticated);
+    if (isAuthenticated) {
+      setShowConnectedBanner(true);
+      const timer = setTimeout(() => {
+        setShowConnectedBanner(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
+
   // Don't render anything if all conditions are normal
-  if (isOnline && !isConnecting && !isAuthLoading) {
+  if (isOnline && !isConnecting && !isAuthLoading && !showConnectedBanner) {
     return null;
   }
 
@@ -94,6 +108,26 @@ export default function ConnectionBanner() {
             className='w-4 h-4 mr-2 animate-spin'
           />
           Please sign transaction to authenticate
+        </span>
+      )}
+
+      {isOnline && !isConnecting && showConnectedBanner && (
+        <span className='flex items-center justify-center'>
+          <svg
+            className='w-4 h-4 mr-2'
+            fill='none'
+            stroke='currentColor'
+            viewBox='0 0 24 24'
+            xmlns='http://www.w3.org/2000/svg'
+          >
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M5 13l4 4L19 7'
+            />
+          </svg>
+          Wallet connected successfully!
         </span>
       )}
     </div>
