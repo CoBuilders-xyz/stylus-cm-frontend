@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
+import { API_URL } from '../utils/env';
 
 // Define the shape of the context data
 interface AuthenticationContextType {
@@ -18,7 +19,7 @@ const AuthenticationContext = createContext<
 export const AuthenticationProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const { address, isConnected, chain } = useAccount();
+  const { address, isConnected } = useAccount();
   const [accessToken, setAccessToken] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { signMessageAsync } = useSignMessage();
@@ -30,7 +31,7 @@ export const AuthenticationProvider: React.FC<{
       const authenticate = async () => {
         try {
           const response = await fetch(
-            `http://localhost:3000/auth/generate-nonce/${address}`
+            `${API_URL}/auth/generate-nonce/${address}`
           );
           const result = await response.json();
           nonce = result.nonce;
@@ -46,7 +47,7 @@ export const AuthenticationProvider: React.FC<{
 
         try {
           console.log(nonce);
-          const response = await fetch('http://localhost:3000/auth/login', {
+          const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ address, signature }),
@@ -61,7 +62,7 @@ export const AuthenticationProvider: React.FC<{
       };
       authenticate();
     }
-  }, [address, chain, isConnected, signMessageAsync]);
+  }, [address, isConnected, signMessageAsync]); // Add chain for reloading on chain change.
 
   return (
     <AuthenticationContext.Provider value={{ accessToken, isLoading }}>

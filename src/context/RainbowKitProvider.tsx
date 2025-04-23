@@ -6,9 +6,9 @@ import {
   RainbowKitProvider as RKP,
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
-import { arbitrum } from 'wagmi/chains';
+import { arbitrum, arbitrumSepolia } from 'wagmi/chains';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { arbitrumLocal, arbitrumSepolia } from '../config/chains';
+import customChains from '../config/customChains';
 // Create the query client
 const queryClient = new QueryClient();
 
@@ -16,7 +16,7 @@ const queryClient = new QueryClient();
 const config = getDefaultConfig({
   appName: 'RainbowKit Connection',
   projectId: '4e32b2a9d664968a074a03167e046cbd',
-  chains: [arbitrum, arbitrumSepolia, arbitrumLocal],
+  chains: [arbitrum, arbitrumSepolia, ...customChains],
   ssr: true,
 });
 
