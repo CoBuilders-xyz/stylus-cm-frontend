@@ -12,6 +12,7 @@ import {
 
 interface Contract {
   id: string;
+  name?: string;
   address: string;
   bid: string;
   effectiveBid: string;
@@ -41,6 +42,7 @@ export default function ContractsTable({
   const sampleContracts: Contract[] = [
     {
       id: '1',
+      name: 'ERC-20 Token',
       address: '0xF5A7B8C9...567890',
       bid: '0.05 ETH',
       effectiveBid: '0.05 ETH',
@@ -55,6 +57,7 @@ export default function ContractsTable({
     },
     {
       id: '2',
+      name: 'NFT Collection',
       address: '0xC00ME1F2...012345',
       bid: '0.05 ETH',
       effectiveBid: '0.0 ETH',
@@ -69,6 +72,7 @@ export default function ContractsTable({
     },
     {
       id: '3',
+      name: 'DEX Router',
       address: '0xB9C00E1...890123',
       bid: '0.05 ETH',
       effectiveBid: '0.05 ETH',
@@ -83,6 +87,7 @@ export default function ContractsTable({
     },
     {
       id: '4',
+      name: 'Staking Contract',
       address: '0xA7B8C900...789012',
       bid: '0.05 ETH',
       effectiveBid: '0.05 ETH',
@@ -97,6 +102,7 @@ export default function ContractsTable({
     },
     {
       id: '5',
+      name: 'Lending Pool',
       address: '0xD0E1F2A3...234567',
       bid: '0.05 ETH',
       effectiveBid: '0.0 ETH',
@@ -149,20 +155,27 @@ export default function ContractsTable({
         <h1 className='text-xl font-bold text-white'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
-        <div className='relative'>
-          <input
-            type='text'
-            placeholder='Search contracts...'
-            className='m-1 p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
-          />
-          <button className='absolute left-1 p-3'>🔍</button>
-        </div>
+        {viewType === 'my-contracts' ? (
+          <button className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'>
+            <span>+</span>
+            <span>Add Contract</span>
+          </button>
+        ) : (
+          <div className='relative'>
+            <input
+              type='text'
+              placeholder='Search contracts...'
+              className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
+            />
+            <button className='absolute left-1 p-3'>🔍</button>
+          </div>
+        )}
       </div>
       <div className='overflow-hidden'>
         <Table className='w-full'>
           <TableHeader className='bg-black text-white'>
             <TableRow className='!border-0 h-20 hover:bg-transparent'>
-              <TableHead className='font-medium text-base py-6'>
+              <TableHead className='font-medium text-base py-6 w-[250px]'>
                 Contract
               </TableHead>
               <TableHead className='font-medium text-base py-6'>Bid</TableHead>
@@ -182,7 +195,9 @@ export default function ContractsTable({
               <TableHead className='font-medium text-base py-6'>
                 Cache Status
               </TableHead>
-              <TableHead className='font-medium text-base py-6'></TableHead>
+              {viewType === 'explore-contracts' && (
+                <TableHead className='font-medium text-base py-6'></TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody className='text-white [&>tr]:py-2'>
@@ -191,8 +206,19 @@ export default function ContractsTable({
                 key={contract.id}
                 className={`!border-0 h-20 ${index > 0 ? 'mt-3' : ''}`}
               >
-                <TableCell className='py-6 text-lg'>
-                  {contract.address}
+                <TableCell className='py-6 text-lg w-[250px]'>
+                  {viewType === 'my-contracts' && contract.name ? (
+                    <div className='flex flex-col'>
+                      <span className='text-lg font-medium'>
+                        {contract.name}
+                      </span>
+                      <span className='text-sm text-gray-400'>
+                        {contract.address}
+                      </span>
+                    </div>
+                  ) : (
+                    contract.address
+                  )}
                 </TableCell>
                 <TableCell className='py-6 text-lg'>{contract.bid}</TableCell>
                 <TableCell className='py-6 text-lg'>
@@ -222,11 +248,13 @@ export default function ContractsTable({
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className='py-6'>
-                  <button className='w-10 h-10 flex items-center justify-center bg-black text-white border border-white rounded-md'>
-                    +
-                  </button>
-                </TableCell>
+                {viewType === 'explore-contracts' && (
+                  <TableCell className='py-6'>
+                    <button className='w-10 h-10 flex items-center justify-center bg-black text-white border border-white rounded-md'>
+                      +
+                    </button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
