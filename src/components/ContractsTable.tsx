@@ -58,7 +58,27 @@ const SortableTableHead = React.memo(
     }, [sortField, onSort]);
 
     // Determine if this column is currently sorted
-    const isSorted = sortField && currentSortBy[0] === sortField;
+    const isSorted =
+      sortField && currentSortBy.length > 0 && currentSortBy[0] === sortField;
+
+    // Function to render the appropriate sort icon
+    const renderSortIcon = () => {
+      if (!sortField) return null;
+
+      if (!isSorted) {
+        return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
+      }
+
+      if (currentSortOrder === 'ASC') {
+        return <span className='ml-1 text-green-400'>↑</span>;
+      }
+
+      if (currentSortOrder === 'DESC') {
+        return <span className='ml-1 text-red-400'>↓</span>;
+      }
+
+      return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
+    };
 
     return (
       <TableHead
@@ -69,11 +89,7 @@ const SortableTableHead = React.memo(
       >
         <div className='flex items-center'>
           {children}
-          {sortField && (
-            <span className='ml-1'>
-              {isSorted ? (currentSortOrder === 'ASC' ? '↑' : '↓') : '⇅'}
-            </span>
-          )}
+          {renderSortIcon()}
         </div>
       </TableHead>
     );
@@ -107,11 +123,7 @@ const ContractRow = React.memo(
           {formatSize(contract.bytecode.size)}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(
-            contract.bytecode.lastEvictionBid !== '0'
-              ? contract.bytecode.lastEvictionBid
-              : contract.lastBid
-          )}
+          {formatEth(contract.minBid || '0')}
         </TableCell>
         <TableCell
           className={`${getEvictionRiskColor(

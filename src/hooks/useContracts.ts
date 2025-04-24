@@ -11,7 +11,7 @@ export enum ContractSortField {
 }
 
 // Type for sort order
-export type SortOrder = 'ASC' | 'DESC';
+export type SortOrder = 'ASC' | 'DESC' | null;
 
 interface ContractsResult {
   contracts: Contract[];
@@ -81,22 +81,35 @@ export function useContracts(
     try {
       const blockchainId = '3a17dc1b-58ad-4472-96c8-76151a502282'; // Could be parameterized
       const currentType = typeRef.current;
+
+      // Only include sort parameters if we have sort fields and a sort order
+      const sortParams =
+        sortBy.length > 0 && sortOrder
+          ? {
+              sortBy,
+              sortOrder,
+            }
+          : {
+              sortBy: [],
+              sortOrder: null,
+            };
+
       const response =
         currentType === 'explore'
           ? await contractService.getExploreContracts(
               blockchainId,
               page,
               limit,
-              sortBy,
-              sortOrder,
+              sortParams.sortBy,
+              sortParams.sortOrder,
               searchQuery || undefined
             )
           : await contractService.getMyContracts(
               blockchainId,
               page,
               limit,
-              sortBy,
-              sortOrder,
+              sortParams.sortBy,
+              sortParams.sortOrder,
               searchQuery || undefined
             );
 
@@ -121,21 +134,37 @@ export function useContracts(
     setPage(1); // Reset to first page when changing items per page
   }, []);
 
-  // Set sorting - toggles between ASC and DESC if the same field is clicked
-  const handleSetSorting = useCallback((field: ContractSortField) => {
-    setSortBy((prevSortBy) => {
-      // If already sorting by this field, keep only this field
-      if (prevSortBy[0] === field) {
-        // Toggle sort order
-        setSortOrder((prevOrder) => (prevOrder === 'ASC' ? 'DESC' : 'ASC'));
-        return [field];
-      }
-      // Otherwise set as the new sort field with default DESC order
-      setSortOrder('DESC');
-      return [field];
-    });
-    setPage(1); // Reset to first page when changing sort
-  }, []);
+  // Set sorting - toggles between ASC, DESC and neutral if the same field is clicked
+  const handleSetSorting = useCallback(
+    (field: ContractSortField) => {
+      if (!field) return;
+
+      setSortBy((prevSortBy) => {
+        // If already sorting by this field
+        if (prevSortBy.length > 0 && prevSortBy[0] === field) {
+          // Toggle sort order: DESC -> ASC -> null (neutral)
+          if (sortOrder === 'DESC') {
+            setSortOrder('ASC');
+            return prevSortBy;
+          } else if (sortOrder === 'ASC') {
+            setSortOrder(null);
+            return []; // Clear sort fields when going to neutral
+          } else {
+            // From null back to DESC
+            setSortOrder('DESC');
+            return [field];
+          }
+        } else {
+          // Otherwise set as the new sort field with default DESC order
+          setSortOrder('DESC');
+          return [field];
+        }
+      });
+
+      setPage(1); // Reset to first page when changing sort
+    },
+    [sortOrder]
+  );
 
   // Handle search query changes
   const handleSetSearchQuery = useCallback((query: string) => {

@@ -73,6 +73,7 @@ export interface Contract {
   blockchain: Blockchain;
   effectiveBid: string;
   evictionRisk: EvictionRisk;
+  minBid: string;
   name?: string; // Optional field possibly used on frontend
 }
 
@@ -126,7 +127,7 @@ export class ContractService {
    * @param page Page number (optional)
    * @param limit Items per page (optional)
    * @param sortBy Fields to sort by (optional)
-   * @param sortOrder Sort order, 'ASC' or 'DESC' (optional)
+   * @param sortOrder Sort order, 'ASC' or 'DESC' or null (optional)
    * @param search Search query (optional)
    * @returns Promise with paginated contracts response
    */
@@ -135,7 +136,7 @@ export class ContractService {
     page: number = 1,
     limit: number = 10,
     sortBy: string[] = ['contract.lastBid'],
-    sortOrder: 'ASC' | 'DESC' = 'DESC',
+    sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
   ): Promise<PaginatedResponse<Contract>> {
     let url = `/contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
@@ -146,7 +147,7 @@ export class ContractService {
     }
 
     if (sortOrder) {
-      url += `&sortOrder=${sortOrder}`;
+      url += `&sortDirection=${sortOrder}`;
     }
 
     // Add search parameter if provided
@@ -163,7 +164,7 @@ export class ContractService {
    * @param page Page number (optional)
    * @param limit Items per page (optional)
    * @param sortBy Fields to sort by (optional)
-   * @param sortOrder Sort order, 'ASC' or 'DESC' (optional)
+   * @param sortOrder Sort order, 'ASC' or 'DESC' or null (optional)
    * @param search Search query (optional)
    * @returns Promise with paginated contracts response
    */
@@ -172,7 +173,7 @@ export class ContractService {
     page: number = 1,
     limit: number = 10,
     sortBy: string[] = ['contract.lastBid'],
-    sortOrder: 'ASC' | 'DESC' = 'DESC',
+    sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
   ): Promise<PaginatedResponse<Contract>> {
     let url = `/user-contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
@@ -183,7 +184,7 @@ export class ContractService {
     }
 
     if (sortOrder) {
-      url += `&sortOrder=${sortOrder}`;
+      url += `&sortDirection=${sortOrder}`;
     }
 
     // Add search parameter if provided
