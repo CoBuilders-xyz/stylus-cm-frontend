@@ -125,16 +125,36 @@ export class ContractService {
    * @param blockchainId ID of the blockchain to filter by
    * @param page Page number (optional)
    * @param limit Items per page (optional)
+   * @param sortBy Fields to sort by (optional)
+   * @param sortOrder Sort order, 'ASC' or 'DESC' (optional)
+   * @param search Search query (optional)
    * @returns Promise with paginated contracts response
    */
   async getExploreContracts(
     blockchainId: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    sortBy: string[] = ['contract.lastBid'],
+    sortOrder: 'ASC' | 'DESC' = 'DESC',
+    search?: string
   ): Promise<PaginatedResponse<Contract>> {
-    return this.apiClient.get<PaginatedResponse<Contract>>(
-      `/contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`
-    );
+    let url = `/contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
+
+    // Add sorting parameters if provided
+    if (sortBy.length > 0) {
+      url += `&sortBy=${sortBy.join(',')}`;
+    }
+
+    if (sortOrder) {
+      url += `&sortOrder=${sortOrder}`;
+    }
+
+    // Add search parameter if provided
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+
+    return this.apiClient.get<PaginatedResponse<Contract>>(url);
   }
 
   /**
@@ -142,16 +162,36 @@ export class ContractService {
    * @param blockchainId ID of the blockchain to filter by
    * @param page Page number (optional)
    * @param limit Items per page (optional)
+   * @param sortBy Fields to sort by (optional)
+   * @param sortOrder Sort order, 'ASC' or 'DESC' (optional)
+   * @param search Search query (optional)
    * @returns Promise with paginated contracts response
    */
   async getMyContracts(
     blockchainId: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    sortBy: string[] = ['contract.lastBid'],
+    sortOrder: 'ASC' | 'DESC' = 'DESC',
+    search?: string
   ): Promise<PaginatedResponse<Contract>> {
-    return this.apiClient.get<PaginatedResponse<Contract>>(
-      `/user-contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`
-    );
+    let url = `/user-contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
+
+    // Add sorting parameters if provided
+    if (sortBy.length > 0) {
+      url += `&sortBy=${sortBy.join(',')}`;
+    }
+
+    if (sortOrder) {
+      url += `&sortOrder=${sortOrder}`;
+    }
+
+    // Add search parameter if provided
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+
+    return this.apiClient.get<PaginatedResponse<Contract>>(url);
   }
 
   /**

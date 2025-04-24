@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -9,7 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useContracts } from '@/hooks/useContracts';
+import {
+  useContracts,
+  ContractSortField,
+  SortOrder,
+} from '@/hooks/useContracts';
 import { useAuthentication } from '@/context/AuthenticationProvider';
 import { Contract, PaginationMeta } from '@/services/contractService';
 import {
@@ -28,6 +32,55 @@ interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
 }
+
+// Table header component with sorting functionality
+const SortableTableHead = React.memo(
+  ({
+    children,
+    sortField,
+    currentSortBy,
+    currentSortOrder,
+    onSort,
+    ...props
+  }: {
+    children: React.ReactNode;
+    sortField?: ContractSortField;
+    currentSortBy: ContractSortField[];
+    currentSortOrder: SortOrder;
+    onSort: (field: ContractSortField) => void;
+    className?: string;
+  }) => {
+    // Only add sorting functionality if a sortField is provided
+    const handleSort = useCallback(() => {
+      if (sortField) {
+        onSort(sortField);
+      }
+    }, [sortField, onSort]);
+
+    // Determine if this column is currently sorted
+    const isSorted = sortField && currentSortBy[0] === sortField;
+
+    return (
+      <TableHead
+        onClick={sortField ? handleSort : undefined}
+        className={`font-medium text-base py-6 ${
+          sortField ? 'cursor-pointer hover:bg-gray-900' : ''
+        } ${props.className || ''}`}
+      >
+        <div className='flex items-center'>
+          {children}
+          {sortField && (
+            <span className='ml-1'>
+              {isSorted ? (currentSortOrder === 'ASC' ? '↑' : '↓') : '⇅'}
+            </span>
+          )}
+        </div>
+      </TableHead>
+    );
+  }
+);
+
+SortableTableHead.displayName = 'SortableTableHead';
 
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
@@ -82,7 +135,7 @@ const ContractRow = React.memo(
         </TableCell>
         {viewType === 'explore-contracts' && (
           <TableCell className='py-6'>
-            <button className='w-10 h-10 flex items-center justify-center bg-black text-white rounded-md'>
+            <button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
               +
             </button>
           </TableCell>
@@ -195,10 +248,23 @@ function ContractsTable({
   viewType = 'explore-contracts',
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
-  const { contracts, isLoading, error, pagination, goToPage, setItemsPerPage } =
-    useContracts(viewType === 'explore-contracts' ? 'explore' : 'my-contracts');
+  const {
+    contracts,
+    isLoading,
+    error,
+    pagination,
+    goToPage,
+    setItemsPerPage,
+    sortBy,
+    sortOrder,
+    setSorting,
+    setSearchQuery,
+  } = useContracts(
+    viewType === 'explore-contracts' ? 'explore' : 'my-contracts'
+  );
 
   const { isAuthenticated } = useAuthentication();
+  const [searchInput, setSearchInput] = useState('');
 
   // Use provided contracts if available, otherwise use fetched contracts
   const displayContracts = useMemo(
@@ -220,6 +286,29 @@ function ContractsTable({
       setItemsPerPage(Number(e.target.value));
     },
     [setItemsPerPage]
+  );
+
+  // Handle search input changes
+  const handleSearchInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchInput(e.target.value);
+    },
+    []
+  );
+
+  // Handle search submission
+  const handleSearch = useCallback(() => {
+    setSearchQuery(searchInput);
+  }, [searchInput, setSearchQuery]);
+
+  // Handle search by Enter key
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleSearch();
+      }
+    },
+    [handleSearch]
   );
 
   // Render placeholder when not authenticated
@@ -250,8 +339,13 @@ function ContractsTable({
               type='text'
               placeholder='Search contracts...'
               className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
+              value={searchInput}
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
             />
-            <button className='absolute left-1 p-3'>🔍</button>
+            <button className='absolute left-1 p-3' onClick={handleSearch}>
+              🔍
+            </button>
           </div>
         )}
       </div>
@@ -275,30 +369,67 @@ function ContractsTable({
           <Table className='w-full'>
             <TableHeader className='bg-black text-white'>
               <TableRow className='h-20 hover:bg-transparent'>
-                <TableHead className='font-medium text-base py-6 w-[250px]'>
+                <SortableTableHead
+                  className='w-[250px]'
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Contract
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.LAST_BID}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Bid
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Effective Bid
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.BYTECODE_SIZE}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Size
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Min. Bid
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Eviction Risk
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.TOTAL_BID_INVESTMENT}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Total Spent
-                </TableHead>
-                <TableHead className='font-medium text-base py-6'>
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.IS_CACHED}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
                   Cache Status
-                </TableHead>
+                </SortableTableHead>
                 {viewType === 'explore-contracts' && (
                   <TableHead className='font-medium text-base py-6'></TableHead>
                 )}
