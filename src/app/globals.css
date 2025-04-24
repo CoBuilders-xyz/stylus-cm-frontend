@@ -125,19 +125,6 @@
     @apply bg-background text-foreground;
   }
 
-  /* Remove all table borders */
-  table,
-  thead,
-  tbody,
-  tr,
-  th,
-  td {
-    border: none !important;
-    border-width: 0 !important;
-    border-bottom-width: 0 !important;
-    border-top-width: 0 !important;
-  }
-
   /* Add spacing between table rows */
   tbody tr {
     margin-bottom: 0.75rem !important;

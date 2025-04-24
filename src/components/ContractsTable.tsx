@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useContracts } from '@/hooks/useContracts';
+import { useAuthentication } from '@/context/AuthenticationProvider';
 import { Contract, PaginationMeta } from '@/services/contractService';
 import {
   formatEth,
@@ -18,6 +19,10 @@ import {
   getEvictionRiskColor,
   formatRiskLevel,
 } from '@/utils/formatting';
+import authRequiredImage from 'public/auth-required.svg';
+import noContractsFoundImage from 'public/no-contracts-found.svg';
+import sthWentWrongImage from 'public/sth-went-wrong.svg';
+import NoticeBanner from '@/components/NoticeBanner';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -28,7 +33,7 @@ interface ContractsTableProps {
 const ContractRow = React.memo(
   ({ contract, viewType }: { contract: Contract; viewType: string }) => {
     return (
-      <TableRow className='!border-0 h-20'>
+      <TableRow className='h-20'>
         <TableCell className='py-6 text-lg w-[250px]'>
           {viewType === 'my-contracts' && contract.name ? (
             <div className='flex flex-col'>
@@ -77,7 +82,7 @@ const ContractRow = React.memo(
         </TableCell>
         {viewType === 'explore-contracts' && (
           <TableCell className='py-6'>
-            <button className='w-10 h-10 flex items-center justify-center bg-black text-white border border-white rounded-md'>
+            <button className='w-10 h-10 flex items-center justify-center bg-black text-white rounded-md'>
               +
             </button>
           </TableCell>
@@ -190,17 +195,10 @@ function ContractsTable({
   viewType = 'explore-contracts',
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
-  const {
-    contracts,
-    isLoading,
-    error,
-    pagination,
-    refetch,
-    goToPage,
-    setItemsPerPage,
-  } = useContracts(
-    viewType === 'explore-contracts' ? 'explore' : 'my-contracts'
-  );
+  const { contracts, isLoading, error, pagination, goToPage, setItemsPerPage } =
+    useContracts(viewType === 'explore-contracts' ? 'explore' : 'my-contracts');
+
+  const { isAuthenticated } = useAuthentication();
 
   // Use provided contracts if available, otherwise use fetched contracts
   const displayContracts = useMemo(
@@ -223,6 +221,17 @@ function ContractsTable({
     },
     [setItemsPerPage]
   );
+
+  // Render placeholder when not authenticated
+  if (!isAuthenticated) {
+    return (
+      <NoticeBanner
+        image={authRequiredImage}
+        title='Authentication Required'
+        description='Please sign the transaction to see the contracts list.'
+      />
+    );
+  }
 
   return (
     <div className='overflow-hidden'>
@@ -254,19 +263,18 @@ function ContractsTable({
       )}
 
       {error && (
-        <div className='bg-red-800 text-white p-4 rounded mb-4'>
-          {error}
-          <button onClick={refetch} className='ml-4 underline'>
-            Try again
-          </button>
-        </div>
+        <NoticeBanner
+          image={sthWentWrongImage}
+          title='Error'
+          description='An error occurred while fetching contracts. Please try again.'
+        />
       )}
 
       {!isLoading && !error && (
         <div className='overflow-hidden'>
           <Table className='w-full'>
             <TableHeader className='bg-black text-white'>
-              <TableRow className='!border-0 h-20 hover:bg-transparent'>
+              <TableRow className='h-20 hover:bg-transparent'>
                 <TableHead className='font-medium text-base py-6 w-[250px]'>
                   Contract
                 </TableHead>
@@ -311,41 +319,11 @@ function ContractsTable({
                     colSpan={viewType === 'explore-contracts' ? 9 : 8}
                     className='text-center py-12'
                   >
-                    <div className='flex flex-col items-center'>
-                      <svg
-                        className='mb-4 w-16 h-16 text-gray-400'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                        xmlns='http://www.w3.org/2000/svg'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth='2'
-                          d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
-                        ></path>
-                      </svg>
-                      <p className='text-xl font-semibold mb-2'>
-                        No contracts found
-                      </p>
-                      <p className='text-gray-400 mb-6'>
-                        {viewType === 'my-contracts'
-                          ? "You haven't added any contracts yet."
-                          : 'There are no contracts matching your criteria.'}
-                      </p>
-                      {viewType === 'my-contracts' && (
-                        <button
-                          className='px-4 py-2 bg-[#116AAE] text-white rounded-md flex items-center gap-2'
-                          onClick={() => {
-                            /* Add contract logic */
-                          }}
-                        >
-                          <span>+</span>
-                          <span>Add Your First Contract</span>
-                        </button>
-                      )}
-                    </div>
+                    <NoticeBanner
+                      image={noContractsFoundImage}
+                      title='No Contracts Found'
+                      description='No contracts found.'
+                    />
                   </TableCell>
                 </TableRow>
               )}
