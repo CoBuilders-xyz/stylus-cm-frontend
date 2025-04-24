@@ -1,4 +1,10 @@
+'use client';
+import { useAuthentication } from '@/context/AuthenticationProvider';
+
 export default function CacheStatusPage() {
+  const { accessToken } = useAuthentication();
+  console.log(accessToken);
+
   return (
     <div className='flex flex-col w-full'>
       <div
