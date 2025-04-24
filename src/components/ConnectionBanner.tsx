@@ -8,41 +8,18 @@ import { Check, LoaderCircle, WifiOff } from 'lucide-react';
 export default function ConnectionBanner() {
   const { isConnecting, isConnected } = useAccount();
   const { isLoading: isAuthLoading, isAuthenticated } = useAuthentication();
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(window.navigator.onLine);
   const [showConnectedBanner, setShowConnectedBanner] = useState(false);
 
   // Check internet connection
   useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        await fetch('https://www.google.com', {
-          method: 'HEAD',
-          mode: 'no-cors',
-          cache: 'no-store',
-        });
-        setIsOnline(true);
-      } catch {
-        setIsOnline(false);
-      }
-    };
-
-    // Initial check
-    checkConnection();
-
-    // Set up interval to check connection periodically
-    const interval = setInterval(checkConnection, 30000); // Check every 30 seconds
-
-    // Add event listeners for online/offline status
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    const updateOnlineStatus = () => setIsOnline(window.navigator.onLine);
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
     };
   }, []);
 
