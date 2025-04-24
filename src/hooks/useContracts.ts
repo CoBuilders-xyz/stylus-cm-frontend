@@ -17,7 +17,7 @@ interface ContractsResult {
  */
 const DEFAULT_PAGINATION: PaginationMeta = {
   page: 1,
-  limit: 10,
+  limit: 5,
   totalItems: 0,
   totalPages: 0,
   hasNextPage: false,
@@ -38,7 +38,7 @@ export function useContracts(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(5);
 
   // Store the current type in a ref to avoid unnecessary re-renders
   const typeRef = useRef(type);

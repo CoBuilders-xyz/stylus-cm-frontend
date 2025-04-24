@@ -11,55 +11,22 @@ import {
 } from '@/components/ui/table';
 import { useContracts } from '@/hooks/useContracts';
 import { Contract, PaginationMeta } from '@/services/contractService';
+import {
+  formatEth,
+  formatSize,
+  formatDate,
+  getEvictionRiskColor,
+  formatRiskLevel,
+} from '@/utils/formatting';
 
 interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
 }
 
-// Helper function to format ETH amounts
-const formatEth = (wei: string): string => {
-  // Convert Wei to ETH (1 ETH = 10^18 Wei)
-  try {
-    const weiNum = BigInt(wei);
-    const ethValue = Number(weiNum) / 1e18;
-    return ethValue.toFixed(6) + ' ETH';
-  } catch {
-    return wei;
-  }
-};
-
-// Helper function to format file size
-const formatSize = (bytes: string): string => {
-  const size = parseInt(bytes, 10);
-  if (isNaN(size)) return bytes;
-
-  if (size < 1024) return size + ' B';
-  if (size < 1048576) return (size / 1024).toFixed(2) + ' KB';
-  return (size / 1048576).toFixed(2) + ' MB';
-};
-
-// Helper function to format date
-const formatDate = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  } catch {
-    return dateString;
-  }
-};
-
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
-  ({
-    contract,
-    viewType,
-    getEvictionRiskColor,
-  }: {
-    contract: Contract;
-    viewType: string;
-    getEvictionRiskColor: (risk: string) => string;
-  }) => {
+  ({ contract, viewType }: { contract: Contract; viewType: string }) => {
     return (
       <TableRow className='!border-0 h-20'>
         <TableCell className='py-6 text-lg w-[250px]'>
@@ -93,8 +60,7 @@ const ContractRow = React.memo(
             contract.evictionRisk.riskLevel
           )} py-6 text-lg`}
         >
-          {contract.evictionRisk.riskLevel.charAt(0).toUpperCase() +
-            contract.evictionRisk.riskLevel.slice(1)}
+          {formatRiskLevel(contract.evictionRisk.riskLevel)}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {formatEth(contract.totalBidInvestment)}
@@ -258,20 +224,6 @@ function ContractsTable({
     [setItemsPerPage]
   );
 
-  // Memoize this function to avoid recreating it on each render
-  const getEvictionRiskColor = useCallback((risk: string) => {
-    switch (risk.toLowerCase()) {
-      case 'high':
-        return 'text-red-500';
-      case 'medium':
-        return 'text-yellow-500';
-      case 'low':
-        return 'text-green-500';
-      default:
-        return 'text-gray-400';
-    }
-  }, []);
-
   return (
     <div className='overflow-hidden'>
       <div className='flex justify-between mb-8'>
@@ -351,7 +303,6 @@ function ContractsTable({
                     key={contract.id}
                     contract={contract}
                     viewType={viewType}
-                    getEvictionRiskColor={getEvictionRiskColor}
                   />
                 ))
               ) : (
