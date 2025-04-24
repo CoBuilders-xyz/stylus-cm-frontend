@@ -8,19 +8,26 @@ import { Check, LoaderCircle, WifiOff } from 'lucide-react';
 export default function ConnectionBanner() {
   const { isConnecting, isConnected } = useAccount();
   const { isLoading: isAuthLoading, isAuthenticated } = useAuthentication();
-  const [isOnline, setIsOnline] = useState(window.navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true); // Default to true for SSR
   const [showConnectedBanner, setShowConnectedBanner] = useState(false);
 
-  // Check internet connection
+  // Check internet connection - only run in browser
   useEffect(() => {
-    const updateOnlineStatus = () => setIsOnline(window.navigator.onLine);
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
+    // Set initial online status
+    setIsOnline(typeof window !== 'undefined' ? window.navigator.onLine : true);
 
-    return () => {
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
-    };
+    const updateOnlineStatus = () => setIsOnline(window.navigator.onLine);
+
+    // Only add event listeners in browser environment
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      return () => {
+        window.removeEventListener('online', updateOnlineStatus);
+        window.removeEventListener('offline', updateOnlineStatus);
+      };
+    }
   }, []);
 
   // Show connected banner for 3 seconds
