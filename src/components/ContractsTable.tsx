@@ -17,6 +17,38 @@ interface ContractsTableProps {
   viewType?: 'explore-contracts' | 'my-contracts';
 }
 
+// Helper function to format ETH amounts
+const formatEth = (wei: string): string => {
+  // Convert Wei to ETH (1 ETH = 10^18 Wei)
+  try {
+    const weiNum = BigInt(wei);
+    const ethValue = Number(weiNum) / 1e18;
+    return ethValue.toFixed(6) + ' ETH';
+  } catch {
+    return wei;
+  }
+};
+
+// Helper function to format file size
+const formatSize = (bytes: string): string => {
+  const size = parseInt(bytes, 10);
+  if (isNaN(size)) return bytes;
+
+  if (size < 1024) return size + ' B';
+  if (size < 1048576) return (size / 1024).toFixed(2) + ' KB';
+  return (size / 1048576).toFixed(2) + ' MB';
+};
+
+// Helper function to format date
+const formatDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  } catch {
+    return dateString;
+  }
+};
+
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
   ({
@@ -40,23 +72,40 @@ const ContractRow = React.memo(
             contract.address
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>{contract.bid}</TableCell>
-        <TableCell className='py-6 text-lg'>{contract.effectiveBid}</TableCell>
-        <TableCell className='py-6 text-lg'>{contract.size}</TableCell>
-        <TableCell className='py-6 text-lg'>{contract.minBid}</TableCell>
+        <TableCell className='py-6 text-lg'>
+          {formatEth(contract.lastBid)}
+        </TableCell>
+        <TableCell className='py-6 text-lg'>
+          {formatEth(contract.effectiveBid)}
+        </TableCell>
+        <TableCell className='py-6 text-lg'>
+          {formatSize(contract.bytecode.size)}
+        </TableCell>
+        <TableCell className='py-6 text-lg'>
+          {formatEth(
+            contract.bytecode.lastEvictionBid !== '0'
+              ? contract.bytecode.lastEvictionBid
+              : contract.lastBid
+          )}
+        </TableCell>
         <TableCell
           className={`${getEvictionRiskColor(
-            contract.evictionRisk
+            contract.evictionRisk.riskLevel
           )} py-6 text-lg`}
         >
-          {contract.evictionRisk}
+          {contract.evictionRisk.riskLevel.charAt(0).toUpperCase() +
+            contract.evictionRisk.riskLevel.slice(1)}
         </TableCell>
-        <TableCell className='py-6 text-lg'>{contract.totalSpent}</TableCell>
+        <TableCell className='py-6 text-lg'>
+          {formatEth(contract.totalBidInvestment)}
+        </TableCell>
         <TableCell className='py-6'>
           <div className='flex flex-col'>
-            <span className='text-lg'>{contract.cacheStatus.status}</span>
+            <span className='text-lg'>
+              {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
+            </span>
             <span className='text-sm text-gray-400 mt-1'>
-              {contract.cacheStatus.timestamp}
+              {formatDate(contract.bidBlockTimestamp)}
             </span>
           </div>
         </TableCell>
@@ -139,7 +188,7 @@ const Pagination = React.memo(
                     onClick={() => handlePageChange(page)}
                     className={`px-2 py-1 rounded-md ${
                       pagination.page === page
-                        ? 'bg-[#116AAE] text-white'
+                        ? 'bg-black text-white'
                         : 'bg-black text-white'
                     }`}
                   >
@@ -211,12 +260,12 @@ function ContractsTable({
 
   // Memoize this function to avoid recreating it on each render
   const getEvictionRiskColor = useCallback((risk: string) => {
-    switch (risk) {
-      case 'High':
+    switch (risk.toLowerCase()) {
+      case 'high':
         return 'text-red-500';
-      case 'Medium':
+      case 'medium':
         return 'text-yellow-500';
-      case 'Low':
+      case 'low':
         return 'text-green-500';
       default:
         return 'text-gray-400';

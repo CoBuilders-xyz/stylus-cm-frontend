@@ -1,22 +1,79 @@
 import { ApiClient } from './api';
 
 /**
+ * Blockchain data interface
+ */
+export interface Blockchain {
+  id: string;
+  name: string;
+  rpcUrl: string;
+  cacheManagerAddress: string;
+  cacheManagerAutomationAddress: string;
+  arbWasmCacheAddress: string;
+  chainId: number;
+  otherInfo: Record<string, unknown> | null;
+  lastSyncedBlock: number;
+  lastProcessedBlockNumber: number;
+}
+
+/**
+ * Bytecode data interface
+ */
+export interface Bytecode {
+  id: string;
+  bytecodeHash: string;
+  size: string;
+  lastBid: string;
+  bidPlusDecay: string;
+  lastEvictionBid: string;
+  isCached: boolean;
+  totalBidInvestment: string;
+  bidBlockNumber: string;
+  bidBlockTimestamp: string;
+}
+
+/**
+ * Eviction risk data interface
+ */
+export interface EvictionRisk {
+  riskLevel: 'high' | 'medium' | 'low' | 'none';
+  remainingEffectiveBid: string;
+  suggestedBids: {
+    highRisk: string;
+    midRisk: string;
+    lowRisk: string;
+  };
+  comparisonPercentages: {
+    vsHighRisk: number;
+    vsMidRisk: number;
+    vsLowRisk: number;
+  };
+  cacheStats: {
+    utilization: number;
+    evictionRate: number;
+    medianBidPerByte: string;
+    competitiveness: number;
+    cacheSizeBytes: string;
+    usedCacheSizeBytes: string;
+  };
+}
+
+/**
  * Contract data interface
  */
 export interface Contract {
   id: string;
-  name?: string;
   address: string;
-  bid: string;
+  lastBid: string;
+  bidPlusDecay: string;
+  totalBidInvestment: string;
+  bidBlockNumber: string;
+  bidBlockTimestamp: string;
+  bytecode: Bytecode;
+  blockchain: Blockchain;
   effectiveBid: string;
-  size: string;
-  minBid: string;
-  evictionRisk: 'High' | 'Medium' | 'Low' | '-';
-  totalSpent: string;
-  cacheStatus: {
-    status: 'Cached' | 'Not Cached';
-    timestamp: string;
-  };
+  evictionRisk: EvictionRisk;
+  name?: string; // Optional field possibly used on frontend
 }
 
 /**
@@ -24,8 +81,9 @@ export interface Contract {
  */
 export interface CreateContractData {
   address: string;
+  blockchainId: string;
   name?: string;
-  bid: string;
+  bid?: string;
 }
 
 /**
