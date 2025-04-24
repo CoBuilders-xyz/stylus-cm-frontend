@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import logo from 'public/logo.svg';
-import horn from 'public/icons/horn.svg';
+import { Megaphone } from 'lucide-react';
+
 // import BlockchainSelector from './BlockchainSelector';
 import ConnectWallet from './ConnectWallet';
 export default function Header() {
@@ -22,7 +23,7 @@ export default function Header() {
           className='border border-white rounded-[10px] p-2 flex items-center justify-center'
           style={{ borderWidth: '1px' }}
         >
-          <Image src={horn} alt='horn' className='w-4 h-4' />
+          <Megaphone className='w-4 h-4' />
         </div>
         {/* <BlockchainSelector /> */}
         <ConnectWallet />
