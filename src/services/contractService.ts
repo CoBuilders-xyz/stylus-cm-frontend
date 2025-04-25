@@ -82,7 +82,7 @@ export interface Contract {
  */
 export interface CreateContractData {
   address: string;
-  blockchainId: string;
+  blockchainId?: string; // Now optional since we can use currentBlockchainId
   name?: string;
   bid?: string;
 }
@@ -125,18 +125,35 @@ export interface UserContract {
  */
 export class ContractService {
   private apiClient: ApiClient;
+  private currentBlockchainId: string | null;
 
   /**
    * Create a new ContractService instance
    * @param accessToken JWT token for authentication
+   * @param defaultBlockchainId Optional default blockchain ID to use in requests
    */
-  constructor(accessToken: string) {
+  constructor(accessToken: string, defaultBlockchainId: string | null = null) {
     this.apiClient = new ApiClient(accessToken);
+    this.currentBlockchainId = defaultBlockchainId;
+  }
+
+  /**
+   * Get the current blockchain ID
+   */
+  getCurrentBlockchainId(): string | null {
+    return this.currentBlockchainId;
+  }
+
+  /**
+   * Set the current blockchain ID
+   * @param blockchainId New blockchain ID
+   */
+  setCurrentBlockchainId(blockchainId: string | null): void {
+    this.currentBlockchainId = blockchainId;
   }
 
   /**
    * Get all contracts from the explore section
-   * @param blockchainId ID of the blockchain to filter by
    * @param page Page number (optional)
    * @param limit Items per page (optional)
    * @param sortBy Fields to sort by (optional)
@@ -145,14 +162,17 @@ export class ContractService {
    * @returns Promise with paginated contracts response
    */
   async getExploreContracts(
-    blockchainId: string,
     page: number = 1,
     limit: number = 10,
     sortBy: string[] = ['contract.lastBid'],
     sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
   ): Promise<PaginatedResponse<Contract>> {
-    let url = `/contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
+    if (!this.currentBlockchainId) {
+      throw new Error('No blockchain ID available for getExploreContracts');
+    }
+
+    let url = `/contracts?blockchainId=${this.currentBlockchainId}&page=${page}&limit=${limit}`;
 
     // Add sorting parameters if provided
     if (sortBy.length > 0) {
@@ -173,7 +193,6 @@ export class ContractService {
 
   /**
    * Get all contracts owned by the authenticated user
-   * @param blockchainId ID of the blockchain to filter by
    * @param page Page number (optional)
    * @param limit Items per page (optional)
    * @param sortBy Fields to sort by (optional)
@@ -182,14 +201,17 @@ export class ContractService {
    * @returns Promise with paginated user contracts response
    */
   async getMyContracts(
-    blockchainId: string,
     page: number = 1,
     limit: number = 10,
     sortBy: string[] = ['contract.lastBid'],
     sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
   ): Promise<PaginatedResponse<UserContract>> {
-    let url = `/user-contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
+    if (!this.currentBlockchainId) {
+      throw new Error('No blockchain ID available for getMyContracts');
+    }
+
+    let url = `/user-contracts?blockchainId=${this.currentBlockchainId}&page=${page}&limit=${limit}`;
 
     // Add sorting parameters if provided
     if (sortBy.length > 0) {
@@ -223,6 +245,18 @@ export class ContractService {
    * @returns Promise with the created contract
    */
   async createContract(contractData: CreateContractData): Promise<Contract> {
+    if (!contractData.blockchainId) {
+      if (!this.currentBlockchainId) {
+        throw new Error('No blockchain ID available for createContract');
+      }
+
+      // Use the current blockchain ID
+      contractData = {
+        ...contractData,
+        blockchainId: this.currentBlockchainId,
+      };
+    }
+
     return this.apiClient.post<Contract, CreateContractData>(
       '/contracts',
       contractData

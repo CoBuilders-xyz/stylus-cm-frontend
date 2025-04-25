@@ -5,6 +5,7 @@ import {
   UserContract,
 } from '@/services/contractService';
 import { useContractService } from './useContractService';
+import { useBlockchainService } from './useBlockchainService';
 
 // Enum for contract sort fields - matches the backend enum
 export enum ContractSortField {
@@ -72,6 +73,8 @@ export function useContracts(
   }, [type]);
 
   const contractService = useContractService();
+  const { currentBlockchainId, isLoading: isBlockchainLoading } =
+    useBlockchainService();
 
   // Use useCallback to ensure the function reference is stable
   const fetchContracts = useCallback(async () => {
@@ -79,11 +82,15 @@ export function useContracts(
       return;
     }
 
+    // Don't fetch if we don't have a blockchain ID yet
+    if (!currentBlockchainId) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const blockchainId = '3a17dc1b-58ad-4472-96c8-76151a502282'; // Could be parameterized
       const currentType = typeRef.current;
 
       // Only include sort parameters if we have sort fields and a sort order
@@ -100,7 +107,6 @@ export function useContracts(
 
       if (currentType === 'explore') {
         const response = await contractService.getExploreContracts(
-          blockchainId,
           page,
           limit,
           sortParams.sortBy,
@@ -113,7 +119,6 @@ export function useContracts(
       } else {
         // For my-contracts, we need to transform the UserContract format to Contract format
         const response = await contractService.getMyContracts(
-          blockchainId,
           page,
           limit,
           sortParams.sortBy,
@@ -155,7 +160,15 @@ export function useContracts(
     } finally {
       setIsLoading(false);
     }
-  }, [contractService, page, limit, sortBy, sortOrder, searchQuery]);
+  }, [
+    contractService,
+    currentBlockchainId,
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    searchQuery,
+  ]);
 
   // Go to a specific page - use useCallback for stable reference
   const goToPage = useCallback((newPage: number) => {
@@ -208,13 +221,18 @@ export function useContracts(
 
   // Fetch contracts when dependencies change
   useEffect(() => {
+    if (isBlockchainLoading) {
+      setIsLoading(true);
+      return;
+    }
+
     fetchContracts();
-  }, [fetchContracts]);
+  }, [fetchContracts, isBlockchainLoading]);
 
   // Create a stable reference to the result object to avoid unnecessary re-renders
   return {
     contracts,
-    isLoading,
+    isLoading: isLoading || isBlockchainLoading,
     error,
     pagination,
     refetch: fetchContracts,
