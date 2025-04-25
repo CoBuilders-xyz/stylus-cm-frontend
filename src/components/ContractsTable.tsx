@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   useContracts,
   ContractSortField,
@@ -20,14 +21,13 @@ import {
   formatEth,
   formatSize,
   formatDate,
-  getEvictionRiskColor,
   formatRiskLevel,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search } from 'lucide-react';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -67,15 +67,27 @@ const SortableTableHead = React.memo(
       if (!sortField) return null;
 
       if (!isSorted) {
-        return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
+        return (
+          <span className='ml-1 text-gray-500'>
+            <ArrowUpDown className='w-4 h-4' />
+          </span>
+        );
       }
 
       if (currentSortOrder === 'ASC') {
-        return <span className='ml-1 text-green-400'>↑</span>;
+        return (
+          <span className='ml-1 text-green-400'>
+            <ArrowUp className='w-4 h-4' />
+          </span>
+        );
       }
 
       if (currentSortOrder === 'DESC') {
-        return <span className='ml-1 text-red-400'>↓</span>;
+        return (
+          <span className='ml-1 text-red-400'>
+            <ArrowDown className='w-4 h-4' />
+          </span>
+        );
       }
 
       return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
@@ -98,6 +110,22 @@ const SortableTableHead = React.memo(
 );
 
 SortableTableHead.displayName = 'SortableTableHead';
+
+// A helper function to get badge variant based on risk level
+const getRiskBadgeVariant = (risk?: string | null) => {
+  if (!risk) return 'secondary';
+
+  switch (risk.toLowerCase()) {
+    case 'high':
+      return 'destructive';
+    case 'medium':
+      return 'default';
+    case 'low':
+      return 'secondary';
+    default:
+      return 'outline';
+  }
+};
 
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
@@ -126,23 +154,34 @@ const ContractRow = React.memo(
         <TableCell className='py-6 text-lg'>
           {formatEth(contract.minBid || '0')}
         </TableCell>
-        <TableCell
-          className={`${getEvictionRiskColor(
-            contract.evictionRisk?.riskLevel || 'none'
-          )} py-6 text-lg`}
-        >
-          {contract.evictionRisk
-            ? formatRiskLevel(contract.evictionRisk.riskLevel)
-            : 'N/A'}
+        <TableCell className='py-6 text-lg'>
+          {contract.evictionRisk ? (
+            <Badge
+              variant={getRiskBadgeVariant(contract.evictionRisk.riskLevel)}
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              {formatRiskLevel(contract.evictionRisk.riskLevel)}
+            </Badge>
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {formatEth(contract.totalBidInvestment)}
         </TableCell>
         <TableCell className='py-6'>
           <div className='flex flex-col'>
-            <span className='text-lg'>
+            <Badge
+              variant={contract.bytecode.isCached ? 'secondary' : 'outline'}
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
               {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
-            </span>
+            </Badge>
             <span className='text-sm text-gray-400 mt-1'>
               {formatDate(contract.bidBlockTimestamp)}
             </span>
