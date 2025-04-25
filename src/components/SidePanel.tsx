@@ -18,7 +18,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
 }) => {
   return (
     <div
-      className={`fixed right-0 top-0 h-full bg-gray-900 shadow-xl z-40 transition-all duration-300 ease-in-out overflow-auto ${
+      className={`fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl z-40 transition-all duration-300 ease-in-out overflow-auto ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
       style={{
