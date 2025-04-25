@@ -8,7 +8,7 @@ import {
   formatDate,
   formatRiskLevel,
 } from '@/utils/formatting';
-import { MoreHorizontal, CircleEllipsis, Edit } from 'lucide-react';
+import { MoreHorizontal, CircleEllipsis, Edit, PlusCircle } from 'lucide-react';
 
 interface ContractDetailsProps {
   contract: Contract;
@@ -87,6 +87,12 @@ export default function ContractDetails({
     // Here would be API call to submit bid
   };
 
+  // Handler for adding contract to my contracts
+  const handleAddToMyContracts = () => {
+    console.log('Adding contract to My Contracts:', contract.address);
+    // Here would be API call to add contract
+  };
+
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Top Section: Contract Address and Name with Options */}
@@ -100,6 +106,13 @@ export default function ContractDetails({
           </h1>
         </div>
         <div className='flex gap-2'>
+          {viewType === 'explore-contracts' && (
+            <div className='relative'>
+              <button className='px-3 py-1 bg-white text-black text-sm rounded hover:bg-gray-200'>
+                + Manage this contract
+              </button>
+            </div>
+          )}
           <button className='p-2 rounded-md bg-black border-none hover:bg-gray-900'>
             <MoreHorizontal className='h-5 w-5' />
           </button>
@@ -111,6 +124,7 @@ export default function ContractDetails({
 
       {viewType === 'my-contracts' ? (
         <>
+          {/* My Contracts View */}
           {/* Main statistics in a 2-column grid layout */}
           <div className='grid grid-cols-2 gap-4 mb-6'>
             {/* Cache Status */}
@@ -310,59 +324,84 @@ export default function ContractDetails({
           </div>
         </>
       ) : (
-        /* Explore Contracts View - Keep the existing simpler layout */
-        <div className='space-y-4'>
-          <div>
-            <p className='text-gray-400'>Address</p>
-            <p className='font-mono'>{contract.address}</p>
+        /* Explore Contracts View - Updated to match image structure */
+        <>
+          {/* Main statistics in a 2-column grid layout */}
+          <div className='grid grid-cols-2 gap-4 mb-6'>
+            {/* Cache Status */}
+            <div className='border border-[#2C2E30] rounded-md p-4'>
+              <div className='text-gray-400 text-sm'>Cache Status</div>
+              <div className='text-xl font-bold'>
+                {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
+              </div>
+              <div className='text-xs text-gray-400'>
+                Last Cached {formatDate(contract.bidBlockTimestamp)}
+              </div>
+            </div>
+
+            {/* Effective Bid */}
+            <div className='border border-[#2C2E30] rounded-md p-4'>
+              <div className='text-gray-400 text-sm'>Effective Bid</div>
+              <div className='text-xl font-bold'>
+                {formatEth(contract.effectiveBid || '0.03')}
+              </div>
+              <div className='text-xs text-gray-400'>
+                Bid: {formatEth(contract.lastBid)}
+              </div>
+            </div>
           </div>
 
-          <div>
-            <p className='text-gray-400'>Current Bid</p>
-            <p className='text-xl font-bold'>{formatEth(contract.lastBid)}</p>
+          {/* Other stats as a simple list */}
+          <div className='space-y-4 mb-6'>
+            {/* Eviction Risk */}
+            <div className='flex justify-between items-center'>
+              <div className='text-gray-400'>Eviction Risk</div>
+              <div className='font-medium'>
+                {contract.evictionRisk
+                  ? formatRiskLevel(contract.evictionRisk.riskLevel)
+                  : 'High'}
+              </div>
+            </div>
+
+            {/* Total Spent */}
+            <div className='flex justify-between items-center'>
+              <div className='text-gray-400'>Total Spent</div>
+              <div className='font-medium'>
+                {formatEth(contract.totalBidInvestment || '0.9')}
+              </div>
+            </div>
+
+            {/* Size */}
+            <div className='flex justify-between items-center'>
+              <div className='text-gray-400'>Size</div>
+              <div className='font-medium'>
+                {formatSize(contract.bytecode.size)}
+              </div>
+            </div>
           </div>
 
-          <div>
-            <p className='text-gray-400'>Effective Bid</p>
-            <p className='text-lg'>{formatEth(contract.effectiveBid)}</p>
-          </div>
-
-          <div>
-            <p className='text-gray-400'>Size</p>
-            <p className='text-lg'>{formatSize(contract.bytecode.size)}</p>
-          </div>
-
-          <div>
-            <p className='text-gray-400'>Minimum Bid</p>
-            <p className='text-lg'>{formatEth(contract.minBid || '0')}</p>
-          </div>
-
-          <div>
-            <p className='text-gray-400'>Eviction Risk</p>
-            <p className='text-lg'>
-              {contract.evictionRisk
-                ? formatRiskLevel(contract.evictionRisk.riskLevel)
-                : 'N/A'}
+          {/* Add to My Contracts Section */}
+          <div className='border border-[#2C2E30] rounded-md p-6 mt-6 text-center'>
+            <div className='flex justify-center mb-4'>
+              <div className='bg-gray-800 p-3 rounded-md'>
+                <PlusCircle className='h-6 w-6' />
+              </div>
+            </div>
+            <h3 className='text-xl font-bold mb-2'>
+              Add this contract to place bids
+            </h3>
+            <p className='text-gray-400 text-sm mb-4'>
+              Add this contract to your managed list to place bids, set
+              automations and more.
             </p>
+            <button
+              className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+              onClick={handleAddToMyContracts}
+            >
+              Add to My Contracts
+            </button>
           </div>
-
-          <div>
-            <p className='text-gray-400'>Total Spent</p>
-            <p className='text-lg'>{formatEth(contract.totalBidInvestment)}</p>
-          </div>
-
-          <div>
-            <p className='text-gray-400'>Cache Status</p>
-            <p className='text-lg'>
-              {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
-            </p>
-          </div>
-
-          <div>
-            <p className='text-gray-400'>Last Updated</p>
-            <p className='text-sm'>{formatDate(contract.bidBlockTimestamp)}</p>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
