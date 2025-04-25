@@ -7,7 +7,7 @@ import { Megaphone } from 'lucide-react';
 import ConnectWallet from './ConnectWallet';
 export default function Header() {
   return (
-    <div className='w-full bg-black text-white z-10 flex flex-wrap items-center justify-between p-4 px-10'>
+    <div className='w-full bg-black text-white z-10 flex flex-wrap items-center justify-between p-4 px-10 fixed'>
       <div className='space-x-4 text-xs flex items-center'>
         <span className='flex items-center'>
           <Link href='/'>

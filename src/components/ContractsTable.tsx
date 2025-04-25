@@ -32,6 +32,7 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
+  onRowClick?: (contract: Contract) => void;
 }
 
 // Table header component with sorting functionality
@@ -123,15 +124,26 @@ const getRiskBadgeVariant = (risk?: string | null) => {
     case 'low':
       return 'secondary';
     default:
-      return 'outline';
+      return 'default';
   }
 };
 
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
-  ({ contract, viewType }: { contract: Contract; viewType: string }) => {
+  ({
+    contract,
+    viewType,
+    onRowClick,
+  }: {
+    contract: Contract;
+    viewType: string;
+    onRowClick?: (contract: Contract) => void;
+  }) => {
     return (
-      <TableRow className='h-20'>
+      <TableRow
+        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors'
+        onClick={() => onRowClick && onRowClick(contract)}
+      >
         <TableCell className='py-6 text-lg w-[250px]'>
           {viewType === 'my-contracts' && contract.name ? (
             <div className='flex flex-col'>
@@ -300,7 +312,10 @@ Pagination.displayName = 'Pagination';
 function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
-}: ContractsTableProps) {
+  onRowClick,
+}: ContractsTableProps & {
+  onRowClick?: (contract: Contract) => void;
+}) {
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
     contracts,
@@ -493,9 +508,10 @@ function ContractsTable({
               {displayContracts.length > 0 ? (
                 displayContracts.map((contract) => (
                   <ContractRow
-                    key={contract.id}
+                    key={contract.address}
                     contract={contract}
                     viewType={viewType}
+                    onRowClick={onRowClick}
                   />
                 ))
               ) : (
