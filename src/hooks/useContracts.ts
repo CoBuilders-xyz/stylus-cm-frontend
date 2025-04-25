@@ -126,11 +126,22 @@ export function useContracts(
           (userContract: UserContract) => {
             // Extract the nested contract and merge with top-level data
             const { contract, ...rest } = userContract;
+
+            // Ensure all required fields exist, but preserve null values when appropriate
             return {
               ...contract,
               ...rest,
               // Preserve name from top level if exists
               name: rest.name || '',
+              // Pass evictionRisk as is (could be null)
+              evictionRisk: contract.evictionRisk,
+              // Ensure bytecode exists with minimal required properties
+              bytecode: {
+                ...contract.bytecode,
+                // We still need to provide defaults for bytecode size since it's used everywhere
+                size: contract.bytecode?.size || '0',
+                isCached: contract.bytecode?.isCached || false,
+              },
             } as Contract;
           }
         );

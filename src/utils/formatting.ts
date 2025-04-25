@@ -51,7 +51,9 @@ export const formatDate = (dateString: string): string => {
  * @param risk The risk level string ('high', 'medium', 'low', etc.)
  * @returns CSS class name for the appropriate color
  */
-export const getEvictionRiskColor = (risk: string): string => {
+export const getEvictionRiskColor = (risk?: string | null): string => {
+  if (!risk) return 'text-gray-400';
+
   switch (risk.toLowerCase()) {
     case 'high':
       return 'text-red-500';

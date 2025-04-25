@@ -128,10 +128,12 @@ const ContractRow = React.memo(
         </TableCell>
         <TableCell
           className={`${getEvictionRiskColor(
-            contract.evictionRisk.riskLevel
+            contract.evictionRisk?.riskLevel || 'none'
           )} py-6 text-lg`}
         >
-          {formatRiskLevel(contract.evictionRisk.riskLevel)}
+          {contract.evictionRisk
+            ? formatRiskLevel(contract.evictionRisk.riskLevel)
+            : 'N/A'}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {formatEth(contract.totalBidInvestment)}

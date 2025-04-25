@@ -72,7 +72,7 @@ export interface Contract {
   bytecode: Bytecode;
   blockchain: Blockchain;
   effectiveBid: string;
-  evictionRisk: EvictionRisk;
+  evictionRisk: EvictionRisk | null;
   minBid: string;
   name?: string; // Optional field possibly used on frontend
 }
