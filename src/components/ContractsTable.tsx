@@ -28,6 +28,7 @@ import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -434,102 +435,106 @@ function ContractsTable({
       )}
 
       {!isLoading && !error && (
-        <div className='overflow-hidden'>
-          <Table className='w-full'>
-            <TableHeader className='bg-black text-white'>
-              <TableRow className='h-20 hover:bg-transparent'>
-                <SortableTableHead
-                  className='w-[250px]'
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Contract
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.LAST_BID}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Bid
-                </SortableTableHead>
-                <SortableTableHead
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Effective Bid
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.BYTECODE_SIZE}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Size
-                </SortableTableHead>
-                <SortableTableHead
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Min. Bid
-                </SortableTableHead>
-                <SortableTableHead
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Eviction Risk
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.TOTAL_BID_INVESTMENT}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Total Spent
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.IS_CACHED}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Cache Status
-                </SortableTableHead>
-                {viewType === 'explore-contracts' && (
-                  <TableHead className='font-medium text-base py-6'></TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody className='text-white [&>tr]:py-2'>
-              {displayContracts.length > 0 ? (
-                displayContracts.map((contract) => (
-                  <ContractRow
-                    key={contract.address}
-                    contract={contract}
-                    viewType={viewType}
-                    onRowClick={onRowClick}
-                  />
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={viewType === 'explore-contracts' ? 9 : 8}
-                    className='text-center py-12 bg-black'
-                  >
-                    <NoticeBanner
-                      image={noContractsFoundImage}
-                      title='No Contracts Found'
-                      description='No contracts found.'
-                    />
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className='w-full'>
+          <ScrollArea orientation='both' className='h-[600px]'>
+            <div className='min-w-full'>
+              <Table className='w-full'>
+                <TableHeader className='bg-black text-white sticky top-0 z-10'>
+                  <TableRow className='h-20 hover:bg-transparent'>
+                    <SortableTableHead
+                      className='w-[250px]'
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Contract
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.LAST_BID}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Effective Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.BYTECODE_SIZE}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Size
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Min. Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Eviction Risk
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.TOTAL_BID_INVESTMENT}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Total Spent
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.IS_CACHED}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Cache Status
+                    </SortableTableHead>
+                    {viewType === 'explore-contracts' && (
+                      <TableHead className='font-medium text-base py-6'></TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody className='text-white [&>tr]:py-2'>
+                  {displayContracts.length > 0 ? (
+                    displayContracts.map((contract) => (
+                      <ContractRow
+                        key={contract.address}
+                        contract={contract}
+                        viewType={viewType}
+                        onRowClick={onRowClick}
+                      />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                        className='text-center py-12 bg-black'
+                      >
+                        <NoticeBanner
+                          image={noContractsFoundImage}
+                          title='No Contracts Found'
+                          description='No contracts found.'
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
         </div>
       )}
 
