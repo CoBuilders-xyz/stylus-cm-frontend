@@ -108,6 +108,19 @@ export interface PaginatedResponse<T> {
 }
 
 /**
+ * User contract data interface with nested contract structure
+ * This matches the API response from the /user-contracts endpoint
+ */
+export interface UserContract {
+  id: string;
+  address: string;
+  name?: string;
+  blockchain: Blockchain;
+  contract: Contract;
+  [key: string]: unknown; // Allow for additional properties
+}
+
+/**
  * Contract service for handling contract-related API requests
  */
 export class ContractService {
@@ -166,7 +179,7 @@ export class ContractService {
    * @param sortBy Fields to sort by (optional)
    * @param sortOrder Sort order, 'ASC' or 'DESC' or null (optional)
    * @param search Search query (optional)
-   * @returns Promise with paginated contracts response
+   * @returns Promise with paginated user contracts response
    */
   async getMyContracts(
     blockchainId: string,
@@ -175,7 +188,7 @@ export class ContractService {
     sortBy: string[] = ['contract.lastBid'],
     sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
-  ): Promise<PaginatedResponse<Contract>> {
+  ): Promise<PaginatedResponse<UserContract>> {
     let url = `/user-contracts?blockchainId=${blockchainId}&page=${page}&limit=${limit}`;
 
     // Add sorting parameters if provided
@@ -192,7 +205,7 @@ export class ContractService {
       url += `&search=${encodeURIComponent(search)}`;
     }
 
-    return this.apiClient.get<PaginatedResponse<Contract>>(url);
+    return this.apiClient.get<PaginatedResponse<UserContract>>(url);
   }
 
   /**

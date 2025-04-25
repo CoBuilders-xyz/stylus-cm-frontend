@@ -27,6 +27,7 @@ import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
+import { Search } from 'lucide-react';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -329,7 +330,7 @@ function ContractsTable({
       <NoticeBanner
         image={authRequiredImage}
         title='Authentication Required'
-        description='Please sign the transaction to see the contracts list.'
+        description='Please connect to your wallet and sign the transaction to see the contracts list.'
       />
     );
   }
@@ -356,7 +357,7 @@ function ContractsTable({
               onKeyDown={handleKeyDown}
             />
             <button className='absolute left-1 p-3' onClick={handleSearch}>
-              🔍
+              <Search className='w-4 h-4' />
             </button>
           </div>
         )}
@@ -460,7 +461,7 @@ function ContractsTable({
                 <TableRow>
                   <TableCell
                     colSpan={viewType === 'explore-contracts' ? 9 : 8}
-                    className='text-center py-12'
+                    className='text-center py-12 bg-black'
                   >
                     <NoticeBanner
                       image={noContractsFoundImage}

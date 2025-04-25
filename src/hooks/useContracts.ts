@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Contract, PaginationMeta } from '@/services/contractService';
+import {
+  Contract,
+  PaginationMeta,
+  UserContract,
+} from '@/services/contractService';
 import { useContractService } from './useContractService';
 
 // Enum for contract sort fields - matches the backend enum
@@ -94,27 +98,46 @@ export function useContracts(
               sortOrder: null,
             };
 
-      const response =
-        currentType === 'explore'
-          ? await contractService.getExploreContracts(
-              blockchainId,
-              page,
-              limit,
-              sortParams.sortBy,
-              sortParams.sortOrder,
-              searchQuery || undefined
-            )
-          : await contractService.getMyContracts(
-              blockchainId,
-              page,
-              limit,
-              sortParams.sortBy,
-              sortParams.sortOrder,
-              searchQuery || undefined
-            );
+      if (currentType === 'explore') {
+        const response = await contractService.getExploreContracts(
+          blockchainId,
+          page,
+          limit,
+          sortParams.sortBy,
+          sortParams.sortOrder,
+          searchQuery || undefined
+        );
 
-      setContracts(response.data);
-      setPagination(response.meta);
+        setContracts(response.data);
+        setPagination(response.meta);
+      } else {
+        // For my-contracts, we need to transform the UserContract format to Contract format
+        const response = await contractService.getMyContracts(
+          blockchainId,
+          page,
+          limit,
+          sortParams.sortBy,
+          sortParams.sortOrder,
+          searchQuery || undefined
+        );
+
+        // Transform UserContract to Contract for the UI
+        const transformedContracts = response.data.map(
+          (userContract: UserContract) => {
+            // Extract the nested contract and merge with top-level data
+            const { contract, ...rest } = userContract;
+            return {
+              ...contract,
+              ...rest,
+              // Preserve name from top level if exists
+              name: rest.name || '',
+            } as Contract;
+          }
+        );
+
+        setContracts(transformedContracts);
+        setPagination(response.meta);
+      }
     } catch (err) {
       console.error('Failed to fetch contracts:', err);
       setError('Failed to load contracts. Please try again later.');
