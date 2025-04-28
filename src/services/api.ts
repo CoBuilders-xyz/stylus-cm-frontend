@@ -46,6 +46,19 @@ export class ApiClient {
   }
 
   /**
+   * Make a PATCH request to the API
+   * @param endpoint The API endpoint to call
+   * @param data The data to send in the request body
+   * @returns Promise with the response data
+   */
+  async patch<T, D = Record<string, unknown>>(
+    endpoint: string,
+    data?: D
+  ): Promise<T> {
+    return this.request<T>('PATCH', endpoint, data);
+  }
+
+  /**
    * Make a DELETE request to the API
    * @param endpoint The API endpoint to call
    * @returns Promise with the response data

@@ -287,4 +287,20 @@ export class ContractService {
   async deleteContract(id: string): Promise<void> {
     return this.apiClient.delete<void>(`/contracts/${id}`);
   }
+
+  /**
+   * Update a user contract's name
+   * @param id User contract ID
+   * @param name New name for the contract
+   * @returns Promise with the updated user contract
+   */
+  async updateUserContractName(
+    id: string,
+    name: string
+  ): Promise<UserContract> {
+    return this.apiClient.patch<UserContract, { name: string }>(
+      `/user-contracts/${id}/name`,
+      { name }
+    );
+  }
 }

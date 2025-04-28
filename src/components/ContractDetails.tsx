@@ -16,6 +16,9 @@ import {
   BellRing,
   Edit2,
   Trash2,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import { useSidePanel } from './SidePanel';
 import { Button } from '@/components/ui/button';
@@ -26,10 +29,129 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { useContractService } from '@/hooks/useContractService';
 
 interface ContractDetailsProps {
   contract: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
+}
+
+// EditableContractName component
+interface EditableContractNameProps {
+  name: string;
+  contractId: string;
+  onNameChange: (newName: string) => void;
+}
+
+function EditableContractName({
+  name,
+  contractId,
+  onNameChange,
+}: EditableContractNameProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPencil, setShowPencil] = useState(false);
+  const [inputValue, setInputValue] = useState(name);
+  const [isLoading, setIsLoading] = useState(false);
+  const contractService = useContractService();
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!inputValue.trim()) {
+      setInputValue(name);
+      setIsEditing(false);
+      return;
+    }
+
+    if (contractService && contractId) {
+      try {
+        setIsLoading(true);
+        await contractService.updateUserContractName(contractId, inputValue);
+        onNameChange(inputValue);
+        console.log('Contract name updated successfully');
+      } catch (error) {
+        console.error('Failed to update contract name:', error);
+        // Revert to original name on error
+        setInputValue(name);
+      } finally {
+        setIsLoading(false);
+        setIsEditing(false);
+      }
+    } else {
+      // Fallback if no service available
+      onNameChange(inputValue);
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setInputValue(name);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      handleCancel();
+    }
+  };
+
+  return (
+    <div
+      className='relative group'
+      onMouseEnter={() => setShowPencil(true)}
+      onMouseLeave={() => setShowPencil(false)}
+    >
+      {isEditing ? (
+        <div className='flex items-center'>
+          <input
+            type='text'
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className='text-2xl font-bold bg-transparent outline-none border-0 border-b-2 border-[#3E71C6] w-full'
+            placeholder={name}
+            style={{ backgroundColor: '#494949' }}
+            autoFocus
+            disabled={isLoading}
+          />
+          <div className='flex ml-2'>
+            <Button
+              onClick={handleSave}
+              className='text-white hover:text-green-400 bg-transparent p-0 h-auto'
+              disabled={isLoading}
+            >
+              <Check className='h-5 w-5' />
+            </Button>
+            <Button
+              onClick={handleCancel}
+              className='text-white hover:text-red-400 bg-transparent p-0 h-auto ml-1'
+              disabled={isLoading}
+            >
+              <X className='h-5 w-5' />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className='flex items-center'>
+          <div className='text-2xl font-bold mb-1'>
+            {name || 'Contract Name'}
+          </div>
+          {showPencil && !isEditing && (
+            <Button
+              onClick={handleEditClick}
+              className='opacity-0 group-hover:opacity-100 transition-opacity bg-transparent p-0 h-auto ml-2'
+            >
+              <Pencil className='h-3 w-3 text-gray-400 hover:text-white' />
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ContractDetails({
@@ -42,6 +164,11 @@ export default function ContractDetails({
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
   const [automatedBidding, setAutomatedBidding] = useState(false);
+
+  // State for contract name
+  const [contractName, setContractName] = useState(
+    contract.name || 'Contract Name'
+  );
 
   // Minimum bid based on contract data or calculation
   const minBidAmount = '<MIN BID>'; //formatEth(contract.minBid || contract.lastBid);
@@ -135,6 +262,12 @@ export default function ContractDetails({
     handleAddToMyContracts();
   };
 
+  // Handler for name change
+  const handleNameChange = (newName: string) => {
+    setContractName(newName);
+    console.log('Contract name changed to:', newName);
+  };
+
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Main content */}
@@ -147,9 +280,11 @@ export default function ContractDetails({
                 <div className='text-sm font-mono text-gray-300'>
                   {contract.address}
                 </div>
-                <div className='text-2xl font-bold mb-1'>
-                  {contract.name || 'Contract Name'}{' '}
-                </div>
+                <EditableContractName
+                  name={contractName}
+                  contractId={contract.id}
+                  onNameChange={handleNameChange}
+                />
               </>
             ) : (
               <div className='text-2xl font-mono mb-1'>{contract.address}</div>
