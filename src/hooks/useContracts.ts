@@ -6,6 +6,7 @@ import {
 } from '@/services/contractService';
 import { useContractService } from './useContractService';
 import { useBlockchainService } from './useBlockchainService';
+import { addContractUpdateListener } from './useContractsUpdater';
 
 // Enum for contract sort fields - matches the backend enum
 export enum ContractSortField {
@@ -218,6 +219,24 @@ export function useContracts(
     setSearchQuery(query);
     setPage(1); // Reset to first page when searching
   }, []);
+
+  // Listen for contract update events
+  useEffect(() => {
+    // Set up listener for contract update events
+    const removeListener = addContractUpdateListener(
+      (contractId, updateType) => {
+        console.log(
+          `Contract update detected: ${updateType} for ${contractId}, refreshing data...`
+        );
+        fetchContracts();
+      }
+    );
+
+    // Clean up the listener when the component unmounts
+    return () => {
+      removeListener();
+    };
+  }, [fetchContracts]);
 
   // Fetch contracts when dependencies change
   useEffect(() => {

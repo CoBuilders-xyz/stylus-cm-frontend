@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useContractService } from '@/hooks/useContractService';
+import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 
 interface ContractDetailsProps {
   contract: Contract;
@@ -53,6 +54,7 @@ function EditableContractName({
   const [inputValue, setInputValue] = useState(name);
   const [isLoading, setIsLoading] = useState(false);
   const contractService = useContractService();
+  const { signalContractUpdated } = useContractsUpdater();
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -71,6 +73,9 @@ function EditableContractName({
         await contractService.updateUserContractName(contractId, inputValue);
         onNameChange(inputValue);
         console.log('Contract name updated successfully');
+
+        // Signal that a contract has been updated to trigger a reload
+        signalContractUpdated(contractId, 'name');
       } catch (error) {
         console.error('Failed to update contract name:', error);
         // Revert to original name on error
