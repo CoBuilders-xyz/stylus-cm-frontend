@@ -45,7 +45,7 @@ export default function ExploreContractsPage() {
   };
 
   return (
-    <div className='min-h-screen pt-16'>
+    <div className='min-h-screen pt-18'>
       <div
         className={`transition-all duration-300 ease-in-out ${
           isPanelOpen ? 'pr-[53%]' : 'pr-0'

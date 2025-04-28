@@ -98,21 +98,9 @@ export default function ContractDetails({
       {/* Top Section: Contract Address and Name with Options */}
       <div className='flex justify-between items-center mb-6'>
         <div>
-          <div className='text-sm font-mono opacity-80 mb-1'>
-            {contract.address}
-          </div>
-          <h1 className='text-2xl font-bold'>
-            {contract.name || 'ArbSwapRouter'}
-          </h1>
+          <div className='text-2xl font-mono mb-1'>{contract.address}</div>
         </div>
         <div className='flex gap-2'>
-          {viewType === 'explore-contracts' && (
-            <div className='relative'>
-              <button className='px-3 py-1 bg-white text-black text-sm rounded hover:bg-gray-200'>
-                + Manage this contract
-              </button>
-            </div>
-          )}
           <button className='p-2 rounded-md bg-black border-none hover:bg-gray-900'>
             <MoreHorizontal className='h-5 w-5' />
           </button>
