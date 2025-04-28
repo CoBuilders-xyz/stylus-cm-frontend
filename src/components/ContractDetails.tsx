@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, {
+  useState,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
 import { Contract } from '@/services/contractService';
 import {
   formatEth,
@@ -44,17 +49,23 @@ interface EditableContractNameProps {
   onNameChange: (newName: string) => void;
 }
 
-function EditableContractName({
-  name,
-  contractId,
-  onNameChange,
-}: EditableContractNameProps) {
+function EditableContractName(
+  { name, contractId, onNameChange }: EditableContractNameProps,
+  ref: React.ForwardedRef<{ setEditing: (isEditing: boolean) => void }>
+) {
   const [isEditing, setIsEditing] = useState(false);
   const [showPencil, setShowPencil] = useState(false);
   const [inputValue, setInputValue] = useState(name);
   const [isLoading, setIsLoading] = useState(false);
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
+
+  // Expose the setIsEditing function via ref
+  useImperativeHandle(ref, () => ({
+    setEditing: (value: boolean) => {
+      setIsEditing(value);
+    },
+  }));
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -159,12 +170,23 @@ function EditableContractName({
   );
 }
 
+// Use forwardRef to be able to pass refs to the component
+const ForwardedEditableContractName = forwardRef<
+  { setEditing: (isEditing: boolean) => void },
+  EditableContractNameProps
+>(EditableContractName);
+
 export default function ContractDetails({
   contract,
   viewType = 'explore-contracts',
 }: ContractDetailsProps) {
   // Get the onClose function from the SidePanel context
   const { onClose } = useSidePanel();
+
+  // Reference to the EditableContractName component
+  const contractNameRef = useRef<{
+    setEditing: (isEditing: boolean) => void;
+  }>(null);
 
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
@@ -253,7 +275,10 @@ export default function ContractDetails({
 
   const handleRenameContract = () => {
     console.log('Renaming contract:', contract.address);
-    // Here would be the implementation to rename the contract
+    // Trigger edit mode in the EditableContractName component
+    if (contractNameRef.current) {
+      contractNameRef.current.setEditing(true);
+    }
   };
 
   const handleRemoveContract = () => {
@@ -285,10 +310,11 @@ export default function ContractDetails({
                 <div className='text-sm font-mono text-gray-300'>
                   {contract.address}
                 </div>
-                <EditableContractName
+                <ForwardedEditableContractName
                   name={contractName}
                   contractId={contract.id}
                   onNameChange={handleNameChange}
+                  ref={contractNameRef}
                 />
               </>
             ) : (
