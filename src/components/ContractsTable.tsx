@@ -29,6 +29,7 @@ import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from './ui/button';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -202,9 +203,9 @@ const ContractRow = React.memo(
         </TableCell>
         {viewType === 'explore-contracts' && (
           <TableCell className='py-6'>
-            <button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
+            <Button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
               +
-            </button>
+            </Button>
           </TableCell>
         )}
       </TableRow>
@@ -249,20 +250,20 @@ const Pagination = React.memo(
               : 'No results'}
           </span>
           <div className='flex space-x-1'>
-            <button
+            <Button
               onClick={() => handlePageChange(1)}
               disabled={!pagination.hasPreviousPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               First
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={!pagination.hasPreviousPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               ◀
-            </button>
+            </Button>
             {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
               .filter(
                 (page) =>
@@ -275,7 +276,7 @@ const Pagination = React.memo(
                   {idx > 0 && arr[idx - 1] !== page - 1 && (
                     <span className='px-2 py-1'>...</span>
                   )}
-                  <button
+                  <Button
                     onClick={() => handlePageChange(page)}
                     className={`px-2 py-1 rounded-md ${
                       pagination.page === page
@@ -284,23 +285,23 @@ const Pagination = React.memo(
                     }`}
                   >
                     {page}
-                  </button>
+                  </Button>
                 </React.Fragment>
               ))}
-            <button
+            <Button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={!pagination.hasNextPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               ▶
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handlePageChange(pagination.totalPages)}
               disabled={!pagination.hasNextPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               Last
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -399,10 +400,10 @@ function ContractsTable({
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
         {viewType === 'my-contracts' ? (
-          <button className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'>
+          <Button className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'>
             <span>+</span>
             <span>Add Contract</span>
-          </button>
+          </Button>
         ) : (
           <div className='relative'>
             <input
@@ -413,9 +414,12 @@ function ContractsTable({
               onChange={handleSearchInputChange}
               onKeyDown={handleKeyDown}
             />
-            <button className='absolute left-1 p-3' onClick={handleSearch}>
-              <Search className='w-4 h-4' />
-            </button>
+            <Button
+              className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
+              onClick={handleSearch}
+            >
+              <Search className='w-3 h-3' />
+            </Button>
           </div>
         )}
       </div>
