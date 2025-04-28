@@ -24,7 +24,7 @@ export default function ContractDetails({
   const [automatedBidding, setAutomatedBidding] = useState(false);
 
   // Minimum bid based on contract data or calculation
-  const minBidAmount = formatEth(contract.minBid || contract.lastBid);
+  const minBidAmount = '<MIN BID>'; //formatEth(contract.minBid || contract.lastBid);
 
   // Bid history mock data - would be fetched from API in a real implementation
   const bidHistory = [
@@ -98,7 +98,18 @@ export default function ContractDetails({
       {/* Top Section: Contract Address and Name with Options */}
       <div className='flex justify-between items-center mb-6'>
         <div>
-          <div className='text-2xl font-mono mb-1'>{contract.address}</div>
+          {viewType === 'my-contracts' ? (
+            <>
+              <div className='text-2xl font-bold mb-1'>
+                {contract.name || 'Contract Name'}{' '}
+              </div>
+              <div className='text-sm font-mono text-gray-300'>
+                {contract.address}
+              </div>
+            </>
+          ) : (
+            <div className='text-2xl font-mono mb-1'>{contract.address}</div>
+          )}
         </div>
         <div className='flex gap-2'>
           <button className='p-2 rounded-md bg-black border-none hover:bg-gray-900'>
@@ -228,11 +239,8 @@ export default function ContractDetails({
                       placeholder={`From ${minBidAmount}`}
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
-                      className='px-3 py-2 bg-[#40507A] border-none outline-none text-white w-32'
+                      className='px-3 py-2 bg-[#40507A] border-none outline-none text-white w-50'
                     />
-                    <span className='absolute right-3 top-2 text-gray-300'>
-                      ETH
-                    </span>
                   </div>
                   <button
                     className='px-4 py-2 bg-black text-white border-none rounded-md'
