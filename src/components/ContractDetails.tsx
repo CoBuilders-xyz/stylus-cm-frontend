@@ -5,6 +5,7 @@ import React, {
   useRef,
   useImperativeHandle,
   forwardRef,
+  useEffect,
 } from 'react';
 import { Contract } from '@/services/contractService';
 import {
@@ -24,6 +25,7 @@ import {
   Pencil,
   Check,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useSidePanel } from './SidePanel';
 import { Button } from '@/components/ui/button';
@@ -36,6 +38,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
+import Image from 'next/image';
+import removeContractImage from 'public/remove-contract.svg';
 
 interface ContractDetailsProps {
   contract: Contract;
@@ -183,6 +187,12 @@ export default function ContractDetails({
   // Get the onClose function from the SidePanel context
   const { onClose } = useSidePanel();
 
+  // Get the contract service
+  const contractService = useContractService();
+
+  // Get the contracts updater
+  const { signalContractUpdated } = useContractsUpdater();
+
   // Reference to the EditableContractName component
   const contractNameRef = useRef<{
     setEditing: (isEditing: boolean) => void;
@@ -281,10 +291,61 @@ export default function ContractDetails({
     }
   };
 
+  // State for contract removal and tracking API call state
+  const [removeState, setRemoveState] = useState({
+    isRemoving: false,
+    showConfirmation: false,
+  });
+
   const handleRemoveContract = () => {
     console.log('Removing contract:', contract.address);
-    // Here would be the implementation to remove the contract
+    // Show confirmation dialog
+    setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
   };
+
+  const cancelRemoveContract = () => {
+    setRemoveState({ isRemoving: false, showConfirmation: false });
+  };
+
+  const confirmRemoveContract = async () => {
+    if (!contractService) {
+      console.error('Contract service not available');
+      return;
+    }
+
+    try {
+      // Set loading state
+      setRemoveState((prev) => ({ ...prev, isRemoving: true }));
+
+      // The deleteUserContract method returns a Promise that resolves when successful (even with 204)
+      await contractService.deleteUserContract(contract.id);
+
+      console.log('Contract removed successfully');
+
+      // Signal that the contract was deleted to trigger a reload of the contracts list
+      signalContractUpdated(contract.id, 'deleted');
+
+      // Reset states before closing panel
+      setRemoveState({ isRemoving: false, showConfirmation: false });
+
+      // Close the side panel after a small delay to ensure state updates are processed
+      setTimeout(() => {
+        onClose();
+      }, 100);
+    } catch (error) {
+      console.error('Failed to remove contract:', error);
+      // Reset state on error
+      setRemoveState({ isRemoving: false, showConfirmation: false });
+    }
+  };
+
+  // Reset dialog state when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup function that runs when component unmounts
+      setRemoveState({ isRemoving: false, showConfirmation: false });
+    };
+  }, []);
 
   const handleManageContract = () => {
     console.log('Managing contract:', contract.address);
@@ -653,6 +714,75 @@ export default function ContractDetails({
           </>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {removeState.showConfirmation && (
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className='bg-[#121212] p-6 rounded-lg max-w-md w-full'>
+            {/* Close button */}
+            <div className='flex justify-end mb-2'>
+              <Button
+                onClick={cancelRemoveContract}
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-800'
+              >
+                <X className='h-4 w-4' />
+              </Button>
+            </div>
+
+            {/* Icon */}
+            <div className='flex justify-center mb-4'>
+              {/* <Image
+                src='/no-contracts-found.svg'
+                alt='Remove icon'
+                className='h-16 w-16'
+              /> */}
+              <Image
+                src={removeContractImage}
+                alt={'remove contract'}
+                width={200}
+                height={200}
+              />
+            </div>
+
+            {/* Title and description */}
+            <h3 className='text-xl font-bold text-center mb-2'>
+              Remove Contract From Your List?
+            </h3>
+            <p className='text-center text-gray-400 text-sm mb-6'>
+              This action will remove the contract from your managed list.
+              <br />
+              All historical data will remain intact.
+            </p>
+
+            {/* Action buttons */}
+            <div className='flex justify-center gap-3'>
+              <Button
+                onClick={cancelRemoveContract}
+                className='bg-transparent border border-gray-600 hover:bg-gray-800 text-white text-sm px-5 py-2 h-9 rounded-md'
+                disabled={removeState.isRemoving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmRemoveContract}
+                className='bg-white hover:bg-gray-200 text-black font-medium text-sm px-5 py-2 h-9 rounded-md'
+                disabled={removeState.isRemoving}
+              >
+                {removeState.isRemoving ? (
+                  <>
+                    <Loader2 className='h-4 w-4 mr-2 animate-spin text-black' />
+                    Removing...
+                  </>
+                ) : (
+                  'Remove Contract'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

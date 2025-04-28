@@ -298,9 +298,17 @@ export class ContractService {
     id: string,
     name: string
   ): Promise<UserContract> {
-    return this.apiClient.patch<UserContract, { name: string }>(
-      `/user-contracts/${id}/name`,
-      { name }
-    );
+    return this.apiClient.patch<UserContract>(`/user-contracts/${id}/name`, {
+      name,
+    });
+  }
+
+  /**
+   * Delete a user contract
+   * @param id User contract ID
+   * @returns Promise that resolves when the contract is deleted
+   */
+  async deleteUserContract(id: string): Promise<void> {
+    return this.apiClient.delete<void>(`/user-contracts/${id}`);
   }
 }
