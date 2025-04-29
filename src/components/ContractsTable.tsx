@@ -141,7 +141,7 @@ const ContractRow = React.memo(
 
     return (
       <TableRow
-        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors'
+        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors hover:bg-gradient-to-r hover:from-[#0B436E] hover:to-[#1581D4] transition-colors duration-300'
         onClick={handleClick}
       >
         <TableCell className='py-6 text-lg w-[250px]'>
@@ -508,7 +508,7 @@ function ContractsTable({
                     )}
                   </TableRow>
                 </TableHeader>
-                <TableBody className='text-white [&>tr]:py-2'>
+                <TableBody className='text-white [&>tr]:py-2 '>
                   {displayContracts.length > 0 ? (
                     displayContracts.map((contract) => (
                       <ContractRow
