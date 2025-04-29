@@ -70,91 +70,6 @@ interface BiddingHistoryItem {
   contractName: string;
 }
 
-// Alert component that handles alert display
-function ContractAlerts({
-  alerts,
-  onManageAlerts,
-}: {
-  alerts?: Alert[];
-  onManageAlerts: () => void;
-}) {
-  // We want to show the "Add alerts" button if there are no alerts or all alerts are inactive
-  const hasActiveAlerts = alerts?.some((alert) => alert.isActive) || false;
-
-  if (!alerts || alerts.length === 0 || !hasActiveAlerts) {
-    return (
-      <div className='flex justify-between items-center'>
-        <div className='text-gray-400'>Active alerts</div>
-        <Button
-          onClick={onManageAlerts}
-          className='px-3 py-1 border border-dashed border-gray-600 text-gray-400 bg-transparent hover:bg-gray-800 rounded-md text-xs flex items-center gap-1'
-        >
-          <PlusCircle className='h-3 w-3' />
-          Add alerts
-        </Button>
-      </div>
-    );
-  }
-
-  // Helper to get the right background color for each alert type
-  const getAlertStyle = (type: string) => {
-    switch (type) {
-      case 'eviction':
-        return 'bg-red-900/50';
-      case 'noGas':
-        return 'bg-yellow-900/50';
-      case 'lowGas':
-        return 'bg-blue-900/50';
-      case 'bidSafety':
-        return 'bg-green-900/50';
-      default:
-        return 'bg-gray-900/50';
-    }
-  };
-
-  // Helper to format alert display text
-  const getAlertText = (alert: Alert) => {
-    switch (alert.type) {
-      case 'eviction':
-        return 'Eviction';
-      case 'noGas':
-        return 'No gas';
-      case 'lowGas':
-        return `Low gas:${alert.value} ETH`;
-      case 'bidSafety':
-        return `Bid Safety:${alert.value}%`;
-      default:
-        return alert.type;
-    }
-  };
-
-  return (
-    <div className='flex justify-between items-center'>
-      <div className='text-gray-400'>Active alerts</div>
-      <div className='flex gap-2 items-center'>
-        {alerts
-          .filter((alert) => alert.isActive)
-          .map((alert) => (
-            <span
-              key={alert.id}
-              className={`px-3 py-1 ${getAlertStyle(
-                alert.type
-              )} text-white text-xs rounded-full`}
-            >
-              {getAlertText(alert)}
-            </span>
-          ))}
-        <Button
-          className='p-1 rounded-md bg-transparent border border-gray-700 hover:bg-gray-900'
-          onClick={onManageAlerts}
-        >
-          <Edit className='h-4 w-4' />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 // BiddingHistory component
 function BiddingHistory({
   isLoading,
@@ -424,6 +339,168 @@ const ForwardedEditableContractName = forwardRef<
   { setEditing: (isEditing: boolean) => void },
   EditableContractNameProps
 >(EditableContractName);
+
+// Contract details table component to display contract stats in a table
+function ContractDetailsTable({
+  contractData,
+  onManageAlerts,
+  isLoading = false,
+}: {
+  contractData: Contract;
+  onManageAlerts: () => void;
+  isLoading?: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className='mb-6'>
+        <h3 className='text-lg mb-3'>Contract Details</h3>
+        <Table>
+          <TableBody>
+            {Array(4)
+              .fill(0)
+              .map((_, index) => (
+                <TableRow key={index} className='animate-pulse'>
+                  <TableCell className='p-2 w-1/3'>
+                    <div className='h-4 bg-gray-700 rounded w-24'></div>
+                  </TableCell>
+                  <TableCell className='p-2 w-2/3'>
+                    <div className='h-4 bg-gray-700 rounded w-24'></div>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  return (
+    <div className='mb-6'>
+      <h3 className='text-lg mb-3'>Contract Details</h3>
+      <Table>
+        <TableBody>
+          <TableRow>
+            <TableCell className='font-medium text-gray-400 w-1/3'>
+              Eviction Risk
+            </TableCell>
+            <TableCell className='text-left w-2/3'>
+              {contractData.evictionRisk ? (
+                <Badge
+                  variant={getRiskBadgeVariant(
+                    contractData.evictionRisk.riskLevel
+                  )}
+                  className='px-3 py-1 text-sm font-semibold w-fit'
+                >
+                  {formatRiskLevel(contractData.evictionRisk.riskLevel)}
+                </Badge>
+              ) : (
+                <Badge
+                  variant='outline'
+                  className='px-3 py-1 text-sm font-semibold w-fit'
+                >
+                  N/A
+                </Badge>
+              )}
+            </TableCell>
+          </TableRow>
+
+          <TableRow>
+            <TableCell className='font-medium text-gray-400 w-1/3'>
+              Total Spent
+            </TableCell>
+            <TableCell className='text-left w-2/3 font-medium'>
+              {formatEth(contractData.totalBidInvestment)}
+            </TableCell>
+          </TableRow>
+
+          <TableRow>
+            <TableCell className='font-medium text-gray-400 w-1/3'>
+              Size
+            </TableCell>
+            <TableCell className='text-left w-2/3 font-medium'>
+              {formatSize(contractData.bytecode.size)}
+            </TableCell>
+          </TableRow>
+
+          <TableRow>
+            <TableCell className='font-medium text-gray-400 w-1/3'>
+              Active Alerts
+            </TableCell>
+            <TableCell className='text-left w-2/3'>
+              <div className='flex items-center gap-2'>
+                {!contractData.alerts ||
+                !contractData.alerts.some((alert) => alert.isActive) ? (
+                  <Button
+                    onClick={onManageAlerts}
+                    className='px-3 py-1 border border-dashed border-gray-600 text-gray-400 bg-transparent hover:bg-gray-800 rounded-md text-xs flex items-center gap-1'
+                  >
+                    <PlusCircle className='h-3 w-3' />
+                    Add alerts
+                  </Button>
+                ) : (
+                  <>
+                    {contractData.alerts
+                      .filter((alert) => alert.isActive)
+                      .map((alert) => {
+                        // Helper to get the right background color for each alert type
+                        const getAlertStyle = (type: string) => {
+                          switch (type) {
+                            case 'eviction':
+                              return 'bg-red-900/50';
+                            case 'noGas':
+                              return 'bg-yellow-900/50';
+                            case 'lowGas':
+                              return 'bg-blue-900/50';
+                            case 'bidSafety':
+                              return 'bg-green-900/50';
+                            default:
+                              return 'bg-gray-900/50';
+                          }
+                        };
+
+                        // Helper to format alert display text
+                        const getAlertText = (alert: Alert) => {
+                          switch (alert.type) {
+                            case 'eviction':
+                              return 'Eviction';
+                            case 'noGas':
+                              return 'No gas';
+                            case 'lowGas':
+                              return `Low gas:${alert.value} ETH`;
+                            case 'bidSafety':
+                              return `Bid Safety:${alert.value}%`;
+                            default:
+                              return alert.type;
+                          }
+                        };
+
+                        return (
+                          <span
+                            key={alert.id}
+                            className={`px-3 py-1 ${getAlertStyle(
+                              alert.type
+                            )} text-white text-xs rounded-full`}
+                          >
+                            {getAlertText(alert)}
+                          </span>
+                        );
+                      })}
+                    <Button
+                      className='p-1 rounded-md bg-transparent border border-gray-700 hover:bg-gray-900'
+                      onClick={onManageAlerts}
+                    >
+                      <Edit className='h-4 w-4' />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
 
 export default function ContractDetails({
   contractId,
@@ -820,54 +897,12 @@ export default function ContractDetails({
                 </div>
               </div>
 
-              {/* Other stats as a simple list */}
-              <div className='space-y-4 mb-6'>
-                {/* Eviction Risk */}
-                <div className='flex justify-between items-center'>
-                  <div className='text-gray-400'>Eviction Risk</div>
-                  <div className='font-medium'>
-                    {contractData.evictionRisk ? (
-                      <Badge
-                        variant={getRiskBadgeVariant(
-                          contractData.evictionRisk.riskLevel
-                        )}
-                        className='px-3 py-1 text-sm font-semibold w-fit'
-                      >
-                        {formatRiskLevel(contractData.evictionRisk.riskLevel)}
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant='outline'
-                        className='px-3 py-1 text-sm font-semibold w-fit'
-                      >
-                        N/A
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Total Spent */}
-                <div className='flex justify-between items-center'>
-                  <div className='text-gray-400'>Total Spent</div>
-                  <div className='font-medium'>
-                    {formatEth(contractData.totalBidInvestment)}
-                  </div>
-                </div>
-
-                {/* Size */}
-                <div className='flex justify-between items-center'>
-                  <div className='text-gray-400'>Size</div>
-                  <div className='font-medium'>
-                    {formatSize(contractData.bytecode.size)}
-                  </div>
-                </div>
-
-                {/* Active Alerts */}
-                <ContractAlerts
-                  alerts={contractData.alerts}
-                  onManageAlerts={handleContractAlerts}
-                />
-              </div>
+              {/* Replace the flex items with the ContractDetailsTable */}
+              <ContractDetailsTable
+                contractData={contractData}
+                onManageAlerts={handleContractAlerts}
+                isLoading={isLoadingContract}
+              />
 
               {/* Bidding Section Header */}
               <div className='mb-3'>
@@ -993,34 +1028,12 @@ export default function ContractDetails({
                 </div>
               </div>
 
-              {/* Other stats as a simple list */}
-              <div className='space-y-4 mb-6'>
-                {/* Eviction Risk */}
-                <div className='flex justify-between items-center'>
-                  <div className='text-gray-400'>Eviction Risk</div>
-                  <div className='font-medium'>
-                    {contractData.evictionRisk
-                      ? formatRiskLevel(contractData.evictionRisk.riskLevel)
-                      : 'High'}
-                  </div>
-                </div>
-
-                {/* Total Spent */}
-                <div className='flex justify-between items-center'>
-                  <div className='text-gray-400'>Total Spent</div>
-                  <div className='font-medium'>
-                    {formatEth(contractData.totalBidInvestment || '0.9')}
-                  </div>
-                </div>
-
-                {/* Size */}
-                <div className='flex justify-between items-center'>
-                  <div className='text-gray-400'>Size</div>
-                  <div className='font-medium'>
-                    {formatSize(contractData.bytecode.size)}
-                  </div>
-                </div>
-              </div>
+              {/* Replace the flex items with the ContractDetailsTable */}
+              <ContractDetailsTable
+                contractData={contractData}
+                onManageAlerts={handleContractAlerts}
+                isLoading={isLoadingContract}
+              />
 
               {/* Add to My Contracts Section */}
               <div className='border border-[#2C2E30] rounded-md p-6 mt-6 text-center'>
