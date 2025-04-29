@@ -7,9 +7,11 @@ import ContractDetails from '@/components/ContractDetails';
 import { Contract } from '@/services/contractService';
 
 export default function ExploreContractsPage() {
-  const [selectedContract, setSelectedContract] = useState<Contract | null>(
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(
     null
   );
+  const [selectedContractData, setSelectedContractData] =
+    useState<Contract | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const panelWidth = '53%'; // Changed to 53% of screen width
 
@@ -35,8 +37,17 @@ export default function ExploreContractsPage() {
     };
   }, []);
 
+  // For backward compatibility
   const handleContractClick = (contract: Contract) => {
-    setSelectedContract(contract);
+    setSelectedContractId(contract.id);
+    setSelectedContractData(contract);
+    setIsPanelOpen(true);
+  };
+
+  // New handler with contractId and initial data
+  const handleContractSelect = (contractId: string, initialData?: Contract) => {
+    setSelectedContractId(contractId);
+    setSelectedContractData(initialData || null);
     setIsPanelOpen(true);
   };
 
@@ -56,6 +67,7 @@ export default function ExploreContractsPage() {
             contracts={[]}
             viewType='explore-contracts'
             onRowClick={handleContractClick}
+            onContractSelect={handleContractSelect}
           />
         </div>
       </div>
@@ -65,9 +77,10 @@ export default function ExploreContractsPage() {
         onClose={handleClosePanel}
         width={panelWidth}
       >
-        {selectedContract && (
+        {selectedContractId && (
           <ContractDetails
-            contract={selectedContract}
+            contractId={selectedContractId}
+            initialContractData={selectedContractData || undefined}
             viewType='explore-contracts'
           />
         )}

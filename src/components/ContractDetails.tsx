@@ -46,7 +46,8 @@ import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ContractDetailsProps {
-  contract: Contract;
+  contractId: string;
+  initialContractData?: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
 }
 
@@ -77,7 +78,10 @@ function ContractAlerts({
   alerts?: Alert[];
   onManageAlerts: () => void;
 }) {
-  if (!alerts || alerts.length === 0) {
+  // We want to show the "Add alerts" button if there are no alerts or all alerts are inactive
+  const hasActiveAlerts = alerts?.some((alert) => alert.isActive) || false;
+
+  if (!alerts || alerts.length === 0 || !hasActiveAlerts) {
     return (
       <div className='flex justify-between items-center'>
         <div className='text-gray-400'>Active alerts</div>
@@ -296,10 +300,15 @@ function EditableContractName(
 ) {
   const [isEditing, setIsEditing] = useState(false);
   const [showPencil, setShowPencil] = useState(false);
-  const [inputValue, setInputValue] = useState(name);
+  const [inputValue, setInputValue] = useState(name || 'Contract Name');
   const [isLoading, setIsLoading] = useState(false);
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
+
+  // Update input value when name prop changes
+  useEffect(() => {
+    setInputValue(name || 'Contract Name');
+  }, [name]);
 
   // Expose the setIsEditing function via ref
   useImperativeHandle(ref, () => ({
@@ -314,7 +323,7 @@ function EditableContractName(
 
   const handleSave = async () => {
     if (!inputValue.trim()) {
-      setInputValue(name);
+      setInputValue(name || 'Contract Name');
       setIsEditing(false);
       return;
     }
@@ -324,14 +333,13 @@ function EditableContractName(
         setIsLoading(true);
         await contractService.updateUserContractName(contractId, inputValue);
         onNameChange(inputValue);
-        console.log('Contract name updated successfully');
 
         // Signal that a contract has been updated to trigger a reload
         signalContractUpdated(contractId, 'name');
       } catch (error) {
         console.error('Failed to update contract name:', error);
         // Revert to original name on error
-        setInputValue(name);
+        setInputValue(name || 'Contract Name');
       } finally {
         setIsLoading(false);
         setIsEditing(false);
@@ -344,7 +352,7 @@ function EditableContractName(
   };
 
   const handleCancel = () => {
-    setInputValue(name);
+    setInputValue(name || 'Contract Name');
     setIsEditing(false);
   };
 
@@ -370,7 +378,7 @@ function EditableContractName(
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             className='text-2xl font-bold bg-transparent outline-none border-0 border-b-2 border-[#3E71C6] w-full'
-            placeholder={name}
+            placeholder={name || 'Contract Name'}
             style={{ backgroundColor: '#494949' }}
             autoFocus
             disabled={isLoading}
@@ -418,7 +426,8 @@ const ForwardedEditableContractName = forwardRef<
 >(EditableContractName);
 
 export default function ContractDetails({
-  contract,
+  contractId,
+  initialContractData,
   viewType = 'explore-contracts',
 }: ContractDetailsProps) {
   // Get the onClose function from the SidePanel context
@@ -435,57 +444,104 @@ export default function ContractDetails({
     setEditing: (isEditing: boolean) => void;
   }>(null);
 
+  // Store the user contract ID separately to avoid type issues
+  const [userContractId, setUserContractId] = useState<string | null>(null);
+
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
   const [automatedBidding, setAutomatedBidding] = useState(false);
 
-  // State for contract name
-  const [contractName, setContractName] = useState(
-    contract.name || 'Contract Name'
+  // State for contract data and loading
+  const [contractData, setContractData] = useState<Contract | null>(
+    initialContractData || null
+  );
+  const [isLoadingContract, setIsLoadingContract] = useState(
+    !initialContractData
   );
 
-  // State for the contract data with bidding history
-  const [contractData, setContractData] = useState<Contract>(contract);
-  const [isLoadingContract, setIsLoadingContract] = useState(false);
+  // State for contract name
+  const [contractName, setContractName] = useState(
+    contractData?.name || 'Contract Name'
+  );
 
-  // Minimum bid based on contract data or calculation
-  const minBidAmount = formatEth(contractData.minBid || contractData.lastBid);
+  // Reset dialog state when component unmounts
+  const [removeState, setRemoveState] = useState({
+    isRemoving: false,
+    showConfirmation: false,
+  });
 
-  // Fetch detailed contract data including bidding history when component mounts
+  // Initialize contract data from initialContractData whenever it changes
   useEffect(() => {
-    async function fetchContractDetails() {
-      if (!contractService) return;
+    if (initialContractData) {
+      // Make sure to initialize alerts array if it's not present
+      const contractWithAlerts = {
+        ...initialContractData,
+        // Ensure alerts exists, even if empty
+        alerts: initialContractData.alerts || [],
+      };
+      setContractData(contractWithAlerts);
+      setContractName(initialContractData.name || 'Contract Name');
+      setIsLoadingContract(false);
+    }
+  }, [initialContractData]);
+
+  // Fetch contract data from the backend
+  useEffect(() => {
+    async function fetchContractData() {
+      if (!contractService || !contractId) return;
 
       try {
         setIsLoadingContract(true);
-        // Get the user contract that contains the detailed contract data
-        const userContract = await contractService.getUserContract(
-          contractData.id
-        );
-        // Update the contract data with the detailed information
-        if (userContract && userContract.contract) {
-          setContractData(userContract.contract);
+        // For my-contracts view, always fetch the full contract data from the backend
+        if (viewType === 'my-contracts') {
+          const userContract = await contractService.getUserContract(
+            contractId
+          );
+
+          if (userContract && userContract.contract) {
+            // Clone the contract object to avoid reference issues
+            const contractWithAlerts = {
+              ...userContract.contract,
+              // Use name from the top-level userContract, as that's the user-customized name
+              name:
+                userContract.name ||
+                userContract.contract.name ||
+                'Contract Name',
+              // Use alerts from userContract if present, otherwise keep contract's alerts or set to empty array
+              alerts: userContract.alerts || userContract.contract.alerts || [],
+            };
+            setContractData(contractWithAlerts);
+            // Set the contract name from userContract.name, which is the user-customized name
+            setContractName(
+              userContract.name || userContract.contract.name || 'Contract Name'
+            );
+            // Store the userContract.id separately in state
+            setUserContractId(userContract.id);
+          }
         }
+        // For explore-contracts view, we rely on initialContractData being provided
+        // No need to fetch individually as we don't have a getExploreContract API endpoint
       } catch (error) {
-        console.error('Failed to fetch contract details:', error);
+        console.error('Failed to fetch contract data:', error);
       } finally {
         setIsLoadingContract(false);
       }
     }
 
-    // Only fetch additional details if it's a "my-contracts" view since we'll need the bidding history
-    if (viewType === 'my-contracts' && !contractData.biddingHistory) {
-      fetchContractDetails();
-    }
-  }, [contractService, contractData.id, viewType]);
+    fetchContractData();
+  }, [contractService, contractId, viewType, initialContractData]);
+
+  // Minimum bid based on contract data or calculation
+  const minBidAmount = contractData
+    ? formatEth(contractData.minBid || contractData.lastBid)
+    : '0';
 
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
-    if (!contractData.biddingHistory) return [];
+    if (!contractData || !contractData.biddingHistory) return [];
 
     return contractData.biddingHistory.map((historyItem, index) => {
-      // Determine if it's an automatic or manual bid (could be determined by some logic)
-      // For now, assuming it's automatic if it's from the automation address
+      // Determine if it's an automatic or manual bid
       const isAutomaticBid =
         historyItem.contractAddress.toLowerCase() ===
         contractData.blockchain.cacheManagerAutomationAddress.toLowerCase();
@@ -524,7 +580,7 @@ export default function ContractDetails({
   const displayBidHistory =
     bidHistory.length > 0
       ? bidHistory
-      : !isLoadingContract
+      : contractData && !isLoadingContract
       ? [
           // Fallback to a placeholder if no history available
           {
@@ -544,48 +600,59 @@ export default function ContractDetails({
         ]
       : [];
 
-  // Handler for bid submission (placeholder)
+  // If we're still loading and don't have contract data, show a loading state
+  if (isLoadingContract && !contractData) {
+    return (
+      <div className='text-white flex flex-col h-full bg-[#1A1919] items-center justify-center'>
+        <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white'></div>
+        <p className='mt-4'>Loading contract details...</p>
+      </div>
+    );
+  }
+
+  // If we failed to load contract data, show an error
+  if (!contractData) {
+    return (
+      <div className='text-white flex flex-col h-full bg-[#1A1919] items-center justify-center p-6'>
+        <div className='text-red-500 text-6xl mb-4'>!</div>
+        <h3 className='text-xl font-bold mb-2'>Contract Not Found</h3>
+        <p className='text-gray-400 text-center mb-6'>
+          We couldn&apos;t find details for this contract. It may have been
+          removed or there was an error.
+        </p>
+        <Button
+          onClick={onClose}
+          className='px-4 py-2 bg-black text-white border border-white rounded-md'
+        >
+          Close
+        </Button>
+      </div>
+    );
+  }
+
+  // Handler for bid submission
   const handleSubmitBid = () => {
-    console.log('Submitting bid:', bidAmount);
     // Here would be API call to submit bid
   };
 
   // Handler for adding contract to my contracts
   const handleAddToMyContracts = () => {
-    console.log('Adding contract to My Contracts:', contract.address);
     // Here would be API call to add contract
   };
 
   // Handler for contract alerts
   const handleContractAlerts = () => {
-    console.log('Opening contract alerts for:', contract.address);
     // Here would be the implementation to manage alerts
   };
 
   const handleRenameContract = () => {
-    console.log('Renaming contract:', contract.address);
     // Trigger edit mode in the EditableContractName component
     if (contractNameRef.current) {
       contractNameRef.current.setEditing(true);
     }
   };
 
-  // State for contract removal and tracking API call state
-  const [removeState, setRemoveState] = useState({
-    isRemoving: false,
-    showConfirmation: false,
-  });
-
-  const handleRemoveContract = () => {
-    console.log('Removing contract:', contract.address);
-    // Show confirmation dialog
-    setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
-  };
-
-  const cancelRemoveContract = () => {
-    setRemoveState({ isRemoving: false, showConfirmation: false });
-  };
-
+  // Handle confirming contract removal
   const confirmRemoveContract = async () => {
     if (!contractService) {
       console.error('Contract service not available');
@@ -597,12 +664,12 @@ export default function ContractDetails({
       setRemoveState((prev) => ({ ...prev, isRemoving: true }));
 
       // The deleteUserContract method returns a Promise that resolves when successful (even with 204)
-      await contractService.deleteUserContract(contract.id);
-
-      console.log('Contract removed successfully');
+      // Use the stored userContractId if available, otherwise fall back to the main contractId
+      const idToDelete = userContractId || contractId;
+      await contractService.deleteUserContract(idToDelete);
 
       // Signal that the contract was deleted to trigger a reload of the contracts list
-      signalContractUpdated(contract.id, 'deleted');
+      signalContractUpdated(idToDelete, 'deleted');
 
       // Reset states before closing panel
       setRemoveState({ isRemoving: false, showConfirmation: false });
@@ -618,24 +685,31 @@ export default function ContractDetails({
     }
   };
 
-  // Reset dialog state when component unmounts
-  useEffect(() => {
-    return () => {
-      // Cleanup function that runs when component unmounts
-      setRemoveState({ isRemoving: false, showConfirmation: false });
-    };
-  }, []);
+  const handleRemoveContract = () => {
+    // Show confirmation dialog
+    setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+  };
+
+  const cancelRemoveContract = () => {
+    setRemoveState({ isRemoving: false, showConfirmation: false });
+  };
 
   const handleManageContract = () => {
-    console.log('Managing contract:', contract.address);
     // Here would be the implementation to add and manage this contract
     handleAddToMyContracts();
   };
 
   // Handler for name change
   const handleNameChange = (newName: string) => {
+    // Update the contract data with the new name
+    if (contractData) {
+      setContractData({
+        ...contractData,
+        name: newName,
+      });
+    }
+    // Also update the name in the state for UI display
     setContractName(newName);
-    console.log('Contract name changed to:', newName);
   };
 
   return (
@@ -649,18 +723,18 @@ export default function ContractDetails({
               {viewType === 'my-contracts' ? (
                 <>
                   <div className='text-sm font-mono text-gray-300'>
-                    {contract.address}
+                    {contractData.address}
                   </div>
                   <ForwardedEditableContractName
                     name={contractName}
-                    contractId={contract.id}
+                    contractId={userContractId || contractId}
                     onNameChange={handleNameChange}
                     ref={contractNameRef}
                   />
                 </>
               ) : (
                 <div className='text-2xl font-mono mb-1'>
-                  {contract.address}
+                  {contractData.address}
                 </div>
               )}
             </div>
@@ -718,6 +792,7 @@ export default function ContractDetails({
             </div>
           </div>
 
+          {/* Rest of component remains mostly the same except uses contractData directly */}
           {viewType === 'my-contracts' ? (
             <>
               {/* Main statistics in a 2-column grid layout */}
@@ -726,10 +801,10 @@ export default function ContractDetails({
                 <div className='border border-[#2C2E30] rounded-md p-4'>
                   <div className='text-gray-400 text-sm'>Cache Status</div>
                   <div className='text-xl font-bold'>
-                    {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
+                    {contractData.bytecode.isCached ? 'Cached' : 'Not Cached'}
                   </div>
                   <div className='text-xs text-gray-400'>
-                    Last Cached {formatDate(contract.bidBlockTimestamp)}
+                    Last Cached {formatDate(contractData.bidBlockTimestamp)}
                   </div>
                 </div>
 
@@ -737,10 +812,10 @@ export default function ContractDetails({
                 <div className='border border-[#2C2E30] rounded-md p-4'>
                   <div className='text-gray-400 text-sm'>Effective Bid</div>
                   <div className='text-xl font-bold'>
-                    {formatEth(contract.effectiveBid || '')}
+                    {formatEth(contractData.effectiveBid || '')}
                   </div>
                   <div className='text-xs text-gray-400'>
-                    Bid: {formatEth(contract.lastBid)}
+                    Bid: {formatEth(contractData.lastBid)}
                   </div>
                 </div>
               </div>
@@ -751,14 +826,14 @@ export default function ContractDetails({
                 <div className='flex justify-between items-center'>
                   <div className='text-gray-400'>Eviction Risk</div>
                   <div className='font-medium'>
-                    {contract.evictionRisk ? (
+                    {contractData.evictionRisk ? (
                       <Badge
                         variant={getRiskBadgeVariant(
-                          contract.evictionRisk.riskLevel
+                          contractData.evictionRisk.riskLevel
                         )}
                         className='px-3 py-1 text-sm font-semibold w-fit'
                       >
-                        {formatRiskLevel(contract.evictionRisk.riskLevel)}
+                        {formatRiskLevel(contractData.evictionRisk.riskLevel)}
                       </Badge>
                     ) : (
                       <Badge
@@ -775,7 +850,7 @@ export default function ContractDetails({
                 <div className='flex justify-between items-center'>
                   <div className='text-gray-400'>Total Spent</div>
                   <div className='font-medium'>
-                    {formatEth(contract.totalBidInvestment)}
+                    {formatEth(contractData.totalBidInvestment)}
                   </div>
                 </div>
 
@@ -783,13 +858,13 @@ export default function ContractDetails({
                 <div className='flex justify-between items-center'>
                   <div className='text-gray-400'>Size</div>
                   <div className='font-medium'>
-                    {formatSize(contract.bytecode.size)}
+                    {formatSize(contractData.bytecode.size)}
                   </div>
                 </div>
 
                 {/* Active Alerts */}
                 <ContractAlerts
-                  alerts={contract.alerts}
+                  alerts={contractData.alerts}
                   onManageAlerts={handleContractAlerts}
                 />
               </div>
@@ -884,14 +959,14 @@ export default function ContractDetails({
                 </div>
               </div>
 
-              {/* Use the new BiddingHistory component */}
+              {/* Use the BiddingHistory component */}
               <BiddingHistory
                 isLoading={isLoadingContract}
                 biddingHistory={displayBidHistory}
               />
             </>
           ) : (
-            /* Explore Contracts View - Updated to match image structure */
+            /* Explore Contracts View */
             <>
               {/* Main statistics in a 2-column grid layout */}
               <div className='grid grid-cols-2 gap-4 mb-6'>
@@ -899,10 +974,10 @@ export default function ContractDetails({
                 <div className='border border-[#2C2E30] rounded-md p-4'>
                   <div className='text-gray-400 text-sm'>Cache Status</div>
                   <div className='text-xl font-bold'>
-                    {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
+                    {contractData.bytecode.isCached ? 'Cached' : 'Not Cached'}
                   </div>
                   <div className='text-xs text-gray-400'>
-                    Last Cached {formatDate(contract.bidBlockTimestamp)}
+                    Last Cached {formatDate(contractData.bidBlockTimestamp)}
                   </div>
                 </div>
 
@@ -910,10 +985,10 @@ export default function ContractDetails({
                 <div className='border border-[#2C2E30] rounded-md p-4'>
                   <div className='text-gray-400 text-sm'>Effective Bid</div>
                   <div className='text-xl font-bold'>
-                    {formatEth(contract.effectiveBid || '0.03')}
+                    {formatEth(contractData.effectiveBid || '0.03')}
                   </div>
                   <div className='text-xs text-gray-400'>
-                    Bid: {formatEth(contract.lastBid)}
+                    Bid: {formatEth(contractData.lastBid)}
                   </div>
                 </div>
               </div>
@@ -924,8 +999,8 @@ export default function ContractDetails({
                 <div className='flex justify-between items-center'>
                   <div className='text-gray-400'>Eviction Risk</div>
                   <div className='font-medium'>
-                    {contract.evictionRisk
-                      ? formatRiskLevel(contract.evictionRisk.riskLevel)
+                    {contractData.evictionRisk
+                      ? formatRiskLevel(contractData.evictionRisk.riskLevel)
                       : 'High'}
                   </div>
                 </div>
@@ -934,7 +1009,7 @@ export default function ContractDetails({
                 <div className='flex justify-between items-center'>
                   <div className='text-gray-400'>Total Spent</div>
                   <div className='font-medium'>
-                    {formatEth(contract.totalBidInvestment || '0.9')}
+                    {formatEth(contractData.totalBidInvestment || '0.9')}
                   </div>
                 </div>
 
@@ -942,7 +1017,7 @@ export default function ContractDetails({
                 <div className='flex justify-between items-center'>
                   <div className='text-gray-400'>Size</div>
                   <div className='font-medium'>
-                    {formatSize(contract.bytecode.size)}
+                    {formatSize(contractData.bytecode.size)}
                   </div>
                 </div>
               </div>
@@ -991,11 +1066,6 @@ export default function ContractDetails({
 
             {/* Icon */}
             <div className='flex justify-center mb-4'>
-              {/* <Image
-                src='/no-contracts-found.svg'
-                alt='Remove icon'
-                className='h-16 w-16'
-              /> */}
               <Image
                 src={removeContractImage}
                 alt={'remove contract'}

@@ -7,14 +7,17 @@ import ContractDetails from '@/components/ContractDetails';
 import { Contract } from '@/services/contractService';
 
 export default function MyContractsPage() {
-  const [selectedContract, setSelectedContract] = useState<Contract | null>(
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(
     null
   );
+  const [selectedContractData, setSelectedContractData] =
+    useState<Contract | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const panelWidth = '53%';
 
-  const handleContractClick = (contract: Contract) => {
-    setSelectedContract(contract);
+  const handleContractSelect = (contractId: string, initialData?: Contract) => {
+    setSelectedContractId(contractId);
+    setSelectedContractData(initialData || null);
     setIsPanelOpen(true);
   };
 
@@ -33,7 +36,7 @@ export default function MyContractsPage() {
           <ContractsTable
             contracts={[]}
             viewType='my-contracts'
-            onRowClick={handleContractClick}
+            onContractSelect={handleContractSelect}
           />
         </div>
       </div>
@@ -43,9 +46,10 @@ export default function MyContractsPage() {
         onClose={handleClosePanel}
         width={panelWidth}
       >
-        {selectedContract && (
+        {selectedContractId && (
           <ContractDetails
-            contract={selectedContract}
+            contractId={selectedContractId}
+            initialContractData={selectedContractData || undefined}
             viewType='my-contracts'
           />
         )}

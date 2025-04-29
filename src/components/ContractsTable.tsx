@@ -36,6 +36,7 @@ interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
   onRowClick?: (contract: Contract) => void;
+  onContractSelect?: (contractId: string, initialData?: Contract) => void;
 }
 
 // Table header component with sorting functionality
@@ -121,15 +122,27 @@ const ContractRow = React.memo(
     contract,
     viewType,
     onRowClick,
+    onContractSelect,
   }: {
     contract: Contract;
     viewType: string;
     onRowClick?: (contract: Contract) => void;
+    onContractSelect?: (contractId: string, initialData?: Contract) => void;
   }) => {
+    const handleClick = () => {
+      if (onContractSelect) {
+        // Use the new handler that takes ID and initial data
+        onContractSelect(contract.id, contract);
+      } else if (onRowClick) {
+        // Fallback to original handler for backward compatibility
+        onRowClick(contract);
+      }
+    };
+
     return (
       <TableRow
         className='h-20 cursor-pointer hover:bg-gray-900 transition-colors'
-        onClick={() => onRowClick && onRowClick(contract)}
+        onClick={handleClick}
       >
         <TableCell className='py-6 text-lg w-[250px]'>
           {viewType === 'my-contracts' && contract.name ? (
@@ -300,9 +313,8 @@ function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
   onRowClick,
-}: ContractsTableProps & {
-  onRowClick?: (contract: Contract) => void;
-}) {
+  onContractSelect,
+}: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
     contracts,
@@ -504,6 +516,7 @@ function ContractsTable({
                         contract={contract}
                         viewType={viewType}
                         onRowClick={onRowClick}
+                        onContractSelect={onContractSelect}
                       />
                     ))
                   ) : (
