@@ -42,6 +42,31 @@ import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import Image from 'next/image';
 import removeContractImage from 'public/remove-contract.svg';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+
+interface ContractDetailsProps {
+  contract: Contract;
+  viewType?: 'explore-contracts' | 'my-contracts';
+}
+
+// EditableContractName component
+interface EditableContractNameProps {
+  name: string;
+  contractId: string;
+  onNameChange: (newName: string) => void;
+}
+
+// Bidding history item interface
+interface BiddingHistoryItem {
+  id: number;
+  address: string;
+  bid: string;
+  type: string;
+  date: string;
+  amount: string;
+  transactionHash?: string;
+  contractName: string;
+}
 
 // Alert component that handles alert display
 function ContractAlerts({
@@ -125,16 +150,117 @@ function ContractAlerts({
   );
 }
 
-interface ContractDetailsProps {
-  contract: Contract;
-  viewType?: 'explore-contracts' | 'my-contracts';
-}
+// BiddingHistory component
+function BiddingHistory({
+  isLoading,
+  biddingHistory,
+}: {
+  isLoading: boolean;
+  biddingHistory: BiddingHistoryItem[];
+}) {
+  return (
+    <>
+      {/* Bid History Header */}
+      <div className='mb-4'>
+        <h3 className='text-lg'>Bid History</h3>
+      </div>
 
-// EditableContractName component
-interface EditableContractNameProps {
-  name: string;
-  contractId: string;
-  onNameChange: (newName: string) => void;
+      {/* Bid History Table */}
+      <Table>
+        <TableBody>
+          {isLoading ? (
+            // Loading state
+            Array(3)
+              .fill(0)
+              .map((_, index) => (
+                <TableRow
+                  key={index}
+                  className='animate-pulse border-b border-[#1A1A1A] bg-[#121212]'
+                >
+                  <TableCell className='p-2 w-1/4'>
+                    <div className='flex items-center'>
+                      <div className='w-8 h-8 bg-none rounded-full mr-3'></div>
+                      <div>
+                        <div className='h-4 bg-gray-700 rounded w-24 mb-2'></div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className='p-2 w-1/4 text-center'>
+                    <div className='h-4 bg-gray-700 rounded w-20 mx-auto'></div>
+                  </TableCell>
+                  <TableCell className='p-2 w-1/4'>
+                    <div className='h-4 bg-gray-700 rounded w-24 ml-auto'></div>
+                  </TableCell>
+                  <TableCell className='p-2 w-1/4 text-right'>
+                    <div className='h-3 bg-gray-800 rounded w-16 ml-auto mb-1'></div>
+                    <div className='h-3 bg-gray-800 rounded w-20 ml-auto'></div>
+                  </TableCell>
+                </TableRow>
+              ))
+          ) : biddingHistory.length === 0 ? (
+            // No bid history available
+            <TableRow>
+              <TableCell colSpan={4} className='text-center py-4 text-gray-400'>
+                No bidding history available for this contract.
+              </TableCell>
+            </TableRow>
+          ) : (
+            // Display bid history
+            biddingHistory.map((bid) => (
+              <TableRow
+                key={bid.id}
+                className='py-2 border-b-1 border-[#2C2E30] hover:bg-transparent rounded'
+              >
+                {/* Left side with avatar and address */}
+                <TableCell className='p-2 w-1/4'>
+                  <div className='flex items-center'>
+                    <div className='w-8 h-8 bg-blue-600 rounded-full mr-3 flex items-center justify-center text-xs font-bold'>
+                      {bid.contractName.substring(0, 2).toUpperCase() || 'CN'}
+                    </div>
+                    <div className='font-mono text-sm'>{bid.address}</div>
+                  </div>
+                </TableCell>
+
+                {/* Center with bid information */}
+                <TableCell className='p-2 w-1/4 text-center'>
+                  <span className='font-medium'>Bid {bid.amount} ETH</span>
+                </TableCell>
+
+                {/* Action button */}
+                <TableCell className='p-2 w-1/4 text-center'>
+                  <div
+                    className={`px-3 py-2 text-white text-xs rounded inline-block
+                      ${
+                        bid.type.includes('automatic')
+                          ? 'bg-[#1A1A1A] border border-[#333]'
+                          : 'bg-[#1A1A1A] border border-[#333]'
+                      }`}
+                  >
+                    {bid.type.includes('automatic')
+                      ? 'Automated Bid'
+                      : 'Manual Bid'}
+                  </div>
+                </TableCell>
+
+                {/* Timestamp */}
+                <TableCell className='p-2 w-1/4 text-center'>
+                  <div className='text-right text-gray-400 min-w-[70px]'>
+                    <div className='text-xs font-medium'>
+                      {bid.date.split(',')[1]?.split(' ')[1]?.trim() || ''}
+                    </div>
+                    <div className='text-xs'>
+                      {bid.date.split(',')[0]?.replace(/\//g, '-') ||
+                        '2024-02-04'}
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </>
+  );
 }
 
 function EditableContractName(
@@ -291,63 +417,105 @@ export default function ContractDetails({
     contract.name || 'Contract Name'
   );
 
-  // Minimum bid based on contract data or calculation
-  const minBidAmount = '<MIN BID>'; //formatEth(contract.minBid || contract.lastBid);
+  // State for the contract data with bidding history
+  const [contractData, setContractData] = useState<Contract>(contract);
+  const [isLoadingContract, setIsLoadingContract] = useState(false);
 
-  // Bid history mock data - would be fetched from API in a real implementation
-  const bidHistory = [
-    {
-      id: 1,
-      address:
-        contract.blockchain.cacheManagerAddress.substring(0, 6) +
+  // Minimum bid based on contract data or calculation
+  const minBidAmount = formatEth(contractData.minBid || contractData.lastBid);
+
+  // Fetch detailed contract data including bidding history when component mounts
+  useEffect(() => {
+    async function fetchContractDetails() {
+      if (!contractService) return;
+
+      try {
+        setIsLoadingContract(true);
+        // Get the user contract that contains the detailed contract data
+        const userContract = await contractService.getUserContract(
+          contractData.id
+        );
+        // Update the contract data with the detailed information
+        if (userContract && userContract.contract) {
+          setContractData(userContract.contract);
+        }
+      } catch (error) {
+        console.error('Failed to fetch contract details:', error);
+      } finally {
+        setIsLoadingContract(false);
+      }
+    }
+
+    // Only fetch additional details if it's a "my-contracts" view since we'll need the bidding history
+    if (viewType === 'my-contracts' && !contractData.biddingHistory) {
+      fetchContractDetails();
+    }
+  }, [contractService, contractData.id, viewType]);
+
+  // Transform bidding history data for display
+  const processBiddingHistory = (): BiddingHistoryItem[] => {
+    if (!contractData.biddingHistory) return [];
+
+    return contractData.biddingHistory.map((historyItem, index) => {
+      // Determine if it's an automatic or manual bid (could be determined by some logic)
+      // For now, assuming it's automatic if it's from the automation address
+      const isAutomaticBid =
+        historyItem.contractAddress.toLowerCase() ===
+        contractData.blockchain.cacheManagerAutomationAddress.toLowerCase();
+
+      // Format the address for display
+      const displayAddress =
+        historyItem.contractAddress.substring(0, 6) +
         '...' +
-        contract.blockchain.cacheManagerAddress.substring(
-          contract.blockchain.cacheManagerAddress.length - 4
-        ),
-      bid: formatEth(contract.lastBid).split(' ')[0],
-      type: 'automatic bid',
-      date: new Date(contract.bidBlockTimestamp).toISOString().split('T')[0],
-      time: new Date(contract.bidBlockTimestamp)
-        .toISOString()
-        .split('T')[1]
-        .substring(0, 5),
-      amount: '0.3',
-    },
-    {
-      id: 2,
-      address:
-        contract.blockchain.cacheManagerAddress.substring(0, 6) +
-        '...' +
-        contract.blockchain.cacheManagerAddress.substring(
-          contract.blockchain.cacheManagerAddress.length - 4
-        ),
-      bid: formatEth(contract.lastBid).split(' ')[0],
-      type: 'manual bid',
-      date: new Date(contract.bidBlockTimestamp).toISOString().split('T')[0],
-      time: new Date(contract.bidBlockTimestamp)
-        .toISOString()
-        .split('T')[1]
-        .substring(0, 5),
-      amount: '0.5',
-    },
-    {
-      id: 3,
-      address:
-        contract.blockchain.cacheManagerAutomationAddress.substring(0, 6) +
-        '...' +
-        contract.blockchain.cacheManagerAutomationAddress.substring(
-          contract.blockchain.cacheManagerAutomationAddress.length - 4
-        ),
-      bid: formatEth(contract.lastBid).split(' ')[0],
-      type: 'manual bid',
-      date: new Date(contract.bidBlockTimestamp).toISOString().split('T')[0],
-      time: new Date(contract.bidBlockTimestamp)
-        .toISOString()
-        .split('T')[1]
-        .substring(0, 5),
-      amount: '0.5',
-    },
-  ];
+        historyItem.contractAddress.substring(
+          historyItem.contractAddress.length - 4
+        );
+
+      // Format the date using the formatDate utility for consistency
+      const formattedDate = formatDate(historyItem.timestamp);
+
+      // Format bid amount
+      const bidAmount = formatEth(historyItem.actualBid).split(' ')[0];
+
+      return {
+        id: index, // Using index as id since the API might not provide one
+        address: displayAddress,
+        bid: bidAmount,
+        type: isAutomaticBid ? 'automatic bid' : 'manual bid',
+        date: formattedDate,
+        amount: bidAmount,
+        transactionHash: historyItem.transactionHash,
+        contractName: contractName,
+      };
+    });
+  };
+
+  // Get the processed bidding history
+  const bidHistory = processBiddingHistory();
+
+  // If there's no bidding history and not loading, create a fallback placeholder
+  const displayBidHistory =
+    bidHistory.length > 0
+      ? bidHistory
+      : !isLoadingContract
+      ? [
+          // Fallback to a placeholder if no history available
+          {
+            id: 0,
+            address:
+              contractData.blockchain.cacheManagerAddress.substring(0, 6) +
+              '...' +
+              contractData.blockchain.cacheManagerAddress.substring(
+                contractData.blockchain.cacheManagerAddress.length - 4
+              ),
+            bid: formatEth(contractData.lastBid).split(' ')[0],
+            type: 'automatic bid',
+            date: formatDate(contractData.bidBlockTimestamp),
+            amount: formatEth(contractData.lastBid).split(' ')[0],
+            contractName: contractName,
+          },
+        ]
+      : [];
 
   // Handler for bid submission (placeholder)
   const handleSubmitBid = () => {
@@ -686,34 +854,11 @@ export default function ContractDetails({
               </div>
             </div>
 
-            {/* Bid History Header */}
-            <div className='mb-4'>
-              <h3 className='text-lg'>Bid History</h3>
-            </div>
-
-            {/* Bid History List (not using table for this layout) */}
-            <div className='space-y-4 mb-4'>
-              {bidHistory.map((bid) => (
-                <div
-                  key={bid.id}
-                  className='flex items-center justify-between py-2 border-b border-[#2C2E30]'
-                >
-                  <div className='flex items-center'>
-                    <div className='w-10 h-10 bg-gray-700 rounded-full mr-3'></div>
-                    <div>
-                      <div className='font-mono'>{bid.address}</div>
-                      <div className='text-gray-400 text-sm'>
-                        placed a <span className='text-white'>{bid.type}</span>
-                      </div>
-                      <div className='text-gray-400 text-sm'>
-                        {bid.date} {bid.time}
-                      </div>
-                    </div>
-                  </div>
-                  <div className='font-medium'>Bid {bid.amount} ETH</div>
-                </div>
-              ))}
-            </div>
+            {/* Use the new BiddingHistory component */}
+            <BiddingHistory
+              isLoading={isLoadingContract}
+              biddingHistory={displayBidHistory}
+            />
           </>
         ) : (
           /* Explore Contracts View - Updated to match image structure */

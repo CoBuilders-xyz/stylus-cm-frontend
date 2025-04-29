@@ -93,6 +93,16 @@ export interface Contract {
   minBid: string;
   name?: string; // Optional field possibly used on frontend
   alerts?: Alert[]; // Optional alerts for contract monitoring
+  biddingHistory?: Array<{
+    bytecodeHash: string;
+    contractAddress: string;
+    bid: string;
+    actualBid: string;
+    size: string;
+    timestamp: string;
+    blockNumber: string;
+    transactionHash: string;
+  }>; // Optional bidding history
 }
 
 /**
@@ -250,61 +260,12 @@ export class ContractService {
   }
 
   /**
-   * Get a specific contract by ID
-   * @param id Contract ID
-   * @returns Promise with the contract details
+   * Get a specific user contract by ID
+   * @param user The authenticated user
+   * @returns Promise with the user contract
    */
-  async getContractById(id: string): Promise<Contract> {
-    return this.apiClient.get<Contract>(`/contracts/${id}`);
-  }
-
-  /**
-   * Create a new contract
-   * @param contractData Contract data to create
-   * @returns Promise with the created contract
-   */
-  async createContract(contractData: CreateContractData): Promise<Contract> {
-    if (!contractData.blockchainId) {
-      if (!this.currentBlockchainId) {
-        throw new Error('No blockchain ID available for createContract');
-      }
-
-      // Use the current blockchain ID
-      contractData = {
-        ...contractData,
-        blockchainId: this.currentBlockchainId,
-      };
-    }
-
-    return this.apiClient.post<Contract, CreateContractData>(
-      '/contracts',
-      contractData
-    );
-  }
-
-  /**
-   * Update an existing contract
-   * @param id Contract ID
-   * @param updateData Data to update
-   * @returns Promise with the updated contract
-   */
-  async updateContract(
-    id: string,
-    updateData: Partial<Contract>
-  ): Promise<Contract> {
-    return this.apiClient.put<Contract, Partial<Contract>>(
-      `/contracts/${id}`,
-      updateData
-    );
-  }
-
-  /**
-   * Delete a contract
-   * @param id Contract ID
-   * @returns Promise with the operation result
-   */
-  async deleteContract(id: string): Promise<void> {
-    return this.apiClient.delete<void>(`/contracts/${id}`);
+  async getUserContract(id: string): Promise<UserContract> {
+    return this.apiClient.get<UserContract>(`/user-contracts/${id}`);
   }
 
   /**

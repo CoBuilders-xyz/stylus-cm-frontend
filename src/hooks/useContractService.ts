@@ -17,7 +17,6 @@ export function useContractService(): ContractService | null {
     if (!isAuthenticated || !accessToken) {
       return null;
     }
-    console.log('currentBlockchainId useContractService', currentBlockchainId);
     // Create the service with the current blockchain ID
     return new ContractService(accessToken, currentBlockchainId);
   }, [accessToken, isAuthenticated, currentBlockchainId]);
