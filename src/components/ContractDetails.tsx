@@ -13,6 +13,7 @@ import {
   formatSize,
   formatDate,
   formatRiskLevel,
+  getRiskBadgeVariant,
 } from '@/utils/formatting';
 import {
   MoreHorizontal,
@@ -40,6 +41,7 @@ import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import Image from 'next/image';
 import removeContractImage from 'public/remove-contract.svg';
+import { Badge } from '@/components/ui/badge';
 
 interface ContractDetailsProps {
   contract: Contract;
@@ -455,7 +457,7 @@ export default function ContractDetails({
               <div className='border border-[#2C2E30] rounded-md p-4'>
                 <div className='text-gray-400 text-sm'>Effective Bid</div>
                 <div className='text-xl font-bold'>
-                  {formatEth(contract.effectiveBid || '0.03')}
+                  {formatEth(contract.effectiveBid || '')}
                 </div>
                 <div className='text-xs text-gray-400'>
                   Bid: {formatEth(contract.lastBid)}
@@ -469,9 +471,23 @@ export default function ContractDetails({
               <div className='flex justify-between items-center'>
                 <div className='text-gray-400'>Eviction Risk</div>
                 <div className='font-medium'>
-                  {contract.evictionRisk
-                    ? formatRiskLevel(contract.evictionRisk.riskLevel)
-                    : 'High'}
+                  {contract.evictionRisk ? (
+                    <Badge
+                      variant={getRiskBadgeVariant(
+                        contract.evictionRisk.riskLevel
+                      )}
+                      className='px-3 py-1 text-sm font-semibold w-fit'
+                    >
+                      {formatRiskLevel(contract.evictionRisk.riskLevel)}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant='outline'
+                      className='px-3 py-1 text-sm font-semibold w-fit'
+                    >
+                      N/A
+                    </Badge>
+                  )}
                 </div>
               </div>
 

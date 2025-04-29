@@ -76,6 +76,22 @@ export const formatRiskLevel = (risk: string): string => {
   return risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
 };
 
+// A helper function to get badge variant based on risk level
+export const getRiskBadgeVariant = (risk?: string | null) => {
+  if (!risk) return 'secondary';
+
+  switch (risk.toLowerCase()) {
+    case 'high':
+      return 'destructive';
+    case 'medium':
+      return 'default';
+    case 'low':
+      return 'secondary';
+    default:
+      return 'default';
+  }
+};
+
 // Also export as a class for better organization if preferred
 export class Format {
   static eth = formatEth;
@@ -83,4 +99,5 @@ export class Format {
   static date = formatDate;
   static evictionRiskColor = getEvictionRiskColor;
   static riskLevel = formatRiskLevel;
+  static riskBadgeVariant = getRiskBadgeVariant;
 }

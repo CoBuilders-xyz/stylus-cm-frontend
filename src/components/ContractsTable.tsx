@@ -22,6 +22,7 @@ import {
   formatSize,
   formatDate,
   formatRiskLevel,
+  getRiskBadgeVariant,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
@@ -113,22 +114,6 @@ const SortableTableHead = React.memo(
 );
 
 SortableTableHead.displayName = 'SortableTableHead';
-
-// A helper function to get badge variant based on risk level
-const getRiskBadgeVariant = (risk?: string | null) => {
-  if (!risk) return 'secondary';
-
-  switch (risk.toLowerCase()) {
-    case 'high':
-      return 'destructive';
-    case 'medium':
-      return 'default';
-    case 'low':
-      return 'secondary';
-    default:
-      return 'default';
-  }
-};
 
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
