@@ -59,6 +59,23 @@ export interface EvictionRisk {
 }
 
 /**
+ * Alert data interface for contract monitoring
+ */
+export interface Alert {
+  id: string;
+  type: 'eviction' | 'noGas' | 'lowGas' | 'bidSafety';
+  value: string;
+  isActive: boolean;
+  lastTriggered: string | null;
+  lastNotified: string | null;
+  triggeredCount: number;
+  emailChannelEnabled: boolean;
+  slackChannelEnabled: boolean;
+  telegramChannelEnabled: boolean;
+  webhookChannelEnabled: boolean;
+}
+
+/**
  * Contract data interface
  */
 export interface Contract {
@@ -75,6 +92,7 @@ export interface Contract {
   evictionRisk: EvictionRisk | null;
   minBid: string;
   name?: string; // Optional field possibly used on frontend
+  alerts?: Alert[]; // Optional alerts for contract monitoring
 }
 
 /**
@@ -117,6 +135,7 @@ export interface UserContract {
   name?: string;
   blockchain: Blockchain;
   contract: Contract;
+  alerts?: Alert[]; // Contract alerts configured by the user
   [key: string]: unknown; // Allow for additional properties
 }
 

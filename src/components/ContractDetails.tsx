@@ -7,7 +7,7 @@ import React, {
   forwardRef,
   useEffect,
 } from 'react';
-import { Contract } from '@/services/contractService';
+import { Contract, Alert } from '@/services/contractService';
 import {
   formatEth,
   formatSize,
@@ -42,6 +42,88 @@ import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import Image from 'next/image';
 import removeContractImage from 'public/remove-contract.svg';
 import { Badge } from '@/components/ui/badge';
+
+// Alert component that handles alert display
+function ContractAlerts({
+  alerts,
+  onManageAlerts,
+}: {
+  alerts?: Alert[];
+  onManageAlerts: () => void;
+}) {
+  if (!alerts || alerts.length === 0) {
+    return (
+      <div className='flex justify-between items-center'>
+        <div className='text-gray-400'>Active alerts</div>
+        <Button
+          onClick={onManageAlerts}
+          className='px-3 py-1 border border-dashed border-gray-600 text-gray-400 bg-transparent hover:bg-gray-800 rounded-md text-xs flex items-center gap-1'
+        >
+          <PlusCircle className='h-3 w-3' />
+          Add alerts
+        </Button>
+      </div>
+    );
+  }
+
+  // Helper to get the right background color for each alert type
+  const getAlertStyle = (type: string) => {
+    switch (type) {
+      case 'eviction':
+        return 'bg-red-900/50';
+      case 'noGas':
+        return 'bg-yellow-900/50';
+      case 'lowGas':
+        return 'bg-blue-900/50';
+      case 'bidSafety':
+        return 'bg-green-900/50';
+      default:
+        return 'bg-gray-900/50';
+    }
+  };
+
+  // Helper to format alert display text
+  const getAlertText = (alert: Alert) => {
+    switch (alert.type) {
+      case 'eviction':
+        return 'Eviction';
+      case 'noGas':
+        return 'No gas';
+      case 'lowGas':
+        return `Low gas:${alert.value} ETH`;
+      case 'bidSafety':
+        return `Bid Safety:${alert.value}%`;
+      default:
+        return alert.type;
+    }
+  };
+
+  return (
+    <div className='flex justify-between items-center'>
+      <div className='text-gray-400'>Active alerts</div>
+      <div className='flex gap-2 items-center'>
+        {alerts
+          .filter((alert) => alert.isActive)
+          .map((alert) => (
+            <span
+              key={alert.id}
+              className={`px-3 py-1 ${getAlertStyle(
+                alert.type
+              )} text-white text-xs rounded-full`}
+            >
+              {getAlertText(alert)}
+            </span>
+          ))}
+        <Button
+          className='p-1 rounded-md bg-transparent border border-gray-700 hover:bg-gray-900'
+          onClick={onManageAlerts}
+        >
+          <Edit className='h-4 w-4' />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface ContractDetailsProps {
   contract: Contract;
@@ -279,7 +361,7 @@ export default function ContractDetails({
     // Here would be API call to add contract
   };
 
-  // Handlers for dropdown menu actions
+  // Handler for contract alerts
   const handleContractAlerts = () => {
     console.log('Opening contract alerts for:', contract.address);
     // Here would be the implementation to manage alerts
@@ -508,26 +590,10 @@ export default function ContractDetails({
               </div>
 
               {/* Active Alerts */}
-              <div className='flex justify-between items-center'>
-                <div className='text-gray-400'>Active alerts</div>
-                <div className='flex gap-2 items-center'>
-                  <span className='px-3 py-1 bg-red-900/50 text-white text-xs rounded-full'>
-                    Eviction
-                  </span>
-                  <span className='px-3 py-1 bg-yellow-900/50 text-white text-xs rounded-full'>
-                    No gas
-                  </span>
-                  <span className='px-3 py-1 bg-blue-900/50 text-white text-xs rounded-full'>
-                    Low gas:0.02 ETH
-                  </span>
-                  <span className='px-3 py-1 bg-green-900/50 text-white text-xs rounded-full'>
-                    Bid Safety:10%
-                  </span>
-                  <Button className='p-1 rounded-md bg-transparent border border-gray-700 hover:bg-gray-900'>
-                    <Edit className='h-4 w-4' />
-                  </Button>
-                </div>
-              </div>
+              <ContractAlerts
+                alerts={contract.alerts}
+                onManageAlerts={handleContractAlerts}
+              />
             </div>
 
             {/* Bidding Section Header */}
