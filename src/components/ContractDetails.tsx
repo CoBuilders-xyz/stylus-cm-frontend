@@ -31,6 +31,8 @@ import RemoveConfirmationModal from './RemoveConfirmationModal';
 import EditableContractName, {
   EditableContractNameRef,
 } from './EditableContractName';
+import BidNowSection from './BidNowSection';
+import AutomatedBiddingSection from './AutomatedBiddingSection';
 
 interface ContractDetailsProps {
   contractId: string;
@@ -447,86 +449,18 @@ export default function ContractDetails({
               {/* Bidding Section */}
               <div className='space-y-4 mb-8'>
                 {/* Bid now section */}
-                <div
-                  className='relative rounded-md p-4 overflow-hidden'
-                  style={{
-                    background:
-                      'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 55.53%, #C35B88 103.8%)',
-                  }}
-                >
-                  {/* White noise texture overlay */}
-                  <div
-                    className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-                      backgroundSize: '100px 100px',
-                      backgroundRepeat: 'repeat',
-                    }}
-                  />
-
-                  <div className='flex justify-between items-start relative z-10'>
-                    <div>
-                      <p className='font-bold'>Bid now</p>
-                      <p className='text-sm text-blue-200'>
-                        Higher bids extend cache duration
-                      </p>
-                    </div>
-                    <div className='flex items-center gap-2'>
-                      <div className='relative rounded-md overflow-hidden'>
-                        <input
-                          type='text'
-                          placeholder={`From ${minBidAmount}`}
-                          value={bidAmount}
-                          onChange={(e) => setBidAmount(e.target.value)}
-                          className='px-3 py-2 bg-[#40507A] border-none outline-none text-white w-50'
-                        />
-                      </div>
-                      <Button
-                        className='px-4 py-2 bg-black text-white border-none rounded-md'
-                        onClick={handleSubmitBid}
-                      >
-                        Place bid
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <BidNowSection
+                  minBidAmount={minBidAmount}
+                  bidAmount={bidAmount}
+                  setBidAmount={setBidAmount}
+                  onSubmitBid={handleSubmitBid}
+                />
 
                 {/* Automated Bidding section */}
-                <div
-                  className='relative rounded-md p-4 overflow-hidden'
-                  style={{
-                    background:
-                      'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 103.8%)',
-                  }}
-                >
-                  {/* White noise texture overlay */}
-                  <div
-                    className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-                      backgroundSize: '100px 100px',
-                      backgroundRepeat: 'repeat',
-                    }}
-                  />
-
-                  <div className='flex justify-between items-center relative z-10'>
-                    <div>
-                      <p className='font-bold'>Enable Automated Bidding</p>
-                      <p className='text-sm text-blue-200'>
-                        Set a maximum bid value to maintain your position in the
-                        cache without manual intervention
-                      </p>
-                    </div>
-                    <div className='relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 data-[state=checked]:bg-[#9747FF]'>
-                      <span
-                        className={`pointer-events-none inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                          automatedBidding ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                        onClick={() => setAutomatedBidding(!automatedBidding)}
-                      ></span>
-                    </div>
-                  </div>
-                </div>
+                <AutomatedBiddingSection
+                  automatedBidding={automatedBidding}
+                  setAutomatedBidding={setAutomatedBidding}
+                />
               </div>
 
               {/* Use the BiddingHistory component */}
