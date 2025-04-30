@@ -33,6 +33,7 @@ import EditableContractName, {
 } from './EditableContractName';
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
+import ContractStatus from './ContractStatus';
 
 interface ContractDetailsProps {
   contractId: string;
@@ -409,29 +410,14 @@ export default function ContractDetails({
           {viewType === 'my-contracts' ? (
             <>
               {/* Main statistics in a 2-column grid layout */}
-              <div className='grid grid-cols-2 gap-4 mb-6'>
-                {/* Cache Status */}
-                <div className='border border-[#2C2E30] rounded-md p-4'>
-                  <div className='text-gray-400 text-sm'>Cache Status</div>
-                  <div className='text-xl font-bold'>
-                    {contractData.bytecode.isCached ? 'Cached' : 'Not Cached'}
-                  </div>
-                  <div className='text-xs text-gray-400'>
-                    Last Cached {formatDate(contractData.bidBlockTimestamp)}
-                  </div>
-                </div>
-
-                {/* Effective Bid */}
-                <div className='border border-[#2C2E30] rounded-md p-4'>
-                  <div className='text-gray-400 text-sm'>Effective Bid</div>
-                  <div className='text-xl font-bold'>
-                    {formatEth(contractData.effectiveBid || '')}
-                  </div>
-                  <div className='text-xs text-gray-400'>
-                    Bid: {formatEth(contractData.lastBid)}
-                  </div>
-                </div>
-              </div>
+              <ContractStatus
+                isLoading={isLoadingContract}
+                isCached={contractData?.bytecode.isCached}
+                bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                effectiveBid={contractData?.effectiveBid}
+                lastBid={contractData?.lastBid}
+                viewType='my-contracts'
+              />
 
               {/* Replace the flex items with the ContractDetailsTable */}
               <ContractInfo
@@ -473,29 +459,14 @@ export default function ContractDetails({
             /* Explore Contracts View */
             <>
               {/* Main statistics in a 2-column grid layout */}
-              <div className='grid grid-cols-2 gap-4 mb-6'>
-                {/* Cache Status */}
-                <div className='border border-[#2C2E30] rounded-md p-4'>
-                  <div className='text-gray-400 text-sm'>Cache Status</div>
-                  <div className='text-xl font-bold'>
-                    {contractData.bytecode.isCached ? 'Cached' : 'Not Cached'}
-                  </div>
-                  <div className='text-xs text-gray-400'>
-                    Last Cached {formatDate(contractData.bidBlockTimestamp)}
-                  </div>
-                </div>
-
-                {/* Effective Bid */}
-                <div className='border border-[#2C2E30] rounded-md p-4'>
-                  <div className='text-gray-400 text-sm'>Effective Bid</div>
-                  <div className='text-xl font-bold'>
-                    {formatEth(contractData.effectiveBid || '0.03')}
-                  </div>
-                  <div className='text-xs text-gray-400'>
-                    Bid: {formatEth(contractData.lastBid)}
-                  </div>
-                </div>
-              </div>
+              <ContractStatus
+                isLoading={isLoadingContract}
+                isCached={contractData?.bytecode.isCached}
+                bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                effectiveBid={contractData?.effectiveBid}
+                lastBid={contractData?.lastBid}
+                viewType='explore-contracts'
+              />
 
               {/* Replace the flex items with the ContractDetailsTable */}
               <ContractInfo
