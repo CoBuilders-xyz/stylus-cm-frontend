@@ -244,11 +244,6 @@ export default function ContractDetails({
     );
   }
 
-  // Handler for bid submission
-  const handleSubmitBid = () => {
-    // Here would be API call to submit bid
-  };
-
   // Handler for adding contract to my contracts
   const handleAddToMyContracts = () => {
     // Here would be API call to add contract
@@ -436,10 +431,44 @@ export default function ContractDetails({
               <div className='space-y-4 mb-8'>
                 {/* Bid now section */}
                 <BidNowSection
+                  contract={contractData}
                   minBidAmount={minBidAmount}
                   bidAmount={bidAmount}
                   setBidAmount={setBidAmount}
-                  onSubmitBid={handleSubmitBid}
+                  onSuccess={() => {
+                    // Reload contract data after successful bid
+                    if (
+                      viewType === 'my-contracts' &&
+                      contractService &&
+                      userContractId
+                    ) {
+                      contractService
+                        .getUserContract(userContractId)
+                        .then((userContract) => {
+                          if (userContract && userContract.contract) {
+                            // Clone the contract object to avoid reference issues
+                            const contractWithAlerts = {
+                              ...userContract.contract,
+                              name:
+                                userContract.name ||
+                                userContract.contract.name ||
+                                'Contract Name',
+                              alerts:
+                                userContract.alerts ||
+                                userContract.contract.alerts ||
+                                [],
+                            };
+                            setContractData(contractWithAlerts);
+                          }
+                        })
+                        .catch((error) => {
+                          console.error(
+                            'Failed to reload contract data after bid:',
+                            error
+                          );
+                        });
+                    }
+                  }}
                 />
 
                 {/* Automated Bidding section */}
