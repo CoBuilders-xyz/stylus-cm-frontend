@@ -12,6 +12,7 @@ export interface BiddingHistoryItem {
   amount: string;
   transactionHash?: string;
   contractName: string;
+  originAddress: string;
 }
 
 interface BiddingHistoryProps {
@@ -96,7 +97,7 @@ export function BiddingHistory({
                     <div className='w-8 h-8 bg-blue-600 rounded-full mr-3 flex items-center justify-center text-xs font-bold'>
                       {bid.contractName.substring(0, 2).toUpperCase() || 'CN'}
                     </div>
-                    <div className='font-mono text-sm'>{bid.address}</div>
+                    <div className='font-mono text-sm'>{bid.originAddress}</div>
                   </div>
                 </TableCell>
 

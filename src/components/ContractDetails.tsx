@@ -168,6 +168,12 @@ export default function ContractDetails({
           historyItem.contractAddress.length - 4
         );
 
+      const displayOriginAddress =
+        historyItem.originAddress.substring(0, 6) +
+        '...' +
+        historyItem.originAddress.substring(
+          historyItem.originAddress.length - 4
+        );
       // Format the date using the formatDate utility for consistency
       const formattedDate = formatDate(historyItem.timestamp);
 
@@ -183,6 +189,7 @@ export default function ContractDetails({
         amount: bidAmount,
         transactionHash: historyItem.transactionHash,
         contractName: contractName,
+        originAddress: displayOriginAddress,
       };
     });
   };
