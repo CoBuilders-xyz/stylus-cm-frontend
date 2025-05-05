@@ -35,7 +35,6 @@ import { Button } from './ui/button';
 interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
-  onRowClick?: (contract: Contract) => void;
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
 }
 
@@ -121,21 +120,15 @@ const ContractRow = React.memo(
   ({
     contract,
     viewType,
-    onRowClick,
     onContractSelect,
   }: {
     contract: Contract;
     viewType: string;
-    onRowClick?: (contract: Contract) => void;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
-        // Use the new handler that takes ID and initial data
         onContractSelect(contract.id, contract);
-      } else if (onRowClick) {
-        // Fallback to original handler for backward compatibility
-        onRowClick(contract);
       }
     };
 
@@ -312,7 +305,6 @@ Pagination.displayName = 'Pagination';
 function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
-  onRowClick,
   onContractSelect,
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
@@ -515,7 +507,6 @@ function ContractsTable({
                         key={contract.address}
                         contract={contract}
                         viewType={viewType}
-                        onRowClick={onRowClick}
                         onContractSelect={onContractSelect}
                       />
                     ))

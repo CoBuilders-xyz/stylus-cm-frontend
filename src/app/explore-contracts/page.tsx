@@ -37,13 +37,6 @@ export default function ExploreContractsPage() {
     };
   }, []);
 
-  // For backward compatibility
-  const handleContractClick = (contract: Contract) => {
-    setSelectedContractId(contract.id);
-    setSelectedContractData(contract);
-    setIsPanelOpen(true);
-  };
-
   // New handler with contractId and initial data
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
     setSelectedContractId(contractId);
@@ -66,7 +59,6 @@ export default function ExploreContractsPage() {
           <ContractsTable
             contracts={[]}
             viewType='explore-contracts'
-            onRowClick={handleContractClick}
             onContractSelect={handleContractSelect}
           />
         </div>
