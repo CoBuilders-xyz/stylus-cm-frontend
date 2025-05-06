@@ -145,11 +145,6 @@ export default function ContractDetails({
     fetchContractData();
   }, [contractService, contractId, viewType, initialContractData]);
 
-  // Minimum bid based on contract data or calculation
-  const minBidAmount = contractData
-    ? formatEth(contractData.minBid || contractData.lastBid)
-    : '0';
-
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
     if (!contractData || !contractData.biddingHistory) return [];
@@ -178,7 +173,7 @@ export default function ContractDetails({
       const formattedDate = formatDate(historyItem.timestamp);
 
       // Format bid amount
-      const bidAmount = formatEth(historyItem.actualBid).split(' ')[0];
+      const bidAmount = formatEth(historyItem.actualBid);
 
       return {
         id: index, // Using index as id since the API might not provide one
@@ -212,10 +207,10 @@ export default function ContractDetails({
               contractData.blockchain.cacheManagerAddress.substring(
                 contractData.blockchain.cacheManagerAddress.length - 4
               ),
-            bid: formatEth(contractData.lastBid).split(' ')[0],
+            bid: formatEth(contractData.lastBid),
             type: 'automatic bid',
             date: formatDate(contractData.bidBlockTimestamp),
-            amount: formatEth(contractData.lastBid).split(' ')[0],
+            amount: formatEth(contractData.lastBid),
             contractName: contractName,
           },
         ]
@@ -439,7 +434,6 @@ export default function ContractDetails({
                 {/* Bid now section */}
                 <BidNowSection
                   contract={contractData}
-                  minBidAmount={minBidAmount}
                   bidAmount={bidAmount}
                   setBidAmount={setBidAmount}
                   onSuccess={() => {

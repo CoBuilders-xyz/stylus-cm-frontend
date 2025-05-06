@@ -148,16 +148,43 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.lastBid)}
+          {contract.lastBid ? (
+            formatEth(contract.lastBid) + ' ETH'
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.effectiveBid)}
+          {contract.effectiveBid ? (
+            formatEth(contract.effectiveBid) + ' ETH'
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {formatSize(contract.bytecode.size)}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.minBid || '0')}
+          {contract.minBid ? (
+            formatEth(contract.minBid) + ' ETH'
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.evictionRisk ? (
@@ -177,7 +204,9 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.totalBidInvestment)}
+          {contract.totalBidInvestment
+            ? formatEth(contract.totalBidInvestment) + ' ETH'
+            : 'N/A'}
         </TableCell>
         <TableCell className='py-6'>
           <div className='flex flex-col'>

@@ -75,7 +75,7 @@ export function ContractInfo({
       label: 'Total Spent',
       content: (
         <span className='font-medium'>
-          {formatEth(contractData.totalBidInvestment)}
+          {formatEth(contractData.totalBidInvestment) + ' ETH'}
         </span>
       ),
     },

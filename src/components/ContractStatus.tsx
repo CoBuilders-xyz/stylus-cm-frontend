@@ -61,10 +61,12 @@ export function ContractStatus({
       <div className='border border-[#2C2E30] rounded-md p-4'>
         <div className='text-gray-400 text-sm'>Effective Bid</div>
         <div className='text-xl font-bold'>
-          {formatEth(displayEffectiveBid)}
+          {displayEffectiveBid
+            ? formatEth(displayEffectiveBid) + ' ETH'
+            : 'N/A'}
         </div>
         <div className='text-xs text-gray-400'>
-          Bid: {formatEth(lastBid || '')}
+          Bid: {lastBid ? formatEth(lastBid) + ' ETH' : 'N/A'}
         </div>
       </div>
     </div>

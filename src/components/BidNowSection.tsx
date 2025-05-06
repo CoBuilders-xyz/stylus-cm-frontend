@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Contract, SuggestedBidsResponse } from '@/services/contractService';
@@ -8,7 +8,7 @@ import cacheManagerAbi from '@/config/abis/cacheManager/cacheManager.json';
 import { Abi } from 'viem';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useContractService } from '@/hooks/useContractService';
-import { formatEth } from '@/utils/formatting';
+import { formatEth, formatRoundedEth } from '@/utils/formatting';
 
 interface BidNowSectionProps {
   contract: Contract;
@@ -20,7 +20,6 @@ interface BidNowSectionProps {
 
 export function BidNowSection({
   contract,
-  minBidAmount,
   bidAmount,
   setBidAmount,
   onSuccess,
@@ -67,6 +66,9 @@ export function BidNowSection({
   // Check if contract is already cached
   const isContractCached = contract?.bytecode?.isCached || false;
 
+  // Component ref for click outside detection
+  const componentRef = useRef<HTMLDivElement>(null);
+
   // Fetch suggested bids
   const fetchSuggestedBids = useCallback(async () => {
     if (!contractService || !contract?.address || !currentBlockchain?.id) {
@@ -86,6 +88,18 @@ export function BidNowSection({
       setIsLoadingSuggestions(false);
     }
   }, [contractService, contract?.address, currentBlockchain?.id]);
+
+  // Fetch suggested bids on component mount
+  useEffect(() => {
+    if (!isContractCached && !suggestedBids && !isLoadingSuggestions) {
+      fetchSuggestedBids();
+    }
+  }, [
+    isContractCached,
+    suggestedBids,
+    isLoadingSuggestions,
+    fetchSuggestedBids,
+  ]);
 
   // Keep the existing effect that fetches suggestions when showing suggestions
   useEffect(() => {
@@ -122,8 +136,9 @@ export function BidNowSection({
       if (trimmedFractional.length > 0) {
         ethValue += '.' + trimmedFractional;
       }
-
-      setBidAmount(ethValue);
+      const formattedBid = formatRoundedEth(ethValue, 8);
+      console.log('Formatted bid:', formattedBid);
+      setBidAmount(formattedBid);
     } catch (error) {
       console.error('Error converting bid value:', error);
       setBidAmount(bid);
@@ -132,10 +147,13 @@ export function BidNowSection({
     setShowSuggestedButtons(true); // Keep the buttons visible after selection
   };
 
-  // Open suggested bid buttons (not toggle)
+  // Open suggested bid buttons and fetch bids if needed
   const openSuggestedButtons = () => {
-    if (!isContractCached && !showSuggestedButtons) {
+    if (!isContractCached) {
       setShowSuggestedButtons(true);
+
+      // Refresh suggested bids on click
+      fetchSuggestedBids();
     }
   };
 
@@ -189,6 +207,23 @@ export function BidNowSection({
     }
   }, [isError, error, reset]);
 
+  // Add click outside listener to close suggested buttons
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        componentRef.current &&
+        !componentRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestedButtons(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Handle bid submission
   const handleSubmitBid = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -240,6 +275,7 @@ export function BidNowSection({
 
   return (
     <div
+      ref={componentRef}
       className='relative rounded-md p-4 overflow-hidden'
       style={{
         background:
@@ -271,11 +307,11 @@ export function BidNowSection({
         )}
 
         {/* Normal Gas Price Info */}
-        {!isGasPriceHigh && gasPriceGwei && (
+        {/* {!isGasPriceHigh && gasPriceGwei && (
           <div className='text-xs text-blue-200 mb-2'>
             Current network fee: {gasPriceGwei} Gwei
           </div>
-        )}
+        )} */}
 
         <div className='flex justify-between items-start'>
           <div>
@@ -287,10 +323,12 @@ export function BidNowSection({
             </p>
           </div>
           <div className='flex items-center gap-2'>
-            <div className='relative rounded-md overflow-hidden'>
+            <div className='relative rounded-md overflow-hidden flex bg-white'>
               <input
                 type='text'
-                placeholder={`From ${minBidAmount}`}
+                placeholder={`From ${formatEth(
+                  suggestedBids?.suggestedBids.highRisk || '0'
+                )}`}
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 className={`px-3 py-2 border-none outline-none w-50 ${
@@ -301,6 +339,15 @@ export function BidNowSection({
                 disabled={isPlacingBid || isGasPriceHigh || isContractCached}
                 onClick={openSuggestedButtons}
               />
+              <div
+                className={`flex items-center pr-3 ${
+                  isContractCached
+                    ? 'bg-gray-600 text-gray-400 opacity-60'
+                    : 'bg-white text-[#B1B1B1]'
+                }`}
+              >
+                ETH
+              </div>
             </div>
             <Button
               className={`px-4 py-2 rounded-md border ${
@@ -322,40 +369,62 @@ export function BidNowSection({
 
         {/* Suggested bid buttons */}
         {!isContractCached && showSuggestedButtons && suggestedBids && (
-          <div className='flex justify-end gap-2 mt-3'>
+          <div className='flex justify-between gap-2 mt-3'>
             <Button
               size='sm'
-              className='bg-transparent border border-blue-200 text-xs text-white hover:bg-blue-700 flex items-center'
+              variant='outline'
+              className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
               onClick={(e) => {
                 e.stopPropagation();
-                handleSelectBid(suggestedBids.suggestedBids.lowRisk);
+                setBidAmount('');
               }}
-              title="Low risk of eviction from cache - recommended for contracts that don't need immediate state access"
             >
-              Low Risk: {formatEth(suggestedBids.suggestedBids.lowRisk)}
+              Clear
             </Button>
-            <Button
-              size='sm'
-              className='bg-transparent border border-blue-200 text-xs text-white hover:bg-blue-700 flex items-center'
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelectBid(suggestedBids.suggestedBids.midRisk);
-              }}
-              title='Medium risk of eviction - balanced option for most contracts'
-            >
-              Mid Risk: {formatEth(suggestedBids.suggestedBids.midRisk)}
-            </Button>
-            <Button
-              size='sm'
-              className='bg-transparent border border-blue-200 text-xs text-white hover:bg-blue-700 flex items-center'
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelectBid(suggestedBids.suggestedBids.highRisk);
-              }}
-              title='High risk of eviction - minimum viable bid to compete in the cache'
-            >
-              High Risk: {formatEth(suggestedBids.suggestedBids.highRisk)}
-            </Button>
+            <div className='flex gap-2'>
+              <Button
+                size='sm'
+                className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectBid(suggestedBids.suggestedBids.lowRisk);
+                }}
+                title="Low risk of eviction from cache - recommended for contracts that don't need immediate state access"
+              >
+                Low Risk:{' '}
+                {formatRoundedEth(
+                  formatEth(suggestedBids.suggestedBids.lowRisk)
+                )}
+              </Button>
+              <Button
+                size='sm'
+                className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectBid(suggestedBids.suggestedBids.midRisk);
+                }}
+                title='Medium risk of eviction - balanced option for most contracts'
+              >
+                Mid Risk:{' '}
+                {formatRoundedEth(
+                  formatEth(suggestedBids.suggestedBids.midRisk)
+                )}
+              </Button>
+              <Button
+                size='sm'
+                className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectBid(suggestedBids.suggestedBids.highRisk);
+                }}
+                title='High risk of eviction - minimum viable bid to compete in the cache'
+              >
+                High Risk:{' '}
+                {formatRoundedEth(
+                  formatEth(suggestedBids.suggestedBids.highRisk)
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </div>
