@@ -1,14 +1,16 @@
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Contract, SuggestedBidsResponse } from '@/services/contractService';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
 import cacheManagerAbi from '@/config/abis/cacheManager/cacheManager.json';
 import { Abi } from 'viem';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useContractService } from '@/hooks/useContractService';
 import { formatEth, formatRoundedEth } from '@/utils/formatting';
+import { toast } from 'sonner';
 
 interface BidNowSectionProps {
   contract: Contract;
@@ -37,6 +39,15 @@ export function BidNowSection({
 
   // State to track if we're actively polling (for UI feedback)
   const [isPolling, setIsPolling] = useState(false);
+
+  // Store the last bid parameters for retry functionality
+  const [lastBidParams, setLastBidParams] = useState<{
+    address: `0x${string}`;
+    abi: Abi;
+    functionName: string;
+    args: string[];
+    value: string;
+  } | null>(null);
 
   // State for suggested bids
   const [showSuggestedButtons, setShowSuggestedButtons] = useState(false);
@@ -78,6 +89,24 @@ export function BidNowSection({
   // Component ref for click outside detection
   const componentRef = useRef<HTMLDivElement>(null);
 
+  // Function to handle retry of the last bid
+  const handleRetry = useCallback(() => {
+    if (!lastBidParams) {
+      console.error('No previous bid parameters found to retry');
+      return;
+    }
+
+    // Reset any previous error states
+    reset();
+    setHasReloaded(false);
+    setIsPolling(false);
+
+    // Re-submit the transaction with the same parameters
+    writeContract(lastBidParams, (hash) => {
+      console.log(`Retry transaction submitted with hash: ${hash}`);
+    });
+  }, [lastBidParams, writeContract, reset]);
+
   // Function to fetch the latest contract data and check cache status
   const pollContractStatus = useCallback(async () => {
     if (!contractService || !contract?.id) {
@@ -109,6 +138,57 @@ export function BidNowSection({
       return false;
     }
   }, [contractService, contract]);
+
+  // Show error toast if transaction fails
+  useEffect(() => {
+    if (isError && error) {
+      toast.custom(
+        (t) => (
+          <div className='flex items-center justify-between w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg gap-2'>
+            <div className='flex-grow whitespace-nowrap mx-3 text-sm'>
+              An error occurred while placing the Bid
+            </div>
+
+            <Button
+              variant='outline'
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent toast from closing
+                handleRetry();
+                toast.dismiss(t);
+              }}
+              className='flex-shrink-0 flex items-center justify-center gap-1 bg-transparent text-white border-white/30 hover:bg-white/10 whitespace-nowrap'
+              size='sm'
+            >
+              <RefreshCw className='h-3.5 w-3.5 mr-1' />
+              Retry
+            </Button>
+            <Button
+              onClick={() => toast.dismiss(t)}
+              className='flex-shrink-0 bg-transparent text-white border-white/30 hover:bg-white/10'
+              size='sm'
+              aria-label='Dismiss'
+            >
+              <X className='h-3 w-3' />
+            </Button>
+          </div>
+        ),
+        {
+          duration: 5000, // Show for 5 seconds
+          position: 'bottom-center', // Position at bottom center
+          id: 'transaction-error-' + Date.now(), // to prevent duplicate toasts
+          style: {
+            minWidth: '400px', // Set minimum width to prevent wrapping
+            width: 'auto',
+            maxWidth: '500px', // Increased max width to accommodate text without wrapping
+          },
+        }
+      );
+
+      reset();
+      setHasReloaded(false);
+      setIsPolling(false);
+    }
+  }, [isError, error, reset, handleRetry]);
 
   // Fetch suggested bids
   const fetchSuggestedBids = useCallback(async () => {
@@ -295,17 +375,6 @@ export function BidNowSection({
     }
   }, [status]);
 
-  // Show error in console if transaction fails
-  useEffect(() => {
-    if (isError && error) {
-      // Use console.error for now instead of toast
-      console.error(`Error placing bid: ${error.message}`);
-      reset();
-      setHasReloaded(false);
-      setIsPolling(false);
-    }
-  }, [isError, error, reset]);
-
   // Add click outside listener to close suggested buttons
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -348,20 +417,23 @@ export function BidNowSection({
       // Reset the reloaded state before starting a new transaction
       setHasReloaded(false);
 
+      // Create and store the bid parameters for potential retry
+      const bidParams = {
+        address: currentBlockchain.cacheManagerAddress as `0x${string}`,
+        abi: cacheManagerAbi.abi as Abi,
+        functionName: 'placeBid',
+        args: [contract.address],
+        value: bidAmount,
+      };
+
+      // Store the parameters for retry functionality
+      setLastBidParams(bidParams);
+
       // Use writeContract from useWeb3 to place the bid
-      writeContract(
-        {
-          address: currentBlockchain.cacheManagerAddress as `0x${string}`,
-          abi: cacheManagerAbi.abi as Abi,
-          functionName: 'placeBid',
-          args: [contract.address],
-          value: bidAmount,
-        },
-        (hash) => {
-          // This callback is called when the transaction hash is available
-          console.log(`Transaction submitted with hash: ${hash}`);
-        }
-      );
+      writeContract(bidParams, (hash) => {
+        // This callback is called when the transaction hash is available
+        console.log(`Transaction submitted with hash: ${hash}`);
+      });
     } catch (err) {
       console.error('Error submitting bid:', err);
       console.error(
@@ -422,25 +494,25 @@ export function BidNowSection({
             </p>
           </div>
           <div className='flex items-center gap-2'>
-            <div className='relative rounded-md overflow-hidden flex bg-white'>
-              <input
+            <div className='relative w-full max-w-[200px]'>
+              <Input
                 type='text'
                 placeholder='Bid amount'
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
-                className={`px-3 py-2 border-none outline-none w-50 text-gray-400 ${
+                className={`pr-12 bg-white border-none text-gray-500${
                   isDisabled
                     ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                    : 'bg-white text-[#B1B1B1]'
+                    : ''
                 }`}
                 disabled={isDisabled}
                 onClick={openSuggestedButtons}
               />
               <div
-                className={`flex items-center pr-3 ${
+                className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none ${
                   isDisabled
-                    ? 'bg-gray-700 text-gray-400 opacity-60'
-                    : 'bg-white text-[#B1B1B1]'
+                    ? 'text-gray-400 cursor-not-allowed opacity-60'
+                    : 'text-gray-500'
                 }`}
               >
                 ETH
@@ -451,12 +523,16 @@ export function BidNowSection({
               disabled={isDisabled}
               className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
             >
-              {isPlacingBid || (isSuccess && !hasReloaded) ? (
+              {isPlacingBid ? (
+                <div className='flex items-center'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                </div>
+              ) : isSuccess && !hasReloaded ? (
                 <div className='flex items-center'>
                   <Loader2 className='h-4 w-4 animate-spin' />
                 </div>
               ) : (
-                'Place bid'
+                'Place Bid'
               )}
             </Button>
           </div>
