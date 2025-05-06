@@ -40,6 +40,9 @@ export function BidNowSection({
   // State to track if we're actively polling (for UI feedback)
   const [isPolling, setIsPolling] = useState(false);
 
+  // State to track input validation errors
+  const [inputError, setInputError] = useState<string | null>(null);
+
   // Store the last bid parameters for retry functionality
   const [lastBidParams, setLastBidParams] = useState<{
     address: `0x${string}`;
@@ -177,9 +180,7 @@ export function BidNowSection({
           position: 'bottom-center', // Position at bottom center
           id: 'transaction-error-' + Date.now(), // to prevent duplicate toasts
           style: {
-            minWidth: '400px', // Set minimum width to prevent wrapping
             width: 'auto',
-            maxWidth: '500px', // Increased max width to accommodate text without wrapping
           },
         }
       );
@@ -292,6 +293,25 @@ export function BidNowSection({
       );
       setBidAmount('');
 
+      // Show success toast
+      toast.custom(
+        () => (
+          <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
+            <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
+              Bid placed successfully
+            </div>
+          </div>
+        ),
+        {
+          duration: 5000, // Show for 5 seconds
+          position: 'bottom-center', // Position at bottom center
+          id: 'transaction-success-' + Date.now(), // to prevent duplicate toasts
+          style: {
+            width: 'auto',
+          },
+        }
+      );
+
       // Set polling state to true to update UI
       setIsPolling(true);
 
@@ -392,6 +412,23 @@ export function BidNowSection({
     };
   }, []);
 
+  // Validate the bid amount whenever it changes
+  useEffect(() => {
+    if (!bidAmount) {
+      setInputError(null);
+      return;
+    }
+
+    // Check if the input is a valid number
+    const isValidNumber = /^[0-9]*\.?[0-9]*$/.test(bidAmount);
+
+    if (!isValidNumber) {
+      setInputError('Enter a valid amount to Bid');
+    } else {
+      setInputError(null);
+    }
+  }, [bidAmount]);
+
   // Handle bid submission
   const handleSubmitBid = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -408,8 +445,9 @@ export function BidNowSection({
       return;
     }
 
-    if (!bidAmount || parseFloat(bidAmount) < 0) {
+    if (!bidAmount || parseFloat(bidAmount) < 0 || inputError) {
       console.error('Please enter a valid bid amount');
+      setInputError('Enter a valid amount to Bid');
       return;
     }
 
@@ -493,48 +531,59 @@ export function BidNowSection({
                 : 'Higher bids extend cache duration'}
             </p>
           </div>
-          <div className='flex items-center gap-2'>
-            <div className='relative w-full max-w-[200px]'>
-              <Input
-                type='text'
-                placeholder='Bid amount'
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                className={`pr-12 bg-white border-none text-gray-500${
-                  isDisabled
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                    : ''
-                }`}
-                disabled={isDisabled}
-                onClick={openSuggestedButtons}
-              />
-              <div
-                className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none ${
-                  isDisabled
-                    ? 'text-gray-400 cursor-not-allowed opacity-60'
-                    : 'text-gray-500'
-                }`}
-              >
-                ETH
+          <div className='flex flex-col items-end gap-2'>
+            <div className='flex items-start gap-2'>
+              <div className='flex flex-col w-full max-w-[200px]'>
+                <div className='relative'>
+                  <Input
+                    type='text'
+                    placeholder='Bid amount'
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    className={`pr-12 bg-white border-none text-gray-500 ${
+                      isDisabled
+                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                        : ''
+                    } ${inputError ? 'border-red-500' : ''}`}
+                    disabled={isDisabled}
+                    onClick={openSuggestedButtons}
+                  />
+                  <div
+                    className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none ${
+                      isDisabled
+                        ? 'text-gray-400 cursor-not-allowed opacity-60'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    ETH
+                  </div>
+                </div>
+                {inputError && (
+                  <div className='text-white text-xs italic text-left mt-1'>
+                    {inputError}
+                  </div>
+                )}
+              </div>
+              <div className='self-start'>
+                <Button
+                  onClick={handleSubmitBid}
+                  disabled={isDisabled || !!inputError}
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                >
+                  {isPlacingBid ? (
+                    <div className='flex items-center'>
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                    </div>
+                  ) : isSuccess && !hasReloaded ? (
+                    <div className='flex items-center'>
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                    </div>
+                  ) : (
+                    'Place Bid'
+                  )}
+                </Button>
               </div>
             </div>
-            <Button
-              onClick={handleSubmitBid}
-              disabled={isDisabled}
-              className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-            >
-              {isPlacingBid ? (
-                <div className='flex items-center'>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                </div>
-              ) : isSuccess && !hasReloaded ? (
-                <div className='flex items-center'>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                </div>
-              ) : (
-                'Place Bid'
-              )}
-            </Button>
           </div>
         </div>
 
