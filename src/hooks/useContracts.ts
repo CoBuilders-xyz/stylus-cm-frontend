@@ -137,6 +137,7 @@ export function useContracts(
             return {
               ...contract,
               ...rest,
+              userContractId: userContract.id,
               // Preserve name from top level if exists
               name: rest.name || '',
               // Pass evictionRisk as is (could be null)

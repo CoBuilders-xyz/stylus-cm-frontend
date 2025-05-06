@@ -12,7 +12,6 @@ import { formatEth, formatRoundedEth } from '@/utils/formatting';
 
 interface BidNowSectionProps {
   contract: Contract;
-  minBidAmount: string;
   bidAmount: string;
   setBidAmount: (value: string) => void;
   onSuccess?: () => void;
@@ -35,6 +34,9 @@ export function BidNowSection({
 
   // State to prevent multiple reloads
   const [hasReloaded, setHasReloaded] = useState(false);
+
+  // State to track if we're actively polling (for UI feedback)
+  const [isPolling, setIsPolling] = useState(false);
 
   // State for suggested bids
   const [showSuggestedButtons, setShowSuggestedButtons] = useState(false);
@@ -66,8 +68,47 @@ export function BidNowSection({
   // Check if contract is already cached
   const isContractCached = contract?.bytecode?.isCached || false;
 
+  // Track if the component is in a disabled state (bidding or polling)
+  const isDisabled =
+    isPlacingBid ||
+    isPolling ||
+    (isSuccess && !hasReloaded) ||
+    isContractCached;
+
   // Component ref for click outside detection
   const componentRef = useRef<HTMLDivElement>(null);
+
+  // Function to fetch the latest contract data and check cache status
+  const pollContractStatus = useCallback(async () => {
+    if (!contractService || !contract?.id) {
+      return false;
+    }
+
+    try {
+      console.log('Polling for contract cache status...');
+
+      // Fetch the latest contract data from backend using getUserContract
+      if (!contract.userContractId) {
+        console.error('No user contract ID found for contract:', contract);
+        return false;
+      }
+      const userContract = await contractService.getUserContract(
+        contract.userContractId
+      );
+      console.log('Polled User contract:', userContract);
+      // Check if the contract is now cached
+      if (userContract?.contract?.bytecode?.isCached) {
+        console.log('Contract is now cached in backend!');
+        return true;
+      }
+
+      console.log('Contract not yet cached in backend, continuing to poll...');
+      return false;
+    } catch (err) {
+      console.error('Error polling contract status:', err);
+      return false;
+    }
+  }, [contractService, contract]);
 
   // Fetch suggested bids
   const fetchSuggestedBids = useCallback(async () => {
@@ -88,18 +129,6 @@ export function BidNowSection({
       setIsLoadingSuggestions(false);
     }
   }, [contractService, contract?.address, currentBlockchain?.id]);
-
-  // Fetch suggested bids on component mount
-  useEffect(() => {
-    if (!isContractCached && !suggestedBids && !isLoadingSuggestions) {
-      fetchSuggestedBids();
-    }
-  }, [
-    isContractCached,
-    suggestedBids,
-    isLoadingSuggestions,
-    fetchSuggestedBids,
-  ]);
 
   // Keep the existing effect that fetches suggestions when showing suggestions
   useEffect(() => {
@@ -169,31 +198,100 @@ export function BidNowSection({
         onSuccess();
       }
 
-      // Mark as reloaded
+      // Mark as reloaded and stop polling
       setHasReloaded(true);
+      setIsPolling(false);
     }
   }, [contract, signalContractUpdated, onSuccess]);
 
-  // Reset the form when transaction completes and schedule a reload
+  // Reset the form when transaction completes and start polling for contract status
   useEffect(() => {
     if (isSuccess && !hasReloaded) {
-      console.log('Transaction successful, scheduling reload...');
+      console.log(
+        'Transaction successful, starting to poll for contract status...'
+      );
       setBidAmount('');
 
-      // Schedule a reload of contract data after 6 seconds
-      const reloadTimer = setTimeout(() => {
-        reloadContractData();
-      }, 6000);
+      // Set polling state to true to update UI
+      setIsPolling(true);
 
-      // Cleanup the timer if component unmounts
-      return () => clearTimeout(reloadTimer);
+      // Variable to track if polling should continue
+      let shouldContinuePolling = true;
+
+      // Function to poll for contract status
+      const startPolling = async () => {
+        // Use a simple poll loop with a 3-second interval
+        const maxAttempts = 20; // Try for up to 60 seconds
+        let attempts = 0;
+
+        console.log('Starting to poll for contract cache status');
+
+        // Poll every 3 seconds until the contract is cached or we stop polling
+        while (shouldContinuePolling && attempts < maxAttempts) {
+          attempts++;
+          console.log(`Polling attempt ${attempts}/${maxAttempts}`);
+
+          try {
+            const isCached = await pollContractStatus();
+
+            if (isCached) {
+              console.log('Contract is now cached, reloading data');
+              // Set polling to false before reloading data
+              setIsPolling(false);
+              reloadContractData();
+              return;
+            }
+
+            // If not cached yet and not at max attempts, wait and try again
+            if (attempts < maxAttempts) {
+              console.log('Waiting 3 seconds before next poll attempt');
+              await new Promise((resolve) => setTimeout(resolve, 3000));
+            } else {
+              console.log('Max polling attempts reached, forcing reload');
+              // Set polling to false before reloading data
+              setIsPolling(false);
+              reloadContractData();
+            }
+          } catch (error) {
+            console.error('Error during polling:', error);
+
+            // Wait before retry even if there was an error
+            if (attempts < maxAttempts) {
+              await new Promise((resolve) => setTimeout(resolve, 3000));
+            } else {
+              // If we've hit max attempts, force reload and stop polling
+              console.log(
+                'Max polling attempts reached after errors, stopping polling'
+              );
+              setIsPolling(false);
+              reloadContractData();
+            }
+          }
+        }
+      };
+
+      // Start polling
+      startPolling();
+
+      // Clean up function to stop polling when component unmounts
+      return () => {
+        shouldContinuePolling = false;
+        setIsPolling(false);
+      };
     }
-  }, [isSuccess, hasReloaded, setBidAmount, reloadContractData]);
+  }, [
+    isSuccess,
+    hasReloaded,
+    pollContractStatus,
+    reloadContractData,
+    setBidAmount,
+  ]);
 
   // Reset reload state when reset is called or when transaction changes
   useEffect(() => {
     if (status === TransactionStatus.IDLE) {
       setHasReloaded(false);
+      setIsPolling(false);
     }
   }, [status]);
 
@@ -204,6 +302,7 @@ export function BidNowSection({
       console.error(`Error placing bid: ${error.message}`);
       reset();
       setHasReloaded(false);
+      setIsPolling(false);
     }
   }, [isError, error, reset]);
 
@@ -326,23 +425,21 @@ export function BidNowSection({
             <div className='relative rounded-md overflow-hidden flex bg-white'>
               <input
                 type='text'
-                placeholder={`From ${formatEth(
-                  suggestedBids?.suggestedBids.highRisk || '0'
-                )}`}
+                placeholder='Bid amount'
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
-                className={`px-3 py-2 border-none outline-none w-50 ${
-                  isContractCached
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-60'
+                className={`px-3 py-2 border-none outline-none w-50 text-gray-400 ${
+                  isDisabled
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
                     : 'bg-white text-[#B1B1B1]'
                 }`}
-                disabled={isPlacingBid || isGasPriceHigh || isContractCached}
+                disabled={isDisabled}
                 onClick={openSuggestedButtons}
               />
               <div
                 className={`flex items-center pr-3 ${
-                  isContractCached
-                    ? 'bg-gray-600 text-gray-400 opacity-60'
+                  isDisabled
+                    ? 'bg-gray-700 text-gray-400 opacity-60'
                     : 'bg-white text-[#B1B1B1]'
                 }`}
               >
@@ -350,16 +447,14 @@ export function BidNowSection({
               </div>
             </div>
             <Button
-              className={`px-4 py-2 rounded-md border ${
-                isContractCached
-                  ? 'bg-gray-700 border-gray-600 text-gray-400 opacity-60 cursor-not-allowed'
-                  : 'bg-transparent border-white'
-              }`}
               onClick={handleSubmitBid}
-              disabled={isPlacingBid || isGasPriceHigh || isContractCached}
+              disabled={isDisabled}
+              className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
             >
-              {isPlacingBid ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
+              {isPlacingBid || (isSuccess && !hasReloaded) ? (
+                <div className='flex items-center'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                </div>
               ) : (
                 'Place bid'
               )}
@@ -372,24 +467,24 @@ export function BidNowSection({
           <div className='flex justify-between gap-2 mt-3'>
             <Button
               size='sm'
-              variant='outline'
-              className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+              className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
               onClick={(e) => {
                 e.stopPropagation();
                 setBidAmount('');
               }}
+              disabled={isDisabled}
             >
               Clear
             </Button>
             <div className='flex gap-2'>
               <Button
                 size='sm'
-                className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSelectBid(suggestedBids.suggestedBids.lowRisk);
                 }}
-                title="Low risk of eviction from cache - recommended for contracts that don't need immediate state access"
+                disabled={isDisabled}
               >
                 Low Risk:{' '}
                 {formatRoundedEth(
@@ -398,12 +493,12 @@ export function BidNowSection({
               </Button>
               <Button
                 size='sm'
-                className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSelectBid(suggestedBids.suggestedBids.midRisk);
                 }}
-                title='Medium risk of eviction - balanced option for most contracts'
+                disabled={isDisabled}
               >
                 Mid Risk:{' '}
                 {formatRoundedEth(
@@ -412,12 +507,12 @@ export function BidNowSection({
               </Button>
               <Button
                 size='sm'
-                className='bg-transparent border border-blue-200 text-xs text-white hover:bg-gray-500 flex items-center'
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSelectBid(suggestedBids.suggestedBids.highRisk);
                 }}
-                title='High risk of eviction - minimum viable bid to compete in the cache'
+                disabled={isDisabled}
               >
                 High Risk:{' '}
                 {formatRoundedEth(

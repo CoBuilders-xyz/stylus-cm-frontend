@@ -115,6 +115,7 @@ export default function ContractDetails({
           if (userContract && userContract.contract) {
             // Clone the contract object to avoid reference issues
             const contractWithAlerts = {
+              userContractId: userContract.id,
               ...userContract.contract,
               // Use name from the top-level userContract, as that's the user-customized name
               name:
@@ -212,6 +213,7 @@ export default function ContractDetails({
             date: formatDate(contractData.bidBlockTimestamp),
             amount: formatEth(contractData.lastBid),
             contractName: contractName,
+            originAddress: '0x0000....0000',
           },
         ]
       : [];
@@ -326,6 +328,7 @@ export default function ContractDetails({
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Main content with ScrollArea */}
+
       <ScrollArea className='flex-1'>
         <div className='p-6'>
           {/* Top Section: Contract Address and Name with Options */}
@@ -402,7 +405,6 @@ export default function ContractDetails({
               </Button>
             </div>
           </div>
-
           {/* Rest of component remains mostly the same except uses contractData directly */}
           {viewType === 'my-contracts' ? (
             <>

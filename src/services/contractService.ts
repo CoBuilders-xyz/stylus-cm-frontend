@@ -93,6 +93,7 @@ export interface Contract {
   minBid: string;
   name?: string; // Optional field possibly used on frontend
   alerts?: Alert[]; // Optional alerts for contract monitoring
+  userContractId?: string; // Optional user contract ID
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
