@@ -9,6 +9,8 @@ interface AutomatedBiddingSectionProps {
   setAutomatedBidding: (value: boolean) => void;
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
+  automationFunding?: string;
+  setAutomationFunding?: (value: string) => void;
 }
 
 export function AutomatedBiddingSection({
@@ -16,18 +18,29 @@ export function AutomatedBiddingSection({
   setAutomatedBidding,
   maxBidAmount = '',
   setMaxBidAmount = () => {},
+  automationFunding = '',
+  setAutomationFunding = () => {},
 }: AutomatedBiddingSectionProps) {
-  // Local state for input value to ensure it updates immediately
+  // Local state for input values to ensure they update immediately
   const [inputValue, setInputValue] = useState(maxBidAmount);
+  const [fundingValue, setFundingValue] = useState(automationFunding);
   const [inputError, setInputError] = useState<string | null>(null);
+  const [fundingError, setFundingError] = useState<string | null>(null);
 
-  // Sync local state with prop value when it changes
+  // Sync local state with prop values when they change
   useEffect(() => {
     setInputValue(maxBidAmount);
   }, [maxBidAmount]);
 
-  // Validate bid amount input - only validate format, don't set error for empty values
-  const validateInput = (value: string) => {
+  useEffect(() => {
+    setFundingValue(automationFunding);
+  }, [automationFunding]);
+
+  // Validate numeric input - only validate format, don't set error for empty values
+  const validateNumericInput = (
+    value: string,
+    setError: (error: string | null) => void
+  ) => {
     if (!value) {
       return false;
     }
@@ -35,20 +48,20 @@ export function AutomatedBiddingSection({
     // Check if the input is a valid number
     const isValidNumber = /^[0-9]*\.?[0-9]*$/.test(value);
     if (!isValidNumber) {
-      setInputError('Enter a valid amount to Bid');
+      setError('Enter a valid amount');
       return false;
     }
 
     if (parseFloat(value) < 0) {
-      setInputError('Bid amount cannot be negative');
+      setError('Amount cannot be negative');
       return false;
     }
 
-    setInputError(null);
+    setError(null);
     return true;
   };
 
-  // Handle input change
+  // Handle max bid amount input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
@@ -60,23 +73,54 @@ export function AutomatedBiddingSection({
       setInputError(null);
     } else {
       // Only validate the format for non-empty values
-      validateInput(value);
+      validateNumericInput(value, setInputError);
     }
 
     setMaxBidAmount(value);
   };
 
+  // Handle automation funding input change
+  const handleFundingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Update local state immediately to show typing in real-time
+    setFundingValue(value);
+
+    // Clear the error if input is emptied
+    if (!value) {
+      setFundingError(null);
+    } else {
+      // Only validate the format for non-empty values
+      validateNumericInput(value, setFundingError);
+    }
+
+    setAutomationFunding(value);
+  };
+
   // Handle set bid button click
   const handleSetBid = () => {
+    let hasError = false;
+
     // When button is clicked, check for empty values and show error if needed
     if (!inputValue) {
       setInputError('Enter a valid Bid Amount');
-      return;
+      hasError = true;
     }
 
-    if (validateInput(inputValue)) {
+    if (!fundingValue) {
+      setFundingError('Enter a valid Amount');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    const isMaxBidValid = validateNumericInput(inputValue, setInputError);
+    const isFundingValid = validateNumericInput(fundingValue, setFundingError);
+
+    if (isMaxBidValid && isFundingValid) {
       // You could add additional logic here if needed
       console.log('Maximum bid set to:', inputValue);
+      console.log('Automation funding set to:', fundingValue);
     }
   };
 
@@ -123,46 +167,74 @@ export function AutomatedBiddingSection({
         </SwitchPrimitive.Root>
       </div>
 
-      {/* Maximum Bid Amount input - shown only when automated bidding is enabled */}
+      {/* Input fields - shown only when automated bidding is enabled */}
       {automatedBidding && (
         <div className='mt-4 relative z-10'>
-          <div className='flex justify-between items-center'>
-            <div>
-              <p className='font-bold'>Maximum Bid Amount</p>
+          <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
+            {/* Row 1: Automation Funding */}
+            <div className='self-center'>
+              <p className='font-bold'>Automation Funding</p>
             </div>
-            <div>
-              <div className='flex gap-2'>
+            <div className='flex justify-end'>
+              <div className='flex flex-col w-full max-w-[200px]'>
                 <div className='relative'>
                   <Input
                     type='text'
-                    placeholder='Enter maximum bid amount'
-                    value={inputValue}
-                    onChange={handleInputChange}
+                    placeholder='Enter amount'
+                    value={fundingValue}
+                    onChange={handleFundingChange}
                     className={`pr-12 bg-white border-none text-gray-500 ${
-                      inputError ? 'border-red-500' : ''
+                      fundingError ? 'border-red-500' : ''
                     }`}
-                    style={{ width: '350px' }}
                   />
                   <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                     ETH
                   </div>
                 </div>
-                <Button
-                  onClick={handleSetBid}
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                  disabled={false} // Button should always be clickable
-                >
-                  Set Bid
-                </Button>
+                {fundingError && (
+                  <div className='text-white text-xs italic text-left mt-1'>
+                    {fundingError}
+                  </div>
+                )}
               </div>
-              {inputError && (
-                <div
-                  className='text-white text-xs italic text-left mt-1'
-                  style={{ width: '350px' }}
-                >
-                  {inputError}
+            </div>
+            <div>{/* Empty cell */}</div>
+
+            {/* Row 2: Maximum Bid Amount */}
+            <div className='self-center'>
+              <p className='font-bold'>Maximum Bid Amount</p>
+            </div>
+            <div className='flex justify-end'>
+              <div className='flex flex-col w-full max-w-[200px]'>
+                <div className='relative'>
+                  <Input
+                    type='text'
+                    placeholder='Enter amount'
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    className={`pr-12 bg-white border-none text-gray-500 ${
+                      inputError ? 'border-red-500' : ''
+                    }`}
+                  />
+                  <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                    ETH
+                  </div>
                 </div>
-              )}
+                {inputError && (
+                  <div className='text-white text-xs italic text-left mt-1'>
+                    {inputError}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className='self-start pl-2'>
+              <Button
+                onClick={handleSetBid}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                disabled={false} // Button should always be clickable
+              >
+                Set Bid
+              </Button>
             </div>
           </div>
         </div>
