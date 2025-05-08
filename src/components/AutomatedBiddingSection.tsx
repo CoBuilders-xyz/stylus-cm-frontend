@@ -10,6 +10,7 @@ import { Abi } from 'viem';
 import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatWei, formatEth } from '@/utils/formatting';
+import { useReadContract, useAccount } from 'wagmi';
 
 interface AutomatedBiddingSectionProps {
   automatedBidding: boolean;
@@ -42,6 +43,28 @@ export function AutomatedBiddingSection({
 
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
+
+  // Get the connected account
+  const { address: userAddress, isConnected } = useAccount();
+
+  // Get user balance from cache manager automation contract
+  const { data: userBalance, refetch: refetchBalance } = useReadContract({
+    address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
+    abi: cacheManagerAutomationAbi.abi as Abi,
+    functionName: 'getUserBalance',
+    account: userAddress, // Include the user's address to properly sign the request
+    query: {
+      enabled:
+        !!currentBlockchain?.cacheManagerAutomationAddress &&
+        isConnected &&
+        !!userAddress,
+    },
+  });
+
+  // Format user balance for display
+  const formattedUserBalance = userBalance
+    ? formatEth(userBalance.toString())
+    : '0';
 
   // Initialize from contract data if not already initialized
   useEffect(() => {
@@ -200,8 +223,11 @@ export function AutomatedBiddingSection({
 
       // Reset form
       reset();
+
+      // Refetch user balance after successful transaction
+      refetchBalance();
     }
-  }, [isSuccess, onSuccess, reset]);
+  }, [isSuccess, onSuccess, reset, refetchBalance]);
 
   // Validate numeric input - only validate format, don't set error for empty values
   const validateNumericInput = (
@@ -390,6 +416,12 @@ export function AutomatedBiddingSection({
             )}
           />
         </SwitchPrimitive.Root>
+      </div>
+
+      {/* Display user balance */}
+      <div className='mt-2 text-sm text-white relative z-10'>
+        <span>Your automation balance: </span>
+        <span className='font-semibold'>{formattedUserBalance} ETH</span>
       </div>
 
       {/* Input fields - shown only when automated bidding is enabled */}
