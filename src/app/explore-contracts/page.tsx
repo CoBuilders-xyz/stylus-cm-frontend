@@ -59,6 +59,13 @@ export default function ExploreContractsPage() {
     setIsPanelOpen(true);
   };
 
+  // Handler for adding a new contract
+  const handleAddNewContract = () => {
+    setContractAddressToAdd(undefined);
+    setActivePanelContent('add');
+    setIsPanelOpen(true);
+  };
+
   const handleClosePanel = () => {
     setIsPanelOpen(false);
   };
@@ -76,6 +83,7 @@ export default function ExploreContractsPage() {
             viewType='explore-contracts'
             onContractSelect={handleContractSelect}
             onAddContract={handleAddExistingContract}
+            onAddNewContract={handleAddNewContract}
           />
         </div>
       </div>

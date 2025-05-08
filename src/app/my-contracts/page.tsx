@@ -51,6 +51,7 @@ export default function MyContractsPage() {
             contracts={[]}
             viewType='my-contracts'
             onContractSelect={handleContractSelect}
+            onAddNewContract={handleAddNewContract}
           />
         </div>
       </div>

@@ -37,6 +37,8 @@ import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
 import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
+import { Badge } from '@/components/ui/badge';
+
 interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
@@ -466,11 +468,21 @@ export default function ContractDetails({
                     </>
                   ) : (
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer'
-                      onClick={handleManageContract}
+                      className={`${
+                        !contractData.isSavedByUser
+                          ? 'hover:bg-gray-800 cursor-pointer'
+                          : 'cursor-not-allowed opacity-50'
+                      }`}
+                      onClick={
+                        !contractData.isSavedByUser
+                          ? handleManageContract
+                          : undefined
+                      }
                     >
                       <PlusCircle className='h-4 w-4 mr-2' />
-                      Manage This Contract
+                      {contractData.isSavedByUser
+                        ? 'Contract Already Added'
+                        : 'Manage This Contract'}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -561,27 +573,42 @@ export default function ContractDetails({
 
               {/* Add to My Contracts Section */}
               <div className='px-6 text-center'>
-                <div className='flex justify-center'>
-                  <Image
-                    src={noManagedImage}
-                    alt='Add contract'
-                    width={200}
-                    height={200}
-                  />
-                </div>
-                <h3 className='text-xl font-bold mb-2'>
-                  Add this contract to place bids
-                </h3>
-                <p className='text-gray-400 text-sm mb-4'>
-                  Add this contract to your managed list to place bids, set
-                  automations and more.
-                </p>
-                <Button
-                  className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                  onClick={handleManageContract}
-                >
-                  Add to My Contracts
-                </Button>
+                {!contractData.isSavedByUser ? (
+                  <>
+                    <div className='flex justify-center'>
+                      <Image
+                        src={noManagedImage}
+                        alt='Add contract'
+                        width={200}
+                        height={200}
+                      />
+                    </div>
+                    <h3 className='text-xl font-bold mb-2'>
+                      Add this contract to place bids
+                    </h3>
+                    <p className='text-gray-400 text-sm mb-4'>
+                      Add this contract to your managed list to place bids, set
+                      automations and more.
+                    </p>
+                    <Button
+                      className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                      onClick={handleManageContract}
+                    >
+                      Add to My Contracts
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className='flex justify-center'>
+                      <Badge
+                        variant='secondary'
+                        className='px-4 py-2 text-base font-semibold'
+                      >
+                        Contract already added to your list
+                      </Badge>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
