@@ -4,6 +4,7 @@ import { useState } from 'react';
 import ContractsTable from '@/components/ContractsTable';
 import SidePanel from '@/components/SidePanel';
 import ContractDetails from '@/components/ContractDetails';
+import AddContract from '@/components/AddContract';
 import { Contract } from '@/services/contractService';
 
 export default function MyContractsPage() {
@@ -13,11 +14,24 @@ export default function MyContractsPage() {
   const [selectedContractData, setSelectedContractData] =
     useState<Contract | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [activePanelContent, setActivePanelContent] = useState<
+    'details' | 'add'
+  >('details');
+  const [contractAddressToAdd, setContractAddressToAdd] = useState<
+    string | undefined
+  >(undefined);
   const panelWidth = '53%';
 
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
     setSelectedContractId(contractId);
     setSelectedContractData(initialData || null);
+    setActivePanelContent('details');
+    setIsPanelOpen(true);
+  };
+
+  const handleAddNewContract = () => {
+    setContractAddressToAdd(undefined);
+    setActivePanelContent('add');
     setIsPanelOpen(true);
   };
 
@@ -26,7 +40,7 @@ export default function MyContractsPage() {
   };
 
   return (
-    <div className='min-h-screen  pt-18'>
+    <div className='min-h-screen pt-18'>
       <div
         className={`transition-all duration-300 ease-in-out ${
           isPanelOpen ? 'pr-[53%]' : 'pr-0'
@@ -46,11 +60,21 @@ export default function MyContractsPage() {
         onClose={handleClosePanel}
         width={panelWidth}
       >
-        {selectedContractId && (
-          <ContractDetails
-            contractId={selectedContractId}
-            initialContractData={selectedContractData || undefined}
-            viewType='my-contracts'
+        {isPanelOpen &&
+          activePanelContent === 'details' &&
+          selectedContractId && (
+            <ContractDetails
+              contractId={selectedContractId}
+              initialContractData={selectedContractData || undefined}
+              viewType='my-contracts'
+            />
+          )}
+        {isPanelOpen && activePanelContent === 'add' && (
+          <AddContract
+            initialAddress={contractAddressToAdd}
+            onSuccess={() => {
+              setIsPanelOpen(false);
+            }}
           />
         )}
       </SidePanel>

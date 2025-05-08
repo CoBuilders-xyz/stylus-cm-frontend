@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
+import { useBlockchainService } from '@/hooks/useBlockchainService';
 import Image from 'next/image';
 import noManagedImage from 'public/no-managed.svg';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -40,12 +41,14 @@ interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
+  onAddContract?: (contract: Contract) => void;
 }
 
 export default function ContractDetails({
   contractId,
   initialContractData,
   viewType = 'explore-contracts',
+  onAddContract,
 }: ContractDetailsProps) {
   // Get the onClose function from the SidePanel context
   const { onClose } = useSidePanel();
@@ -55,6 +58,9 @@ export default function ContractDetails({
 
   // Get the contracts updater
   const { signalContractUpdated } = useContractsUpdater();
+
+  // Get the blockchain service
+  const { currentBlockchainId } = useBlockchainService();
 
   // Reference to the EditableContractName component
   const contractNameRef = useRef<EditableContractNameRef>(null);
@@ -254,8 +260,43 @@ export default function ContractDetails({
   }
 
   // Handler for adding contract to my contracts
-  const handleAddToMyContracts = () => {
-    // Here would be API call to add contract
+  const handleAddToMyContracts = async () => {
+    if (!contractService || !contractData) {
+      console.error('Contract service or data not available');
+      return;
+    }
+
+    // Verify we have a valid blockchain ID
+    if (!currentBlockchainId) {
+      console.error('No valid blockchain ID available');
+      return;
+    }
+
+    try {
+      // Create a properly typed name variable
+      const name: string | undefined =
+        typeof contractName === 'string' && contractName !== 'Contract Name'
+          ? contractName
+          : undefined;
+
+      // Use the actual contract address from the current contract data
+      const result = await contractService.createContract(
+        contractData.address,
+        currentBlockchainId, // This is string | null, but createContract expects string | undefined
+        name
+      );
+
+      // Signal that a contract was added to trigger a reload of the my-contracts list
+      signalContractUpdated(result.id, 'name');
+
+      // Close the panel with a small delay to ensure visual feedback
+      setTimeout(() => {
+        onClose();
+      }, 100);
+    } catch (error) {
+      console.error('Failed to add contract:', error);
+      // You could add error handling UI here
+    }
   };
 
   // Handler for contract alerts
@@ -313,8 +354,13 @@ export default function ContractDetails({
   };
 
   const handleManageContract = () => {
-    // Here would be the implementation to add and manage this contract
-    handleAddToMyContracts();
+    // If we have the onAddContract prop, use it (this allows the parent to control the flow)
+    if (onAddContract && contractData) {
+      onAddContract(contractData);
+    } else {
+      // Otherwise, fall back to the direct API call
+      handleAddToMyContracts();
+    }
   };
 
   // Handler for name change
@@ -532,7 +578,7 @@ export default function ContractDetails({
                 </p>
                 <Button
                   className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                  onClick={handleAddToMyContracts}
+                  onClick={handleManageContract}
                 >
                   Add to My Contracts
                 </Button>

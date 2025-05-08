@@ -37,6 +37,8 @@ interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
+  onAddContract?: (contract: Contract) => void;
+  onAddNewContract?: () => void;
 }
 
 // Table header component with sorting functionality
@@ -122,14 +124,23 @@ const ContractRow = React.memo(
     contract,
     viewType,
     onContractSelect,
+    onAddContract,
   }: {
     contract: Contract;
     viewType: string;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
+    onAddContract?: (contract: Contract) => void;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
         onContractSelect(contract.id, contract);
+      }
+    };
+
+    const handleAddContractClick = (e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent row click event
+      if (onAddContract) {
+        onAddContract(contract);
       }
     };
 
@@ -227,7 +238,10 @@ const ContractRow = React.memo(
         </TableCell>
         {viewType === 'explore-contracts' && (
           <TableCell className='py-6'>
-            <Button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
+            <Button
+              className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
+              onClick={handleAddContractClick}
+            >
               +
             </Button>
           </TableCell>
@@ -339,6 +353,8 @@ function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
   onContractSelect,
+  onAddContract,
+  onAddNewContract,
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
@@ -541,6 +557,7 @@ function ContractsTable({
                         contract={contract}
                         viewType={viewType}
                         onContractSelect={onContractSelect}
+                        onAddContract={onAddContract}
                       />
                     ))
                   ) : (
