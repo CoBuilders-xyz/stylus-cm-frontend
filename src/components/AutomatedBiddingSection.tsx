@@ -68,18 +68,20 @@ export function AutomatedBiddingSection({
   });
 
   // Get user's automated contracts
-  const { data: userContracts } = useReadContract({
-    address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-    abi: cacheManagerAutomationAbi.abi as Abi,
-    functionName: 'getUserContracts',
-    account: userAddress,
-    query: {
-      enabled:
-        !!currentBlockchain?.cacheManagerAutomationAddress &&
-        isConnected &&
-        !!userAddress,
-    },
-  });
+  const { data: userContracts, refetch: refetchUserContracts } =
+    useReadContract({
+      address:
+        currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
+      abi: cacheManagerAutomationAbi.abi as Abi,
+      functionName: 'getUserContracts',
+      account: userAddress,
+      query: {
+        enabled:
+          !!currentBlockchain?.cacheManagerAutomationAddress &&
+          isConnected &&
+          !!userAddress,
+      },
+    });
 
   // Log user contracts when available for debugging
   useEffect(() => {
@@ -292,16 +294,46 @@ export function AutomatedBiddingSection({
         onSuccess();
       }
 
-      // Reset form
-      reset();
+      // Instead of just refetching, first update our local state with the values we just set
+      // This ensures that the values stay consistent with what the user just set
+      if (contract?.address) {
+        // If we just completed a successful transaction, we should keep the user's input value
+        // rather than allowing it to be overwritten by outdated contract data
 
-      // Refetch user balance and contracts after successful transaction
-      refetchBalance();
+        // Store current values before reset
+        const currentInputValue = inputValue;
+        const currentAutomatedBidding = automatedBidding;
 
-      // Reset the last checked address to force a re-check with the updated data
-      setLastCheckedAddress(null);
+        // Reset transaction state
+        reset();
+
+        // Immediately refetch the balance and contracts to get updated data
+        refetchBalance();
+        refetchUserContracts();
+
+        // Force an update of the last checked address on the next render cycle
+        // This gives refetchUserContracts time to complete before we check again
+        setTimeout(() => {
+          setLastCheckedAddress(null);
+        }, 500);
+
+        // Log the values we're keeping
+        console.log('Keeping user values after successful transaction:', {
+          maxBidAmount: currentInputValue,
+          automatedBidding: currentAutomatedBidding,
+        });
+      }
     }
-  }, [isSuccess, onSuccess, reset, refetchBalance]);
+  }, [
+    isSuccess,
+    onSuccess,
+    reset,
+    refetchBalance,
+    refetchUserContracts,
+    inputValue,
+    automatedBidding,
+    contract?.address,
+  ]);
 
   // Validate numeric input - only validate format, don't set error for empty values
   const validateNumericInput = (
@@ -398,6 +430,12 @@ export function AutomatedBiddingSection({
     }
 
     try {
+      console.log('Setting bid with values:', {
+        contractAddress: contract.address,
+        maxBidAmount: inputValue,
+        automatedBidding: automatedBidding,
+      });
+
       // Create transaction parameters
       const txParams = {
         address:
