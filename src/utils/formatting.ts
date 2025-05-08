@@ -19,6 +19,25 @@ export const formatEth = (wei: string): string => {
 };
 
 /**
+ * Convert ETH amount to Wei
+ * @param eth ETH amount as string
+ * @returns Wei amount as string
+ */
+export const formatWei = (eth: string): bigint => {
+  try {
+    // Convert ETH to Wei (1 ETH = 10^18 Wei)
+    const ethNum = parseFloat(eth);
+    if (isNaN(ethNum)) return BigInt(0);
+
+    // Multiply by 10^18 and return as string
+    const weiValue = BigInt(Math.floor(ethNum * 10 ** 18));
+    return weiValue;
+  } catch {
+    return BigInt(0);
+  }
+};
+
+/**
  * Format ETH value with rounding to significant figures
  * @param ethValue ETH amount as string or number
  * @param decimals Number of significant figures to show
@@ -127,6 +146,7 @@ export const getRiskBadgeVariant = (risk?: string | null) => {
 // Also export as a class for better organization if preferred
 export class Format {
   static eth = formatEth;
+  static wei = formatWei;
   static roundedEth = formatRoundedEth;
   static size = formatSize;
   static date = formatDate;

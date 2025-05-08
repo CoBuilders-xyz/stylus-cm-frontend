@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
+import { useBlockchainService } from '@/hooks/useBlockchainService';
+import { toast } from 'sonner';
+import { Abi } from 'viem';
+import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
+import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { formatWei, formatEth } from '@/utils/formatting';
 
 interface AutomatedBiddingSectionProps {
   automatedBidding: boolean;
@@ -11,6 +18,8 @@ interface AutomatedBiddingSectionProps {
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
   setAutomationFunding?: (value: string) => void;
+  contract?: { address: string; maxBid?: string; isAutomated?: boolean };
+  onSuccess?: () => void;
 }
 
 export function AutomatedBiddingSection({
@@ -20,21 +29,179 @@ export function AutomatedBiddingSection({
   setMaxBidAmount = () => {},
   automationFunding = '',
   setAutomationFunding = () => {},
+  contract,
+  onSuccess,
 }: AutomatedBiddingSectionProps) {
   // Local state for input values to ensure they update immediately
   const [inputValue, setInputValue] = useState(maxBidAmount);
   const [fundingValue, setFundingValue] = useState(automationFunding);
   const [inputError, setInputError] = useState<string | null>(null);
   const [fundingError, setFundingError] = useState<string | null>(null);
+  // Add isInitialized flag to track when component has initialized from contract data
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Get the current blockchain
+  const { currentBlockchain } = useBlockchainService();
+
+  // Initialize from contract data if not already initialized
+  useEffect(() => {
+    if (!isInitialized && contract) {
+      // If contract has isAutomated field, use that
+      if (contract.isAutomated !== undefined) {
+        setAutomatedBidding(contract.isAutomated);
+      }
+
+      // If contract has maxBid field, use that
+      if (contract.maxBid) {
+        // Convert from Wei to ETH for display in the input field
+        const maxBidInEth = formatEth(contract.maxBid);
+        setMaxBidAmount(maxBidInEth);
+        setInputValue(maxBidInEth);
+      }
+
+      // Mark as initialized
+      setIsInitialized(true);
+    }
+  }, [contract, isInitialized, setAutomatedBidding, setMaxBidAmount]);
+
+  // Store the last transaction parameters for retry functionality
+  const [lastTxParams, setLastTxParams] = useState<{
+    address: `0x${string}`;
+    abi: Abi;
+    functionName: string;
+    args: [string, bigint, boolean];
+    value: string;
+  } | null>(null);
+
+  // Use the web3 hook
+  const { writeContract, status, error, reset, gasPriceGwei, isGasPriceHigh } =
+    useWeb3({
+      // Set gas protection configuration
+      gasProtection: {
+        maxGasPriceGwei: 500, // Maximum gas price in Gwei
+        gasLimit: BigInt(500000), // Gas limit
+      },
+    });
+
+  // Track if transaction is in progress
+  const isTransactionInProgress =
+    status === TransactionStatus.PENDING ||
+    status === TransactionStatus.PREPARING;
+
+  // Track if transaction is complete
+  const isSuccess = status === TransactionStatus.SUCCESS;
+
+  // Track if there was an error
+  const isError = status === TransactionStatus.ERROR;
 
   // Sync local state with prop values when they change
   useEffect(() => {
-    setInputValue(maxBidAmount);
-  }, [maxBidAmount]);
+    // Only update local state if maxBidAmount changes after initialization
+    if (isInitialized) {
+      setInputValue(maxBidAmount);
+    }
+  }, [maxBidAmount, isInitialized]);
 
   useEffect(() => {
-    setFundingValue(automationFunding);
-  }, [automationFunding]);
+    // Only update local state if automationFunding changes after initialization
+    if (isInitialized) {
+      setFundingValue(automationFunding);
+    }
+  }, [automationFunding, isInitialized]);
+
+  // Function to handle retry of the last transaction
+  const handleRetry = useCallback(() => {
+    if (!lastTxParams) {
+      console.error('No previous transaction parameters found to retry');
+      return;
+    }
+
+    // Reset any previous error states
+    reset();
+
+    // Re-submit the transaction with the same parameters
+    writeContract(lastTxParams, (hash) => {
+      console.log(`Retry transaction submitted with hash: ${hash}`);
+    });
+  }, [lastTxParams, writeContract, reset]);
+
+  // Show error toast if transaction fails
+  useEffect(() => {
+    if (isError && error) {
+      toast.custom(
+        (t) => (
+          <div className='flex items-center justify-between w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg gap-2'>
+            <div className='flex-grow whitespace-nowrap mx-3 text-sm'>
+              An error occurred while setting up automated bidding
+            </div>
+
+            <Button
+              variant='outline'
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent toast from closing
+                handleRetry();
+                toast.dismiss(t);
+              }}
+              className='flex-shrink-0 flex items-center justify-center gap-1 bg-transparent text-white border-white/30 hover:bg-white/10 whitespace-nowrap'
+              size='sm'
+            >
+              <RefreshCw className='h-3.5 w-3.5 mr-1' />
+              Retry
+            </Button>
+            <Button
+              onClick={() => toast.dismiss(t)}
+              className='flex-shrink-0 bg-transparent text-white border-white/30 hover:bg-white/10'
+              size='sm'
+              aria-label='Dismiss'
+            >
+              <X className='h-3 w-3' />
+            </Button>
+          </div>
+        ),
+        {
+          duration: 5000, // Show for 5 seconds
+          position: 'bottom-center', // Position at bottom center
+          id: 'transaction-error-' + Date.now(), // to prevent duplicate toasts
+          style: {
+            width: 'auto',
+          },
+        }
+      );
+
+      reset();
+    }
+  }, [isError, error, reset, handleRetry]);
+
+  // Show success toast when transaction completes
+  useEffect(() => {
+    if (isSuccess) {
+      toast.custom(
+        () => (
+          <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
+            <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
+              Automated bidding configured successfully
+            </div>
+          </div>
+        ),
+        {
+          duration: 5000, // Show for 5 seconds
+          position: 'bottom-center', // Position at bottom center
+          id: 'transaction-success-' + Date.now(), // to prevent duplicate toasts
+          style: {
+            width: 'auto',
+          },
+        }
+      );
+
+      // Call the onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // Reset form
+      reset();
+    }
+  }, [isSuccess, onSuccess, reset]);
 
   // Validate numeric input - only validate format, don't set error for empty values
   const validateNumericInput = (
@@ -117,10 +284,56 @@ export function AutomatedBiddingSection({
     const isMaxBidValid = validateNumericInput(inputValue, setInputError);
     const isFundingValid = validateNumericInput(fundingValue, setFundingError);
 
-    if (isMaxBidValid && isFundingValid) {
-      // You could add additional logic here if needed
-      console.log('Maximum bid set to:', inputValue);
-      console.log('Automation funding set to:', fundingValue);
+    if (!isMaxBidValid || !isFundingValid) {
+      return;
+    }
+
+    if (!currentBlockchain) {
+      console.error(
+        'No blockchain connected. Please connect your wallet to the correct network.'
+      );
+      return;
+    }
+
+    if (!contract || !contract.address) {
+      console.error('No contract address provided');
+      return;
+    }
+
+    try {
+      // Create transaction parameters
+      const txParams = {
+        address:
+          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
+        abi: cacheManagerAutomationAbi.abi as Abi,
+        functionName: 'insertOrUpdateContract',
+        args: [contract.address, formatWei(inputValue), automatedBidding] as [
+          string,
+          bigint,
+          boolean
+        ],
+        value: fundingValue, // This is the amount to fund the automation (ETH)
+      };
+
+      // Store the parameters for retry functionality
+      setLastTxParams(txParams);
+
+      // Send the transaction
+      writeContract(txParams, (hash) => {
+        console.log(`Transaction submitted with hash: ${hash}`);
+      });
+
+      console.log('Automated bidding settings:', {
+        contract: contract.address,
+        maxBid: inputValue,
+        enabled: automatedBidding,
+        funding: fundingValue,
+      });
+
+      // Note: After the transaction is successful, the onSuccess callback will be called,
+      // which should update the contract data in the backend with the new maxBid and isAutomated values
+    } catch (err) {
+      console.error('Error submitting transaction:', err);
     }
   };
 
@@ -140,6 +353,18 @@ export function AutomatedBiddingSection({
           backgroundRepeat: 'repeat',
         }}
       />
+
+      {/* Gas Price Warning */}
+      {isGasPriceHigh && (
+        <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center relative z-10'>
+          <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
+          <span className='text-sm'>
+            Warning: Network fees are extremely high{' '}
+            {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
+            lower gas prices.
+          </span>
+        </div>
+      )}
 
       <div className='flex justify-between items-start relative z-10'>
         <div>
@@ -185,7 +410,12 @@ export function AutomatedBiddingSection({
                     onChange={handleFundingChange}
                     className={`pr-12 bg-white border-none text-gray-500 ${
                       fundingError ? 'border-red-500' : ''
+                    } ${
+                      isTransactionInProgress
+                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                        : ''
                     }`}
+                    disabled={isTransactionInProgress}
                   />
                   <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                     ETH
@@ -214,7 +444,12 @@ export function AutomatedBiddingSection({
                     onChange={handleInputChange}
                     className={`pr-12 bg-white border-none text-gray-500 ${
                       inputError ? 'border-red-500' : ''
+                    } ${
+                      isTransactionInProgress
+                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                        : ''
                     }`}
+                    disabled={isTransactionInProgress}
                   />
                   <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                     ETH
@@ -231,9 +466,15 @@ export function AutomatedBiddingSection({
               <Button
                 onClick={handleSetBid}
                 className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                disabled={false} // Button should always be clickable
+                disabled={isTransactionInProgress || isSuccess}
               >
-                Set Bid
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  </div>
+                ) : (
+                  'Set Bid'
+                )}
               </Button>
             </div>
           </div>

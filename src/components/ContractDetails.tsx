@@ -64,6 +64,8 @@ export default function ContractDetails({
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
   const [automatedBidding, setAutomatedBidding] = useState(false);
+  const [maxBidAmount, setMaxBidAmount] = useState('');
+  const [automationFunding, setAutomationFunding] = useState('');
 
   // State for contract data and loading
   const [contractData, setContractData] = useState<Contract | null>(
@@ -96,6 +98,16 @@ export default function ContractDetails({
       setContractData(contractWithAlerts);
       setContractName(initialContractData.name || 'Contract Name');
       setIsLoadingContract(false);
+
+      // Initialize automated bidding state if available
+      if (initialContractData.isAutomated !== undefined) {
+        setAutomatedBidding(initialContractData.isAutomated);
+      }
+
+      // Initialize max bid amount if available
+      if (initialContractData.maxBid) {
+        setMaxBidAmount(formatEth(initialContractData.maxBid));
+      }
     }
   }, [initialContractData]);
 
@@ -132,6 +144,16 @@ export default function ContractDetails({
             );
             // Store the userContract.id separately in state
             setUserContractId(userContract.id);
+
+            // Initialize automated bidding state if available
+            if (userContract.contract.isAutomated !== undefined) {
+              setAutomatedBidding(userContract.contract.isAutomated);
+            }
+
+            // Initialize max bid amount if available
+            if (userContract.contract.maxBid) {
+              setMaxBidAmount(formatEth(userContract.contract.maxBid));
+            }
           }
         }
         // For explore-contracts view, we rely on initialContractData being provided
@@ -478,6 +500,63 @@ export default function ContractDetails({
                 <AutomatedBiddingSection
                   automatedBidding={automatedBidding}
                   setAutomatedBidding={setAutomatedBidding}
+                  maxBidAmount={maxBidAmount}
+                  setMaxBidAmount={setMaxBidAmount}
+                  automationFunding={automationFunding}
+                  setAutomationFunding={setAutomationFunding}
+                  contract={contractData}
+                  onSuccess={() => {
+                    // Reload contract data after successful setup
+                    if (
+                      viewType === 'my-contracts' &&
+                      contractService &&
+                      userContractId
+                    ) {
+                      contractService
+                        .getUserContract(userContractId)
+                        .then((userContract) => {
+                          if (userContract && userContract.contract) {
+                            // Clone the contract object to avoid reference issues
+                            const contractWithAlerts = {
+                              ...userContract.contract,
+                              name:
+                                userContract.name ||
+                                userContract.contract.name ||
+                                'Contract Name',
+                              alerts:
+                                userContract.alerts ||
+                                userContract.contract.alerts ||
+                                [],
+                              // Include the automation properties
+                              maxBid: userContract.contract.maxBid,
+                              isAutomated: userContract.contract.isAutomated,
+                            };
+                            setContractData(contractWithAlerts);
+
+                            // Update state for automation
+                            if (
+                              userContract.contract.isAutomated !== undefined
+                            ) {
+                              setAutomatedBidding(
+                                userContract.contract.isAutomated
+                              );
+                            }
+
+                            if (userContract.contract.maxBid) {
+                              setMaxBidAmount(
+                                formatEth(userContract.contract.maxBid)
+                              );
+                            }
+                          }
+                        })
+                        .catch((error) => {
+                          console.error(
+                            'Failed to reload contract data after automated bidding setup:',
+                            error
+                          );
+                        });
+                    }
+                  }}
                 />
               </div>
 

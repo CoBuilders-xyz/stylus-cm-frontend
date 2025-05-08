@@ -91,6 +91,8 @@ export interface Contract {
   effectiveBid: string;
   evictionRisk: EvictionRisk | null;
   minBid: string;
+  maxBid?: string; // Maximum bid for automated bidding
+  isAutomated?: boolean; // Whether automated bidding is enabled
   name?: string; // Optional field possibly used on frontend
   alerts?: Alert[]; // Optional alerts for contract monitoring
   userContractId?: string; // Optional user contract ID

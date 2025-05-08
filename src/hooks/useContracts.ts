@@ -142,6 +142,9 @@ export function useContracts(
               name: rest.name || '',
               // Pass evictionRisk as is (could be null)
               evictionRisk: contract.evictionRisk,
+              // Pass automation fields if they exist
+              maxBid: contract.maxBid,
+              isAutomated: contract.isAutomated,
               // Ensure bytecode exists with minimal required properties
               bytecode: {
                 ...contract.bytecode,

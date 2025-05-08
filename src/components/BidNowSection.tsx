@@ -463,7 +463,7 @@ export function BidNowSection({
         args: [contract.address],
         value: bidAmount,
       };
-
+      console.log('Bid params:', bidParams);
       // Store the parameters for retry functionality
       setLastBidParams(bidParams);
 
