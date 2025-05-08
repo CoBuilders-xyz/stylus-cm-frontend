@@ -42,8 +42,10 @@ export function AutomatedBiddingSection({
   /* Temporarily commented out while funding input is hidden
   const [fundingError, setFundingError] = useState<string | null>(null);
   */
-  // Add isInitialized flag to track when component has initialized from contract data
-  const [isInitialized, setIsInitialized] = useState(false);
+  // Track the last checked contract address to detect changes
+  const [lastCheckedAddress, setLastCheckedAddress] = useState<string | null>(
+    null
+  );
 
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
@@ -65,31 +67,96 @@ export function AutomatedBiddingSection({
     },
   });
 
+  // Get user's automated contracts
+  const { data: userContracts } = useReadContract({
+    address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
+    abi: cacheManagerAutomationAbi.abi as Abi,
+    functionName: 'getUserContracts',
+    account: userAddress,
+    query: {
+      enabled:
+        !!currentBlockchain?.cacheManagerAutomationAddress &&
+        isConnected &&
+        !!userAddress,
+    },
+  });
+
+  // Log user contracts when available for debugging
+  useEffect(() => {
+    if (
+      userContracts &&
+      Array.isArray(userContracts) &&
+      userContracts.length > 0
+    ) {
+      console.log('User automated contracts found:', userContracts);
+      userContracts.forEach((contract, index) => {
+        console.log(`Contract ${index + 1}:`, {
+          address: contract.contractAddress,
+          maxBid: formatEth(contract.maxBid.toString()) + ' ETH',
+          lastBid: formatEth(contract.lastBid.toString()) + ' ETH',
+          enabled: contract.enabled ? 'Active' : 'Inactive',
+        });
+      });
+    }
+  }, [userContracts]);
+
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEth(userBalance.toString())
     : '0';
 
-  // Initialize from contract data if not already initialized
+  // Check if current contract is automated
   useEffect(() => {
-    if (!isInitialized && contract) {
-      // If contract has isAutomated field, use that
-      if (contract.isAutomated !== undefined) {
-        setAutomatedBidding(contract.isAutomated);
-      }
+    // Only proceed if we have the necessary data
+    if (
+      contract?.address &&
+      userContracts &&
+      Array.isArray(userContracts) &&
+      // Check if this is a new contract or different from the last checked one
+      contract.address !== lastCheckedAddress
+    ) {
+      console.log('Checking contract automation status for:', contract.address);
+      console.log('Previous checked address:', lastCheckedAddress);
 
-      // If contract has maxBid field, use that
-      if (contract.maxBid) {
-        // Convert from Wei to ETH for display in the input field
-        const maxBidInEth = formatEth(contract.maxBid);
-        setMaxBidAmount(maxBidInEth);
-        setInputValue(maxBidInEth);
-      }
+      // Remember this contract address to detect future changes
+      setLastCheckedAddress(contract.address);
 
-      // Mark as initialized
-      setIsInitialized(true);
+      // Look for the contract in user's automated contracts
+      const automatedContract = userContracts.find(
+        (c) =>
+          c.contractAddress.toLowerCase() === contract.address.toLowerCase()
+      );
+
+      if (automatedContract) {
+        console.log(
+          'Contract found in automated contracts:',
+          automatedContract
+        );
+
+        // Update UI with the automated contract's values
+        setAutomatedBidding(automatedContract.enabled);
+
+        // Format the max bid to ETH for display
+        const maxBidEth = formatEth(automatedContract.maxBid.toString());
+        setMaxBidAmount(maxBidEth);
+
+        console.log(
+          `Automation status: ${automatedContract.enabled}, Max bid: ${maxBidEth} ETH`
+        );
+      } else {
+        console.log('Contract is not automated:', contract.address);
+        // If not found, reset to default values
+        setAutomatedBidding(false);
+        setMaxBidAmount('');
+      }
     }
-  }, [contract, isInitialized, setAutomatedBidding, setMaxBidAmount]);
+  }, [
+    contract?.address,
+    userContracts,
+    setAutomatedBidding,
+    setMaxBidAmount,
+    lastCheckedAddress,
+  ]);
 
   // Store the last transaction parameters for retry functionality
   const [lastTxParams, setLastTxParams] = useState<{
@@ -124,17 +191,17 @@ export function AutomatedBiddingSection({
   // Sync local state with prop values when they change
   useEffect(() => {
     // Only update local state if maxBidAmount changes after initialization
-    if (isInitialized) {
+    if (contract?.address) {
       setInputValue(maxBidAmount);
     }
-  }, [maxBidAmount, isInitialized]);
+  }, [maxBidAmount, contract?.address]);
 
   useEffect(() => {
     // Only update local state if automationFunding changes after initialization
-    if (isInitialized) {
+    if (contract?.address) {
       setAutomationFunding(automationFunding);
     }
-  }, [automationFunding, isInitialized]);
+  }, [setAutomationFunding, automationFunding, contract?.address]);
 
   // Function to handle retry of the last transaction
   const handleRetry = useCallback(() => {
@@ -228,8 +295,11 @@ export function AutomatedBiddingSection({
       // Reset form
       reset();
 
-      // Refetch user balance after successful transaction
+      // Refetch user balance and contracts after successful transaction
       refetchBalance();
+
+      // Reset the last checked address to force a re-check with the updated data
+      setLastCheckedAddress(null);
     }
   }, [isSuccess, onSuccess, reset, refetchBalance]);
 
@@ -349,16 +419,6 @@ export function AutomatedBiddingSection({
       writeContract(txParams, (hash) => {
         console.log(`Transaction submitted with hash: ${hash}`);
       });
-
-      console.log('Automated bidding settings:', {
-        contract: contract.address,
-        maxBid: inputValue,
-        enabled: automatedBidding,
-        funding: '0', // Log fixed value for clarity
-      });
-
-      // Note: After the transaction is successful, the onSuccess callback will be called,
-      // which should update the contract data in the backend with the new maxBid and isAutomated values
     } catch (err) {
       console.error('Error submitting transaction:', err);
     }

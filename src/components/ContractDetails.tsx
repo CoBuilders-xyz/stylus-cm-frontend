@@ -98,16 +98,6 @@ export default function ContractDetails({
       setContractData(contractWithAlerts);
       setContractName(initialContractData.name || 'Contract Name');
       setIsLoadingContract(false);
-
-      // Initialize automated bidding state if available
-      if (initialContractData.isAutomated !== undefined) {
-        setAutomatedBidding(initialContractData.isAutomated);
-      }
-
-      // Initialize max bid amount if available
-      if (initialContractData.maxBid) {
-        setMaxBidAmount(formatEth(initialContractData.maxBid));
-      }
     }
   }, [initialContractData]);
 
@@ -144,16 +134,6 @@ export default function ContractDetails({
             );
             // Store the userContract.id separately in state
             setUserContractId(userContract.id);
-
-            // Initialize automated bidding state if available
-            if (userContract.contract.isAutomated !== undefined) {
-              setAutomatedBidding(userContract.contract.isAutomated);
-            }
-
-            // Initialize max bid amount if available
-            if (userContract.contract.maxBid) {
-              setMaxBidAmount(formatEth(userContract.contract.maxBid));
-            }
           }
         }
         // For explore-contracts view, we rely on initialContractData being provided
@@ -527,26 +507,8 @@ export default function ContractDetails({
                                 userContract.alerts ||
                                 userContract.contract.alerts ||
                                 [],
-                              // Include the automation properties
-                              maxBid: userContract.contract.maxBid,
-                              isAutomated: userContract.contract.isAutomated,
                             };
                             setContractData(contractWithAlerts);
-
-                            // Update state for automation
-                            if (
-                              userContract.contract.isAutomated !== undefined
-                            ) {
-                              setAutomatedBidding(
-                                userContract.contract.isAutomated
-                              );
-                            }
-
-                            if (userContract.contract.maxBid) {
-                              setMaxBidAmount(
-                                formatEth(userContract.contract.maxBid)
-                              );
-                            }
                           }
                         })
                         .catch((error) => {
