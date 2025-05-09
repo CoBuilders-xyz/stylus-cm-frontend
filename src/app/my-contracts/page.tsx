@@ -5,9 +5,12 @@ import ContractsTable from '@/components/ContractsTable';
 import SidePanel from '@/components/SidePanel';
 import ContractDetails from '@/components/ContractDetails';
 import AddContract from '@/components/AddContract';
-import { Contract } from '@/services/contractService';
+import AlertsSettings from '@/components/AlertsSettings';
+import { Contract, Alert } from '@/services/contractService';
+import { useContractService } from '@/hooks/useContractService';
 
 export default function MyContractsPage() {
+  const contractService = useContractService();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(
     null
   );
@@ -20,6 +23,14 @@ export default function MyContractsPage() {
   const [contractAddressToAdd, setContractAddressToAdd] = useState<
     string | undefined
   >(undefined);
+
+  // State for alerts panel
+  const [isAlertsPanelOpen, setIsAlertsPanelOpen] = useState(false);
+  const [alertsContractId, setAlertsContractId] = useState<string>('');
+  const [alertsContractAddress, setAlertsContractAddress] =
+    useState<string>('');
+  const [alertsContractAlerts, setAlertsContractAlerts] = useState<Alert[]>([]);
+
   const panelWidth = '53%';
 
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
@@ -39,6 +50,53 @@ export default function MyContractsPage() {
     setIsPanelOpen(false);
   };
 
+  const handleCloseAlertsPanel = () => {
+    setIsAlertsPanelOpen(false);
+  };
+
+  // Handler for opening alerts panel
+  const handleShowAlerts = (
+    userContractId: string,
+    address: string,
+    alerts?: Alert[]
+  ) => {
+    setAlertsContractId(userContractId);
+    setAlertsContractAddress(address);
+    setAlertsContractAlerts(alerts || []);
+    setIsAlertsPanelOpen(true);
+  };
+
+  // Handler for alert settings success
+  const handleAlertsSuccess = () => {
+    // Reload contract data if needed
+    if (contractService && selectedContractId) {
+      contractService
+        .getUserContract(selectedContractId)
+        .then((userContract) => {
+          if (userContract && userContract.contract) {
+            // Clone and update contract data
+            const updatedContract = {
+              ...userContract.contract,
+              userContractId: userContract.id,
+              name:
+                userContract.name ||
+                userContract.contract.name ||
+                'Contract Name',
+              alerts: userContract.alerts || userContract.contract.alerts || [],
+            };
+            setSelectedContractData(updatedContract);
+          }
+        })
+        .catch((error) => {
+          console.error(
+            'Failed to reload contract data after alert update:',
+            error
+          );
+        });
+    }
+    setIsAlertsPanelOpen(false);
+  };
+
   return (
     <div className='min-h-screen pt-18'>
       <div
@@ -56,6 +114,7 @@ export default function MyContractsPage() {
         </div>
       </div>
 
+      {/* Main Side Panel (Contract Details or Add Contract) */}
       <SidePanel
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
@@ -68,6 +127,7 @@ export default function MyContractsPage() {
               contractId={selectedContractId}
               initialContractData={selectedContractData || undefined}
               viewType='my-contracts'
+              onShowAlerts={handleShowAlerts}
             />
           )}
         {isPanelOpen && activePanelContent === 'add' && (
@@ -76,6 +136,23 @@ export default function MyContractsPage() {
             onSuccess={() => {
               setIsPanelOpen(false);
             }}
+          />
+        )}
+      </SidePanel>
+
+      {/* Alerts Settings Side Panel */}
+      <SidePanel
+        isOpen={isAlertsPanelOpen}
+        onClose={handleCloseAlertsPanel}
+        width={panelWidth}
+        zIndex={50}
+      >
+        {isAlertsPanelOpen && (
+          <AlertsSettings
+            contractId={alertsContractId}
+            contractAddress={alertsContractAddress}
+            initialAlerts={alertsContractAlerts}
+            onSuccess={handleAlertsSuccess}
           />
         )}
       </SidePanel>

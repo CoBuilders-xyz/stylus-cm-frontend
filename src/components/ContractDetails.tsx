@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Contract } from '@/services/contractService';
 import { formatEther } from 'viem';
 import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { Contract, Alert } from '@/services/contractService';
 import {
   MoreHorizontal,
   PlusCircle,
@@ -44,6 +44,11 @@ interface ContractDetailsProps {
   initialContractData?: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
   onAddContract?: (contract: Contract) => void;
+  onShowAlerts?: (
+    userContractId: string,
+    address: string,
+    alerts?: Alert[]
+  ) => void;
 }
 
 export default function ContractDetails({
@@ -51,6 +56,7 @@ export default function ContractDetails({
   initialContractData,
   viewType = 'explore-contracts',
   onAddContract,
+  onShowAlerts,
 }: ContractDetailsProps) {
   // Get the onClose function from the SidePanel context
   const { onClose } = useSidePanel();
@@ -303,7 +309,9 @@ export default function ContractDetails({
 
   // Handler for contract alerts
   const handleContractAlerts = () => {
-    // Here would be the implementation to manage alerts
+    if (onShowAlerts && userContractId && contractData) {
+      onShowAlerts(userContractId, contractData.address, contractData.alerts);
+    }
   };
 
   const handleRenameContract = () => {
