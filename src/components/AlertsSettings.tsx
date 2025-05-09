@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import { useSidePanel } from './SidePanel';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Alert } from '@/services/contractService';
-import { ApiClient } from '@/services/api';
+import { Alert, AlertSettings, AlertType } from '@/services/alertService';
+import { useAlertService } from '@/hooks/useAlertService';
+import * as SwitchPrimitive from '@radix-ui/react-switch';
+import { cn } from '@/lib/utils';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CheckedState } from '@radix-ui/react-checkbox';
 
 interface AlertsSettingsProps {
   onSuccess?: () => void;
@@ -24,46 +29,62 @@ export default function AlertsSettings({
   const { onClose } = useSidePanel();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiClient, setApiClient] = useState<ApiClient | null>(null);
+  const alertService = useAlertService();
+
+  // No need to track alerts separately, just use initialAlerts
+
+  // Helper function to convert CheckedState to boolean
+  const handleCheckedChange = (setter: (val: boolean) => void) => {
+    return (checked: CheckedState) => {
+      setter(checked === true);
+    };
+  };
 
   // Alert state
   const [evictionAlertEnabled, setEvictionAlertEnabled] = useState(false);
   const [noGasAlertEnabled, setNoGasAlertEnabled] = useState(false);
   const [lowGasAlertEnabled, setLowGasAlertEnabled] = useState(false);
-  const [lowGasThreshold, setLowGasThreshold] = useState('');
+  const [lowGasThreshold, setLowGasThreshold] = useState<number | string>('');
+  const [bidSafetyAlertEnabled, setBidSafetyAlertEnabled] = useState(false);
+  const [bidSafetyThreshold, setBidSafetyThreshold] = useState(50); // Default to 50%
 
   // Communication channels - will be configured elsewhere but maintain for backend API
   const [evictionEmailEnabled, setEvictionEmailEnabled] = useState(false);
   const [evictionTelegramEnabled, setEvictionTelegramEnabled] = useState(false);
   const [evictionSlackEnabled, setEvictionSlackEnabled] = useState(false);
+  const [evictionWebhookEnabled, setEvictionWebhookEnabled] = useState(false);
 
   const [noGasEmailEnabled, setNoGasEmailEnabled] = useState(false);
   const [noGasTelegramEnabled, setNoGasTelegramEnabled] = useState(false);
   const [noGasSlackEnabled, setNoGasSlackEnabled] = useState(false);
+  const [noGasWebhookEnabled, setNoGasWebhookEnabled] = useState(false);
 
   const [lowGasEmailEnabled, setLowGasEmailEnabled] = useState(false);
   const [lowGasTelegramEnabled, setLowGasTelegramEnabled] = useState(false);
   const [lowGasSlackEnabled, setLowGasSlackEnabled] = useState(false);
+  const [lowGasWebhookEnabled, setLowGasWebhookEnabled] = useState(false);
 
-  // Initialize the API client
-  useEffect(() => {
-    // Get the token from localStorage
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      setApiClient(new ApiClient(token));
-    }
-  }, []);
+  const [bidSafetyEmailEnabled, setBidSafetyEmailEnabled] = useState(false);
+  const [bidSafetyTelegramEnabled, setBidSafetyTelegramEnabled] =
+    useState(false);
+  const [bidSafetySlackEnabled, setBidSafetySlackEnabled] = useState(false);
+  const [bidSafetyWebhookEnabled, setBidSafetyWebhookEnabled] = useState(false);
 
-  // Set initial alert states based on props
+  // Set initial alert states based on provided alerts
   useEffect(() => {
     if (initialAlerts && initialAlerts.length > 0) {
       // Set alert toggles
       const evictionAlert = initialAlerts.find(
-        (alert) => alert.type === 'eviction'
+        (alert) => alert.type === AlertType.EVICTION
       );
-      const noGasAlert = initialAlerts.find((alert) => alert.type === 'noGas');
+      const noGasAlert = initialAlerts.find(
+        (alert) => alert.type === AlertType.NO_GAS
+      );
       const lowGasAlert = initialAlerts.find(
-        (alert) => alert.type === 'lowGas'
+        (alert) => alert.type === AlertType.LOW_GAS
+      );
+      const bidSafetyAlert = initialAlerts.find(
+        (alert) => alert.type === AlertType.BID_SAFETY
       );
 
       if (evictionAlert) {
@@ -71,6 +92,7 @@ export default function AlertsSettings({
         setEvictionEmailEnabled(evictionAlert.emailChannelEnabled);
         setEvictionTelegramEnabled(evictionAlert.telegramChannelEnabled);
         setEvictionSlackEnabled(evictionAlert.slackChannelEnabled);
+        setEvictionWebhookEnabled(evictionAlert.webhookChannelEnabled);
       }
 
       if (noGasAlert) {
@@ -78,61 +100,161 @@ export default function AlertsSettings({
         setNoGasEmailEnabled(noGasAlert.emailChannelEnabled);
         setNoGasTelegramEnabled(noGasAlert.telegramChannelEnabled);
         setNoGasSlackEnabled(noGasAlert.slackChannelEnabled);
+        setNoGasWebhookEnabled(noGasAlert.webhookChannelEnabled);
       }
 
       if (lowGasAlert) {
         setLowGasAlertEnabled(lowGasAlert.isActive);
-        setLowGasThreshold(lowGasAlert.value || '');
+        // Parse value as a number for lowGas alert
+        if (lowGasAlert.value) {
+          const numericValue = parseFloat(lowGasAlert.value);
+          if (!isNaN(numericValue) && numericValue > 0) {
+            setLowGasThreshold(numericValue); // Store as number
+          } else {
+            setLowGasThreshold(''); // Invalid value, reset
+          }
+        } else {
+          setLowGasThreshold(''); // No value, reset
+        }
         setLowGasEmailEnabled(lowGasAlert.emailChannelEnabled);
         setLowGasTelegramEnabled(lowGasAlert.telegramChannelEnabled);
         setLowGasSlackEnabled(lowGasAlert.slackChannelEnabled);
+        setLowGasWebhookEnabled(lowGasAlert.webhookChannelEnabled);
+      }
+
+      if (bidSafetyAlert) {
+        setBidSafetyAlertEnabled(bidSafetyAlert.isActive);
+        // Parse value as a number for bidSafety alert
+        if (bidSafetyAlert.value) {
+          const numericValue = parseFloat(bidSafetyAlert.value);
+          if (!isNaN(numericValue) && numericValue > 0) {
+            setBidSafetyThreshold(numericValue); // Store as number
+          } else {
+            setBidSafetyThreshold(50); // Invalid value, use default
+          }
+        }
+        setBidSafetyEmailEnabled(bidSafetyAlert.emailChannelEnabled);
+        setBidSafetyTelegramEnabled(bidSafetyAlert.telegramChannelEnabled);
+        setBidSafetySlackEnabled(bidSafetyAlert.slackChannelEnabled);
+        setBidSafetyWebhookEnabled(bidSafetyAlert.webhookChannelEnabled);
       }
     }
   }, [initialAlerts]);
 
-  const handleSaveAlertSettings = async () => {
-    if (!apiClient) {
-      setError('API client not initialized');
+  // Handler for lowGasThreshold input changes
+  const handleLowGasThresholdChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    // Allow empty value
+    if (e.target.value === '') {
+      setLowGasThreshold('');
       return;
+    }
+
+    // Try to parse as a number
+    const value = parseFloat(e.target.value);
+    if (!isNaN(value) && value >= 0) {
+      // Store as a numeric value
+      setLowGasThreshold(value);
+    } else {
+      // If it's not a valid positive number, keep the input as is
+      // This allows the user to type partial valid numbers
+      setLowGasThreshold(e.target.value);
+    }
+  };
+
+  const handleSaveAlertSettings = async () => {
+    if (!alertService) {
+      setError('Alert service not initialized');
+      return;
+    }
+
+    // Validate that the bidSafetyThreshold is positive
+    if (
+      bidSafetyAlertEnabled &&
+      (typeof bidSafetyThreshold !== 'number' || bidSafetyThreshold <= 0)
+    ) {
+      setError('Bid Safety threshold must be a positive number');
+      return;
+    }
+
+    // Validate and convert lowGasThreshold to a number if provided
+    let lowGasValueNumeric: number | undefined;
+    if (lowGasAlertEnabled) {
+      if (lowGasThreshold === '') {
+        setError('Low Gas threshold is required');
+        return;
+      }
+
+      // Convert to number if it's a string
+      lowGasValueNumeric =
+        typeof lowGasThreshold === 'string'
+          ? parseFloat(lowGasThreshold)
+          : lowGasThreshold;
+
+      if (isNaN(lowGasValueNumeric) || lowGasValueNumeric <= 0) {
+        setError('Low Gas threshold must be a positive number');
+        return;
+      }
     }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Save eviction alert settings
-      await apiClient.post('/alerts', {
-        type: 'eviction',
-        isActive: evictionAlertEnabled,
-        userContractId: contractId,
-        emailChannelEnabled: evictionEmailEnabled,
-        slackChannelEnabled: evictionSlackEnabled,
-        telegramChannelEnabled: evictionTelegramEnabled,
-        webhookChannelEnabled: false,
-      });
+      // Create an array of alert settings to save
+      const alertSettings: AlertSettings[] = [
+        // Eviction alert
+        {
+          type: AlertType.EVICTION,
+          isActive: evictionAlertEnabled,
+          userContractId: contractId,
+          emailChannelEnabled: evictionEmailEnabled,
+          slackChannelEnabled: evictionSlackEnabled,
+          telegramChannelEnabled: evictionTelegramEnabled,
+          webhookChannelEnabled: evictionWebhookEnabled,
+        },
+        // No Gas alert
+        {
+          type: AlertType.NO_GAS,
+          isActive: noGasAlertEnabled,
+          userContractId: contractId,
+          emailChannelEnabled: noGasEmailEnabled,
+          slackChannelEnabled: noGasSlackEnabled,
+          telegramChannelEnabled: noGasTelegramEnabled,
+          webhookChannelEnabled: noGasWebhookEnabled,
+        },
+        // Low Gas alert - value as a number
+        {
+          type: AlertType.LOW_GAS,
+          value: lowGasValueNumeric, // Use the validated number
+          isActive: lowGasAlertEnabled,
+          userContractId: contractId,
+          emailChannelEnabled: lowGasEmailEnabled,
+          slackChannelEnabled: lowGasSlackEnabled,
+          telegramChannelEnabled: lowGasTelegramEnabled,
+          webhookChannelEnabled: lowGasWebhookEnabled,
+        },
+        // Bid Safety alert - value as a number
+        {
+          type: AlertType.BID_SAFETY,
+          value: bidSafetyThreshold, // Already a number
+          isActive: bidSafetyAlertEnabled,
+          userContractId: contractId,
+          emailChannelEnabled: bidSafetyEmailEnabled,
+          slackChannelEnabled: bidSafetySlackEnabled,
+          telegramChannelEnabled: bidSafetyTelegramEnabled,
+          webhookChannelEnabled: bidSafetyWebhookEnabled,
+        },
+      ];
 
-      // Save noGas alert settings
-      await apiClient.post('/alerts', {
-        type: 'noGas',
-        isActive: noGasAlertEnabled,
-        userContractId: contractId,
-        emailChannelEnabled: noGasEmailEnabled,
-        slackChannelEnabled: noGasSlackEnabled,
-        telegramChannelEnabled: noGasTelegramEnabled,
-        webhookChannelEnabled: false,
-      });
+      // Save each alert individually
+      const promises = alertSettings.map((settings) =>
+        alertService.createOrUpdateAlert(settings)
+      );
 
-      // Save lowGas alert settings
-      await apiClient.post('/alerts', {
-        type: 'lowGas',
-        value: lowGasThreshold,
-        isActive: lowGasAlertEnabled,
-        userContractId: contractId,
-        emailChannelEnabled: lowGasEmailEnabled,
-        slackChannelEnabled: lowGasSlackEnabled,
-        telegramChannelEnabled: lowGasTelegramEnabled,
-        webhookChannelEnabled: false,
-      });
+      // Wait for all alerts to be saved
+      await Promise.all(promises);
 
       // Call the onSuccess callback if provided
       if (onSuccess) {
@@ -156,6 +278,7 @@ export default function AlertsSettings({
       setEvictionEmailEnabled(true);
       setEvictionTelegramEnabled(true);
       setEvictionSlackEnabled(true);
+      setEvictionWebhookEnabled(true);
     }
   };
 
@@ -166,6 +289,7 @@ export default function AlertsSettings({
       setNoGasEmailEnabled(true);
       setNoGasTelegramEnabled(true);
       setNoGasSlackEnabled(true);
+      setNoGasWebhookEnabled(true);
     }
   };
 
@@ -176,6 +300,18 @@ export default function AlertsSettings({
       setLowGasEmailEnabled(true);
       setLowGasTelegramEnabled(true);
       setLowGasSlackEnabled(true);
+      setLowGasWebhookEnabled(true);
+    }
+  };
+
+  const handleBidSafetyAlertToggle = (checked: boolean) => {
+    setBidSafetyAlertEnabled(checked);
+    if (checked) {
+      // Enable all channels by default when alert is enabled
+      setBidSafetyEmailEnabled(true);
+      setBidSafetyTelegramEnabled(true);
+      setBidSafetySlackEnabled(true);
+      setBidSafetyWebhookEnabled(true);
     }
   };
 
@@ -205,9 +341,7 @@ export default function AlertsSettings({
             <h2 className='text-2xl font-bold text-white'>
               Set Contract Alerts
             </h2>
-            <div className='text-white/80 mt-1'>
-              Liquidity Pool {contractAddress}
-            </div>
+            <div className='text-white/80 mt-1'>{contractAddress}</div>
           </div>
           <Button
             size='icon'
@@ -224,111 +358,414 @@ export default function AlertsSettings({
         <div className='mb-8 rounded-lg bg-black p-6'>
           <div className='flex items-center justify-between mb-2'>
             <div>
-              <h3 className='text-lg font-medium'>Eviction Alerts</h3>
+              <h3 className='text-lg font-medium'>Eviction</h3>
               <p className='text-gray-400 text-sm'>
-                Get notified when your contract is evicted from the cache.
+                Alert me when my contract gets evicted from the cache.
               </p>
             </div>
-            <div className='relative inline-flex items-center cursor-pointer'>
-              <input
-                type='checkbox'
-                id='evictionToggle'
-                className='sr-only'
-                checked={evictionAlertEnabled}
-                onChange={(e) => handleEvictionAlertToggle(e.target.checked)}
+            <SwitchPrimitive.Root
+              checked={evictionAlertEnabled}
+              onCheckedChange={handleEvictionAlertToggle}
+              className={cn(
+                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+              )}
+            >
+              <SwitchPrimitive.Thumb
+                className={cn(
+                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                )}
               />
-              <div
-                className={`w-11 h-6 rounded-full transition-colors ease-in-out duration-200 ${
-                  evictionAlertEnabled ? 'bg-blue-600' : 'bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`transform transition ease-in-out duration-200 h-5 w-5 rounded-full bg-white shadow-md translate-x-0.5 translate-y-0.5 ${
-                    evictionAlertEnabled ? 'translate-x-5' : ''
-                  }`}
+            </SwitchPrimitive.Root>
+          </div>
+
+          {evictionAlertEnabled && (
+            <div className='mt-4 grid grid-cols-2 gap-4'>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='evictionEmail'
+                  checked={evictionEmailEnabled}
+                  onCheckedChange={handleCheckedChange(setEvictionEmailEnabled)}
+                  className='data-[state=checked]:bg-[#335CD7]'
                 />
+                <label
+                  htmlFor='evictionEmail'
+                  className='text-sm cursor-pointer'
+                >
+                  Email
+                </label>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='evictionTelegram'
+                  checked={evictionTelegramEnabled}
+                  onCheckedChange={handleCheckedChange(
+                    setEvictionTelegramEnabled
+                  )}
+                  className='data-[state=checked]:bg-[#335CD7]'
+                />
+                <label
+                  htmlFor='evictionTelegram'
+                  className='text-sm cursor-pointer'
+                >
+                  Telegram
+                </label>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='evictionSlack'
+                  checked={evictionSlackEnabled}
+                  onCheckedChange={handleCheckedChange(setEvictionSlackEnabled)}
+                  className='data-[state=checked]:bg-[#335CD7]'
+                />
+                <label
+                  htmlFor='evictionSlack'
+                  className='text-sm cursor-pointer'
+                >
+                  Slack
+                </label>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='evictionWebhook'
+                  checked={evictionWebhookEnabled}
+                  onCheckedChange={handleCheckedChange(
+                    setEvictionWebhookEnabled
+                  )}
+                  className='data-[state=checked]:bg-[#335CD7]'
+                />
+                <label
+                  htmlFor='evictionWebhook'
+                  className='text-sm cursor-pointer'
+                >
+                  Webhook
+                </label>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* No Gas Alerts */}
         <div className='mb-8 rounded-lg bg-black p-6'>
           <div className='flex items-center justify-between mb-2'>
             <div>
-              <h3 className='text-lg font-medium'>No Gas Alerts</h3>
+              <h3 className='text-lg font-medium'>No Gas</h3>
               <p className='text-gray-400 text-sm'>
-                Get notified when your balance can&apos;t cover gas for
-                automatic bids.
+                Alert me when my balance can&apos;t cover gas for auto-bids.
               </p>
             </div>
-            <div className='relative inline-flex items-center cursor-pointer'>
-              <input
-                type='checkbox'
-                id='noGasToggle'
-                className='sr-only'
-                checked={noGasAlertEnabled}
-                onChange={(e) => handleNoGasAlertToggle(e.target.checked)}
+            <SwitchPrimitive.Root
+              checked={noGasAlertEnabled}
+              onCheckedChange={handleNoGasAlertToggle}
+              className={cn(
+                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+              )}
+            >
+              <SwitchPrimitive.Thumb
+                className={cn(
+                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                )}
               />
-              <div
-                className={`w-11 h-6 rounded-full transition-colors ease-in-out duration-200 ${
-                  noGasAlertEnabled ? 'bg-blue-600' : 'bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`transform transition ease-in-out duration-200 h-5 w-5 rounded-full bg-white shadow-md translate-x-0.5 translate-y-0.5 ${
-                    noGasAlertEnabled ? 'translate-x-5' : ''
-                  }`}
+            </SwitchPrimitive.Root>
+          </div>
+
+          {noGasAlertEnabled && (
+            <div className='mt-4 grid grid-cols-2 gap-4'>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='noGasEmail'
+                  checked={noGasEmailEnabled}
+                  onCheckedChange={handleCheckedChange(setNoGasEmailEnabled)}
+                  className='data-[state=checked]:bg-[#335CD7]'
                 />
+                <label htmlFor='noGasEmail' className='text-sm cursor-pointer'>
+                  Email
+                </label>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='noGasTelegram'
+                  checked={noGasTelegramEnabled}
+                  onCheckedChange={handleCheckedChange(setNoGasTelegramEnabled)}
+                  className='data-[state=checked]:bg-[#335CD7]'
+                />
+                <label
+                  htmlFor='noGasTelegram'
+                  className='text-sm cursor-pointer'
+                >
+                  Telegram
+                </label>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='noGasSlack'
+                  checked={noGasSlackEnabled}
+                  onCheckedChange={handleCheckedChange(setNoGasSlackEnabled)}
+                  className='data-[state=checked]:bg-[#335CD7]'
+                />
+                <label htmlFor='noGasSlack' className='text-sm cursor-pointer'>
+                  Slack
+                </label>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='noGasWebhook'
+                  checked={noGasWebhookEnabled}
+                  onCheckedChange={handleCheckedChange(setNoGasWebhookEnabled)}
+                  className='data-[state=checked]:bg-[#335CD7]'
+                />
+                <label
+                  htmlFor='noGasWebhook'
+                  className='text-sm cursor-pointer'
+                >
+                  Webhook
+                </label>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Low Gas Alerts */}
         <div className='mb-8 rounded-lg bg-black p-6'>
           <div className='flex items-center justify-between mb-2'>
             <div>
-              <h3 className='text-lg font-medium'>Low Gas Alerts</h3>
+              <h3 className='text-lg font-medium'>Low Gas</h3>
               <p className='text-gray-400 text-sm'>
-                Get notified when your balance drops below the set threshold.
+                Alert me when my balance goes below the threshold.
               </p>
             </div>
-            <div className='relative inline-flex items-center cursor-pointer'>
-              <input
-                type='checkbox'
-                id='lowGasToggle'
-                className='sr-only'
-                checked={lowGasAlertEnabled}
-                onChange={(e) => handleLowGasAlertToggle(e.target.checked)}
+            <SwitchPrimitive.Root
+              checked={lowGasAlertEnabled}
+              onCheckedChange={handleLowGasAlertToggle}
+              className={cn(
+                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+              )}
+            >
+              <SwitchPrimitive.Thumb
+                className={cn(
+                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                )}
               />
-              <div
-                className={`w-11 h-6 rounded-full transition-colors ease-in-out duration-200 ${
-                  lowGasAlertEnabled ? 'bg-blue-600' : 'bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`transform transition ease-in-out duration-200 h-5 w-5 rounded-full bg-white shadow-md translate-x-0.5 translate-y-0.5 ${
-                    lowGasAlertEnabled ? 'translate-x-5' : ''
-                  }`}
-                />
-              </div>
-            </div>
+            </SwitchPrimitive.Root>
           </div>
 
           {lowGasAlertEnabled && (
-            <div className='mt-4 mb-4'>
-              <label className='block text-sm mb-1'>
-                Alert Threshold (ETH)
-              </label>
-              <Input
-                type='number'
-                placeholder='e.g. 0.1'
-                value={lowGasThreshold}
-                onChange={(e) => setLowGasThreshold(e.target.value)}
-                className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
-              />
+            <>
+              <div className='mt-4 mb-4'>
+                <label className='block text-sm mb-1'>
+                  Low gas threshold (ETH)
+                </label>
+                <Input
+                  type='number'
+                  placeholder='e.g. 0.1'
+                  value={lowGasThreshold}
+                  onChange={handleLowGasThresholdChange}
+                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
+                />
+              </div>
+
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='lowGasEmail'
+                    checked={lowGasEmailEnabled}
+                    onCheckedChange={handleCheckedChange(setLowGasEmailEnabled)}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='lowGasEmail'
+                    className='text-sm cursor-pointer'
+                  >
+                    Email
+                  </label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='lowGasTelegram'
+                    checked={lowGasTelegramEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setLowGasTelegramEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='lowGasTelegram'
+                    className='text-sm cursor-pointer'
+                  >
+                    Telegram
+                  </label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='lowGasSlack'
+                    checked={lowGasSlackEnabled}
+                    onCheckedChange={handleCheckedChange(setLowGasSlackEnabled)}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='lowGasSlack'
+                    className='text-sm cursor-pointer'
+                  >
+                    Slack
+                  </label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='lowGasWebhook'
+                    checked={lowGasWebhookEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setLowGasWebhookEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='lowGasWebhook'
+                    className='text-sm cursor-pointer'
+                  >
+                    Webhook
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Bid Safety Alerts */}
+        <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='flex items-center justify-between mb-2'>
+            <div>
+              <h3 className='text-lg font-medium'>Bid Safety</h3>
+              <p className='text-gray-400 text-sm'>
+                Alert me when the minimum bid nears contract bid.
+              </p>
             </div>
+            <SwitchPrimitive.Root
+              checked={bidSafetyAlertEnabled}
+              onCheckedChange={handleBidSafetyAlertToggle}
+              className={cn(
+                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+              )}
+            >
+              <SwitchPrimitive.Thumb
+                className={cn(
+                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                )}
+              />
+            </SwitchPrimitive.Root>
+          </div>
+
+          {bidSafetyAlertEnabled && (
+            <>
+              <div className='mt-4 mb-8'>
+                <div className='flex flex-col gap-3'>
+                  <Slider
+                    value={[bidSafetyThreshold]}
+                    max={100}
+                    step={1}
+                    onValueChange={(values) => setBidSafetyThreshold(values[0])}
+                    className={cn(
+                      'w-full',
+                      '[&>span]:bg-black', // Black track
+                      '[&>span>span]:bg-white', // White fill
+                      '[&_[data-slot=slider-thumb]]:bg-white' // White thumb
+                    )}
+                  />
+                  <div className='flex justify-between text-xs text-gray-400 mt-1 px-1'>
+                    <span>0%</span>
+                    <span className='text-center text-white font-medium'>
+                      {bidSafetyThreshold}%
+                    </span>
+                    <span>100%</span>
+                  </div>
+                  <div className='text-xs text-center mt-3 text-gray-400 border-t border-gray-800 pt-3'>
+                    MinBid-to-EffectiveBid distance:{' '}
+                    {bidSafetyThreshold < 30
+                      ? 'Close'
+                      : bidSafetyThreshold < 70
+                      ? 'Medium'
+                      : 'Far'}
+                  </div>
+                </div>
+              </div>
+
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='bidSafetyEmail'
+                    checked={bidSafetyEmailEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setBidSafetyEmailEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='bidSafetyEmail'
+                    className='text-sm cursor-pointer'
+                  >
+                    Email
+                  </label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='bidSafetyTelegram'
+                    checked={bidSafetyTelegramEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setBidSafetyTelegramEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='bidSafetyTelegram'
+                    className='text-sm cursor-pointer'
+                  >
+                    Telegram
+                  </label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='bidSafetySlack'
+                    checked={bidSafetySlackEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setBidSafetySlackEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='bidSafetySlack'
+                    className='text-sm cursor-pointer'
+                  >
+                    Slack
+                  </label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='bidSafetyWebhook'
+                    checked={bidSafetyWebhookEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setBidSafetyWebhookEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='bidSafetyWebhook'
+                    className='text-sm cursor-pointer'
+                  >
+                    Webhook
+                  </label>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -336,7 +773,7 @@ export default function AlertsSettings({
 
         <div className='mt-6 mb-4'>
           <Button
-            className='w-full px-4 py-2 bg-white text-black font-medium hover:bg-gray-200 rounded-md'
+            className='w-full px-4 py-2 bg-black text-white font-medium hover:bg-gray-900 rounded-md'
             onClick={handleSaveAlertSettings}
             disabled={isLoading}
           >
