@@ -43,16 +43,45 @@ export interface AlertSettings {
 }
 
 /**
+ * Email settings for user alert preferences
+ */
+export interface EmailSettings {
+  enabled: boolean;
+  destination: string;
+}
+
+/**
+ * Telegram settings for user alert preferences
+ */
+export interface TelegramSettings {
+  enabled: boolean;
+  destination: string;
+}
+
+/**
+ * Slack settings for user alert preferences
+ */
+export interface SlackSettings {
+  enabled: boolean;
+  destination: string;
+}
+
+/**
+ * Webhook settings for user alert preferences
+ */
+export interface WebhookSettings {
+  enabled: boolean;
+  destination: string;
+}
+
+/**
  * User alert preferences interface
  */
 export interface UserAlertPreferences {
-  emailEnabled: boolean;
-  slackEnabled: boolean;
-  telegramEnabled: boolean;
-  webhookEnabled: boolean;
-  slackWebhookUrl?: string;
-  telegramChatId?: string;
-  customWebhookUrl?: string;
+  emailSettings?: EmailSettings;
+  telegramSettings?: TelegramSettings;
+  slackSettings?: SlackSettings;
+  webhookSettings?: WebhookSettings;
 }
 
 /**
@@ -83,8 +112,6 @@ export class AlertService {
 
   /**
    * Deactivate an alert by setting isActive to false
-   * @param alertId Alert ID
-   * @param userContractId The user contract ID associated with the alert
    * @param existingAlert The existing alert data
    * @returns Promise that resolves when the alert is deactivated
    */
@@ -107,19 +134,19 @@ export class AlertService {
    * @returns Promise with the user alert preferences
    */
   async getUserAlertPreferences(): Promise<UserAlertPreferences> {
-    return this.apiClient.get<UserAlertPreferences>('/alerts/preferences');
+    return this.apiClient.get<UserAlertPreferences>('/users/alerts-settings');
   }
 
   /**
    * Update user's global alert preferences
-   * @param preferences Updated alert preferences
-   * @returns Promise with the updated alert preferences
+   * @param preferences User alert preferences to update
+   * @returns Promise with the updated preferences
    */
   async updateUserAlertPreferences(
-    preferences: Partial<UserAlertPreferences>
+    preferences: UserAlertPreferences
   ): Promise<UserAlertPreferences> {
     return this.apiClient.patch<UserAlertPreferences>(
-      '/alerts/preferences',
+      '/users/alerts-settings',
       preferences as unknown as Record<string, unknown>
     );
   }

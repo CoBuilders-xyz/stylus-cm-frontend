@@ -5,6 +5,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
 import { AuthenticationProvider } from '../context/AuthenticationProvider';
+import { AlertSettingsProvider } from '../context/AlertSettingsProvider';
 import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -24,8 +25,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <RainbowKitProvider>
           <AuthenticationProvider>
-            <Header />
-            {children}
+            <AlertSettingsProvider>
+              <Header />
+              {children}
+            </AlertSettingsProvider>
           </AuthenticationProvider>
         </RainbowKitProvider>
         <Toaster />
