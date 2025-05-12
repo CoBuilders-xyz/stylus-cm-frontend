@@ -8,6 +8,8 @@ import {
   ResponsiveContainer,
   XAxis,
   YAxis,
+  Tooltip,
+  TooltipProps,
 } from 'recharts';
 import {
   Card,
@@ -16,12 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
+import { ChartConfig, ChartContainer } from '@/components/ui/chart';
 import {
   Select,
   SelectContent,
@@ -82,7 +79,7 @@ const mockData = {
 const chartConfig = {
   averageBid: {
     label: 'Average Bid',
-    color: 'hsl(var(--chart-1))',
+    color: '#4267B2', // Using a blue color similar to the bars in the image
   },
 } satisfies ChartConfig;
 
@@ -114,15 +111,121 @@ export default function CacheAverageBid() {
     }));
   }, []);
 
+  // Custom styles
+  const customStyles = {
+    card: {
+      backgroundColor: '#1A1919',
+      border: 'none',
+    },
+    title: {
+      color: '#FFFFFF',
+    },
+    globalValue: {
+      color: '#FFFFFF',
+    },
+    description: {
+      color: '#B1B1B1',
+    },
+    toggleButton: {
+      backgroundColor: '#1A1919',
+      color: '#B1B1B1',
+      border: '1px solid #2C2E30',
+      borderRadius: '0',
+      margin: '0',
+    },
+    toggleButtonActive: {
+      backgroundColor: '#2C2E30',
+      color: '#FFFFFF',
+      border: '1px solid #2C2E30',
+      borderRadius: '0',
+      margin: '0',
+    },
+    toggleGroup: {
+      backgroundColor: '#1A1919',
+      border: '1px solid #2C2E30',
+      borderRadius: '8px',
+      padding: '0',
+      overflow: 'hidden',
+    },
+    yAxis: {
+      color: '#B1B1B1',
+    },
+    xAxis: {
+      color: '#B1B1B1',
+    },
+    grid: {
+      stroke: '#2C2E30',
+    },
+  };
+
+  // Custom tooltip component
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: TooltipProps<number, string>) => {
+    if (!active || !payload || !payload.length) {
+      return null;
+    }
+
+    const formattedDate = new Date(label).toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    });
+
+    return (
+      <div
+        style={{
+          backgroundColor: '#1A1919',
+          border: '1px solid #2C2E30',
+          padding: '10px',
+          borderRadius: '4px',
+        }}
+      >
+        <p
+          style={{ color: '#FFFFFF', marginBottom: '4px', fontWeight: 'bold' }}
+        >
+          {formattedDate}
+        </p>
+        {payload.map((entry, index) => (
+          <div
+            key={`item-${index}`}
+            style={{
+              color: '#B1B1B1',
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '3px',
+            }}
+          >
+            <span style={{ marginRight: '8px' }}>
+              {entry.name === 'averageBid' ? 'Average Bid' : entry.name}:
+            </span>
+            <span style={{ fontWeight: 'bold' }}>
+              {entry.name === 'averageBid' ? `${entry.value} ETH` : entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <Card className='@container/card'>
+    <Card
+      className='@container/card'
+      style={{ ...customStyles.card, borderRadius: '12px' }}
+    >
       <CardHeader className='relative'>
         <div className='flex flex-col gap-1'>
-          <CardTitle className='text-2xl font-bold'>Average Bid</CardTitle>
-          <div className='text-4xl font-bold'>
+          <CardTitle className='text-2xl font-bold' style={customStyles.title}>
+            Average Bid
+          </CardTitle>
+          <div className='text-4xl font-bold' style={customStyles.globalValue}>
             {mockData.global.parsedAverageBid} ETH
           </div>
-          <CardDescription className='text-base'>
+          <CardDescription
+            className='text-base'
+            style={customStyles.description}
+          >
             Average bid recorded during the period for the selected contract
             size group
           </CardDescription>
@@ -134,12 +237,23 @@ export default function CacheAverageBid() {
             onValueChange={(value) => value && setTimespan(value)}
             variant='outline'
             className='hidden md:flex'
+            style={customStyles.toggleGroup}
           >
-            {timespanOptions.map((option) => (
+            {timespanOptions.map((option, index) => (
               <ToggleGroupItem
                 key={option.value}
                 value={option.value}
-                className='h-8 w-10 px-2.5 font-medium'
+                className='h-8 w-10 px-2.5 font-medium data-[state=on]:bg-transparent'
+                style={{
+                  ...(option.value === timespan
+                    ? customStyles.toggleButtonActive
+                    : customStyles.toggleButton),
+                  borderRight:
+                    index === timespanOptions.length - 1
+                      ? 'none'
+                      : '1px solid #2C2E30',
+                  borderLeft: index === 0 ? 'none' : 'none',
+                }}
               >
                 {option.label}
               </ToggleGroupItem>
@@ -149,15 +263,31 @@ export default function CacheAverageBid() {
             <SelectTrigger
               className='md:hidden flex w-40'
               aria-label='Select a timespan'
+              style={{
+                backgroundColor: '#1A1919',
+                color: '#FFFFFF',
+                border: '1px solid #2C2E30',
+              }}
             >
               <SelectValue placeholder='Select timespan' />
             </SelectTrigger>
-            <SelectContent className='rounded-xl'>
+            <SelectContent
+              className='rounded-xl'
+              style={{
+                backgroundColor: '#1A1919',
+                border: '1px solid #2C2E30',
+              }}
+            >
               {timespanOptions.map((option) => (
                 <SelectItem
                   key={option.value}
                   value={option.value}
                   className='rounded-lg'
+                  style={{
+                    color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
+                    backgroundColor:
+                      option.value === timespan ? '#2C2E30' : '#1A1919',
+                  }}
                 >
                   {option.label}
                 </SelectItem>
@@ -175,13 +305,24 @@ export default function CacheAverageBid() {
           onValueChange={(value) => value && setContractSize(value)}
           variant='outline'
           className='w-full grid grid-cols-3'
+          style={customStyles.toggleGroup}
         >
-          {contractSizeOptions.map((option) => (
+          {contractSizeOptions.map((option, index) => (
             <ToggleGroupItem
               key={option.value}
               value={option.value}
-              className='h-10 px-2 py-2 text-center'
+              className='h-10 px-2 py-2 text-center data-[state=on]:bg-transparent'
               variant='outline'
+              style={{
+                ...(option.value === contractSize
+                  ? customStyles.toggleButtonActive
+                  : customStyles.toggleButton),
+                borderRight:
+                  index === contractSizeOptions.length - 1
+                    ? 'none'
+                    : '1px solid #2C2E30',
+                borderLeft: index === 0 ? 'none' : 'none',
+              }}
             >
               {option.label}
             </ToggleGroupItem>
@@ -198,25 +339,22 @@ export default function CacheAverageBid() {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id='fillAverageBid' x1='0' y1='0' x2='0' y2='1'>
-                  <stop
-                    offset='5%'
-                    stopColor='var(--color-averageBid)'
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset='95%'
-                    stopColor='var(--color-averageBid)'
-                    stopOpacity={0.1}
-                  />
+                  <stop offset='5%' stopColor='#4267B2' stopOpacity={0.8} />
+                  <stop offset='95%' stopColor='#4267B2' stopOpacity={0.1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray='3 3' />
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray='3 3'
+                stroke={customStyles.grid.stroke}
+              />
               <XAxis
                 dataKey='date'
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={32}
+                tick={{ fill: customStyles.xAxis.color }}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleDateString('en-US', {
@@ -228,34 +366,16 @@ export default function CacheAverageBid() {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
+                tick={{ fill: customStyles.yAxis.color }}
                 tickFormatter={(value) => `${value} ETH`}
                 width={80}
               />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => {
-                      return new Date(value).toLocaleDateString('en-US', {
-                        month: 'long',
-                        year: 'numeric',
-                      });
-                    }}
-                    formatter={(value, name) => {
-                      if (name === 'averageBid') {
-                        return [`${value} ETH`, 'Average Bid'];
-                      }
-                      return [value, name];
-                    }}
-                    indicator='dot'
-                  />
-                }
-              />
+              <Tooltip cursor={false} content={<CustomTooltip />} />
               <Area
                 dataKey='averageBid'
                 type='monotone'
                 fill='url(#fillAverageBid)'
-                stroke='var(--color-averageBid)'
+                stroke='#4267B2'
                 strokeWidth={2}
               />
             </AreaChart>
