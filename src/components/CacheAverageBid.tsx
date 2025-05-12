@@ -89,6 +89,78 @@ export default function CacheAverageBid() {
     return formatRoundedEth(bidAverageData.global.parsedAverageBid, 5);
   }, [bidAverageData]);
 
+  // Format X-axis ticks based on timespan
+  const formatXAxisTick = (value: string) => {
+    if (!value) return '';
+
+    switch (timespan) {
+      case 'D':
+        // For day, show the day part (e.g., "06" from "2025-05-06")
+        return value.split('-')[2] || value;
+      case 'W':
+        // For week, show the week part (e.g., "17" from "2025-17")
+        return value.split('-')[1] || value;
+      case 'M':
+        // For month, show the month part (e.g., "04" from "2025-04")
+        return value.split('-')[1] || value;
+      case 'Y':
+        // For year, show the year (e.g., "2025")
+        return value.split('-')[0] || value;
+      default:
+        return value;
+    }
+  };
+
+  // Format tooltip header based on timespan
+  const formatTooltipHeader = (label: string) => {
+    if (!label) return '';
+
+    switch (timespan) {
+      case 'D':
+        // For day, show the full date (e.g., "May 6, 2025")
+        const parts = label.split('-');
+        if (parts.length === 3) {
+          return `${parts[0]}-${parts[1]}-${parts[2]}`;
+        }
+        return label;
+      case 'W':
+        // For week, show "Week X, Year"
+        const weekParts = label.split('-');
+        if (weekParts.length === 2) {
+          return `Week ${weekParts[1]}, ${weekParts[0]}`;
+        }
+        return label;
+      case 'M':
+        // For month, show "Month, Year"
+        const monthParts = label.split('-');
+        if (monthParts.length === 2) {
+          const monthNames = [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec',
+          ];
+          const monthIndex = parseInt(monthParts[1], 10) - 1;
+          const monthName = monthNames[monthIndex] || monthParts[1];
+          return `${monthName}, ${monthParts[0]}`;
+        }
+        return label;
+      case 'Y':
+        // For year, show the year
+        return label;
+      default:
+        return label;
+    }
+  };
+
   // Custom styles
   const customStyles = {
     card: {
@@ -146,10 +218,7 @@ export default function CacheAverageBid() {
       return null;
     }
 
-    const formattedDate = new Date(label).toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric',
-    });
+    const formattedLabel = formatTooltipHeader(label);
 
     return (
       <div
@@ -163,7 +232,7 @@ export default function CacheAverageBid() {
         <p
           style={{ color: '#FFFFFF', marginBottom: '4px', fontWeight: 'bold' }}
         >
-          {formattedDate}
+          {formattedLabel}
         </p>
         {payload.map((entry, index) => (
           <div
@@ -372,12 +441,7 @@ export default function CacheAverageBid() {
                   tickMargin={8}
                   minTickGap={32}
                   tick={{ fill: customStyles.xAxis.color }}
-                  tickFormatter={(value) => {
-                    const date = new Date(value);
-                    return date.toLocaleDateString('en-US', {
-                      month: 'short',
-                    });
-                  }}
+                  tickFormatter={formatXAxisTick}
                 />
                 <YAxis
                   tickLine={false}
