@@ -65,6 +65,7 @@ export default function CacheAverageBid() {
     sizeRange,
     setTimespan,
     setSizeRange,
+    currentBlockchainId,
   } = useBidAverage('D', 'small');
 
   // Process data for chart
@@ -283,7 +284,7 @@ export default function CacheAverageBid() {
             Average Bid
           </CardTitle>
           <div className='text-4xl font-bold' style={customStyles.globalValue}>
-            {isLoading ? (
+            {isLoading || !currentBlockchainId ? (
               <Skeleton className='h-10 w-32 bg-slate-700' />
             ) : (
               `${globalAverageBid} ETH`
@@ -398,7 +399,7 @@ export default function CacheAverageBid() {
       </div>
 
       <CardContent className='px-2 pt-0 sm:px-6'>
-        {isLoading ? (
+        {isLoading || !currentBlockchainId ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
             <Skeleton className='h-[200px] w-full bg-slate-700' />
           </div>

@@ -83,6 +83,7 @@ export default function CacheManagerActivity() {
     error,
     timespan,
     setTimespan,
+    currentBlockchainId,
   } = useCacheManagerActivity('D');
 
   // Format X-axis ticks based on timespan
@@ -263,7 +264,7 @@ export default function CacheManagerActivity() {
             Cache Manager Activity
           </CardTitle>
           <div className='text-4xl font-bold' style={customStyles.globalValue}>
-            {isLoading ? (
+            {isLoading || !currentBlockchainId ? (
               <Skeleton className='h-10 w-32 bg-slate-700' />
             ) : (
               totalActivity
@@ -347,7 +348,7 @@ export default function CacheManagerActivity() {
       <div className='px-6 mb-4 h-10'></div>
 
       <CardContent className='px-2 pt-0 sm:px-6'>
-        {isLoading ? (
+        {isLoading || !currentBlockchainId ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
             <Skeleton className='h-[200px] w-full bg-slate-700' />
           </div>

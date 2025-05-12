@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useCacheMetrics } from '@/hooks/useCacheMetrics';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CacheStatus() {
   const {
@@ -36,8 +37,11 @@ export default function CacheStatus() {
           {/* Total Contracts Card */}
           <div className='p-6 rounded-md' style={{ background: '#1A1919' }}>
             <h2 className='text-gray-300 font-medium'>Total Contracts</h2>
-            {isLoadingTotalBytecodes ? (
-              <p className='text-white mt-2'>Loading...</p>
+            {isLoadingTotalBytecodes || !currentBlockchainId ? (
+              <div className='mt-2 space-y-2'>
+                <Skeleton className='h-10 w-32 bg-slate-700' />
+                <Skeleton className='h-4 w-24 bg-slate-700' />
+              </div>
             ) : errorTotalBytecodes ? (
               <p className='text-red-500 mt-2'>Error loading data</p>
             ) : totalBytecodes ? (
@@ -51,10 +55,6 @@ export default function CacheStatus() {
                   from last month
                 </p>
               </>
-            ) : !currentBlockchainId ? (
-              <p className='text-yellow-500 mt-2'>
-                No blockchain selected or connected
-              </p>
             ) : (
               <p className='text-white mt-2'>No data available</p>
             )}
@@ -63,8 +63,11 @@ export default function CacheStatus() {
           {/* Available Cache Space Card */}
           <div className='p-6 rounded-md' style={{ background: '#1A1919' }}>
             <h2 className='text-gray-300 font-medium'>Available Cache Space</h2>
-            {isLoadingCacheStats ? (
-              <p className='text-white mt-2'>Loading...</p>
+            {isLoadingCacheStats || !currentBlockchainId ? (
+              <div className='mt-2 space-y-2'>
+                <Skeleton className='h-10 w-32 bg-slate-700' />
+                <Skeleton className='h-4 w-24 bg-slate-700' />
+              </div>
             ) : errorCacheStats ? (
               <p className='text-red-500 mt-2'>Error loading data</p>
             ) : cacheStats ? (
@@ -78,10 +81,6 @@ export default function CacheStatus() {
                   {cacheStats.cacheSizeMB.toFixed(2)}mb
                 </p>
               </>
-            ) : !currentBlockchainId ? (
-              <p className='text-yellow-500 mt-2'>
-                No blockchain selected or connected
-              </p>
             ) : (
               <p className='text-white mt-2'>No data available</p>
             )}
