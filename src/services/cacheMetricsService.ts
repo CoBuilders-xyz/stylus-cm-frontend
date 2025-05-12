@@ -20,6 +20,38 @@ export interface CacheStats {
 }
 
 /**
+ * Interface for bid average period data
+ */
+export interface BidAveragePeriod {
+  period: string;
+  averageBid: string;
+  parsedAverageBid: string;
+  count: number;
+}
+
+/**
+ * Interface for global bid average data
+ */
+export interface BidAverageGlobal {
+  averageBid: string;
+  parsedAverageBid: string;
+  count: number;
+}
+
+/**
+ * Interface for bid average response
+ */
+export interface BidAverageResponse {
+  periods: BidAveragePeriod[];
+  global: BidAverageGlobal;
+}
+
+/**
+ * Timespan options for bid average data
+ */
+export type BidAverageTimespan = 'D' | 'W' | 'M' | 'Y';
+
+/**
  * Cache Metrics Service for non-authenticated API requests related to cache metrics
  */
 export class CacheMetricsService {
@@ -53,6 +85,37 @@ export class CacheMetricsService {
   async getCacheStats(blockchainId: string): Promise<CacheStats> {
     return this.apiClient.get<CacheStats>(
       `/blockchains/${blockchainId}/cache-stats`
+    );
+  }
+
+  /**
+   * Get bid average data for a specific blockchain
+   * @param blockchainId The blockchain ID
+   * @param timespan The timespan (D=Day, W=Week, M=Month, Y=Year)
+   * @param minSize Minimum size in bytes (optional)
+   * @param maxSize Maximum size in bytes (optional)
+   * @returns Promise with bid average information
+   */
+  async getBidAverage(
+    blockchainId: string,
+    timespan: BidAverageTimespan,
+    minSize?: number,
+    maxSize?: number
+  ): Promise<BidAverageResponse> {
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('timespan', timespan);
+
+    if (minSize !== undefined) {
+      params.append('minSize', minSize.toString());
+    }
+
+    if (maxSize !== undefined) {
+      params.append('maxSize', maxSize.toString());
+    }
+
+    return this.apiClient.get<BidAverageResponse>(
+      `/blockchains/${blockchainId}/bid-average?${params.toString()}`
     );
   }
 }

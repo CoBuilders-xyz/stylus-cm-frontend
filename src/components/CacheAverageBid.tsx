@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Area,
   AreaChart,
@@ -27,53 +27,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-
-// Mock data based on the provided structure
-const mockData = {
-  periods: [
-    {
-      period: '2025-01-15',
-      averageBid: '3627218218350321',
-      parsedAverageBid: '0.020',
-      count: 39,
-    },
-    {
-      period: '2025-02-15',
-      averageBid: '10128096254897959',
-      parsedAverageBid: '0.050',
-      count: 49,
-    },
-    {
-      period: '2025-03-15',
-      averageBid: '6977974526506491',
-      parsedAverageBid: '0.075',
-      count: 18,
-    },
-    {
-      period: '2025-04-15',
-      averageBid: '4174129200454426',
-      parsedAverageBid: '0.040',
-      count: 73,
-    },
-    {
-      period: '2025-05-15',
-      averageBid: '1578190064375000',
-      parsedAverageBid: '0.010',
-      count: 16,
-    },
-    {
-      period: '2025-06-15',
-      averageBid: '2187500000000000',
-      parsedAverageBid: '0.025',
-      count: 8,
-    },
-  ],
-  global: {
-    averageBid: '3954700695300258',
-    parsedAverageBid: '0.05',
-    count: 203,
-  },
-};
+import { useBidAverage, BidAverageSizeRange } from '@/hooks/useBidAverage';
+import { BidAverageTimespan } from '@/services/cacheMetricsService';
+import { formatRoundedEth } from '@/utils/formatting';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Chart configuration
 const chartConfig = {
@@ -99,17 +56,38 @@ const contractSizeOptions = [
 ];
 
 export default function CacheAverageBid() {
-  const [timespan, setTimespan] = useState<string>('D');
-  const [contractSize, setContractSize] = useState<string>('medium');
+  // Use the bid average hook instead of mock data and local state
+  const {
+    bidAverageData,
+    isLoading,
+    error,
+    timespan,
+    sizeRange,
+    setTimespan,
+    setSizeRange,
+  } = useBidAverage('D', 'small');
 
   // Process data for chart
   const chartData = useMemo(() => {
-    return mockData.periods.map((item) => ({
+    if (!bidAverageData || !bidAverageData.periods) {
+      return [];
+    }
+
+    return bidAverageData.periods.map((item) => ({
       date: item.period,
       averageBid: parseFloat(item.parsedAverageBid),
+      formattedAverageBid: formatRoundedEth(item.parsedAverageBid, 5),
       count: item.count,
     }));
-  }, []);
+  }, [bidAverageData]);
+
+  // Formatted global average
+  const globalAverageBid = useMemo(() => {
+    if (!bidAverageData || !bidAverageData.global) {
+      return '0.00';
+    }
+    return formatRoundedEth(bidAverageData.global.parsedAverageBid, 5);
+  }, [bidAverageData]);
 
   // Custom styles
   const customStyles = {
@@ -201,12 +179,28 @@ export default function CacheAverageBid() {
               {entry.name === 'averageBid' ? 'Average Bid' : entry.name}:
             </span>
             <span style={{ fontWeight: 'bold' }}>
-              {entry.name === 'averageBid' ? `${entry.value} ETH` : entry.value}
+              {entry.name === 'averageBid'
+                ? `${payload[0].payload.formattedAverageBid} ETH`
+                : entry.value}
             </span>
           </div>
         ))}
       </div>
     );
+  };
+
+  // Handle timespan change
+  const handleTimespanChange = (value: string) => {
+    if (value) {
+      setTimespan(value as BidAverageTimespan);
+    }
+  };
+
+  // Handle contract size change
+  const handleContractSizeChange = (value: string) => {
+    if (value) {
+      setSizeRange(value as BidAverageSizeRange);
+    }
   };
 
   return (
@@ -220,7 +214,11 @@ export default function CacheAverageBid() {
             Average Bid
           </CardTitle>
           <div className='text-4xl font-bold' style={customStyles.globalValue}>
-            {mockData.global.parsedAverageBid} ETH
+            {isLoading ? (
+              <Skeleton className='h-10 w-32 bg-slate-700' />
+            ) : (
+              `${globalAverageBid} ETH`
+            )}
           </div>
           <CardDescription
             className='text-base'
@@ -234,7 +232,7 @@ export default function CacheAverageBid() {
           <ToggleGroup
             type='single'
             value={timespan}
-            onValueChange={(value) => value && setTimespan(value)}
+            onValueChange={handleTimespanChange}
             variant='outline'
             className='hidden md:flex'
             style={customStyles.toggleGroup}
@@ -259,7 +257,7 @@ export default function CacheAverageBid() {
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          <Select value={timespan} onValueChange={setTimespan}>
+          <Select value={timespan} onValueChange={handleTimespanChange}>
             <SelectTrigger
               className='md:hidden flex w-40'
               aria-label='Select a timespan'
@@ -301,8 +299,8 @@ export default function CacheAverageBid() {
       <div className='px-6 mb-4'>
         <ToggleGroup
           type='single'
-          value={contractSize}
-          onValueChange={(value) => value && setContractSize(value)}
+          value={sizeRange}
+          onValueChange={handleContractSizeChange}
           variant='outline'
           className='w-full grid grid-cols-3'
           style={customStyles.toggleGroup}
@@ -314,7 +312,7 @@ export default function CacheAverageBid() {
               className='h-10 px-2 py-2 text-center data-[state=on]:bg-transparent'
               variant='outline'
               style={{
-                ...(option.value === contractSize
+                ...(option.value === sizeRange
                   ? customStyles.toggleButtonActive
                   : customStyles.toggleButton),
                 borderRight:
@@ -331,56 +329,76 @@ export default function CacheAverageBid() {
       </div>
 
       <CardContent className='px-2 pt-0 sm:px-6'>
-        <ChartContainer
-          config={chartConfig}
-          className='aspect-auto h-[250px] w-full'
-        >
-          <ResponsiveContainer width='100%' height='100%'>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id='fillAverageBid' x1='0' y1='0' x2='0' y2='1'>
-                  <stop offset='5%' stopColor='#4267B2' stopOpacity={0.8} />
-                  <stop offset='95%' stopColor='#4267B2' stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                vertical={false}
-                strokeDasharray='3 3'
-                stroke={customStyles.grid.stroke}
-              />
-              <XAxis
-                dataKey='date'
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tick={{ fill: customStyles.xAxis.color }}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                  });
-                }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fill: customStyles.yAxis.color }}
-                tickFormatter={(value) => `${value} ETH`}
-                width={80}
-              />
-              <Tooltip cursor={false} content={<CustomTooltip />} />
-              <Area
-                dataKey='averageBid'
-                type='monotone'
-                fill='url(#fillAverageBid)'
-                stroke='#4267B2'
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+        {isLoading ? (
+          <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
+            <Skeleton className='h-[200px] w-full bg-slate-700' />
+          </div>
+        ) : error ? (
+          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-red-500'>
+            Error loading chart data. Please try again.
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-gray-400'>
+            No data available for the selected filters.
+          </div>
+        ) : (
+          <ChartContainer
+            config={chartConfig}
+            className='aspect-auto h-[250px] w-full'
+          >
+            <ResponsiveContainer width='100%' height='100%'>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient
+                    id='fillAverageBid'
+                    x1='0'
+                    y1='0'
+                    x2='0'
+                    y2='1'
+                  >
+                    <stop offset='5%' stopColor='#4267B2' stopOpacity={0.8} />
+                    <stop offset='95%' stopColor='#4267B2' stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray='3 3'
+                  stroke={customStyles.grid.stroke}
+                />
+                <XAxis
+                  dataKey='date'
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                  tick={{ fill: customStyles.xAxis.color }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return date.toLocaleDateString('en-US', {
+                      month: 'short',
+                    });
+                  }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fill: customStyles.yAxis.color }}
+                  tickFormatter={(value) => `${formatRoundedEth(value, 5)} ETH`}
+                  width={80}
+                />
+                <Tooltip cursor={false} content={<CustomTooltip />} />
+                <Area
+                  dataKey='averageBid'
+                  type='monotone'
+                  fill='url(#fillAverageBid)'
+                  stroke='#4267B2'
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );
