@@ -11,7 +11,6 @@ export default function CacheStatus() {
     isLoadingCacheStats,
     errorTotalBytecodes,
     errorCacheStats,
-    refreshData,
     currentBlockchainId,
   } = useCacheMetrics();
 
@@ -30,19 +29,6 @@ export default function CacheStatus() {
             <p className='text-gray-300 mt-1 opacity-60'>
               Monitor the status of contract caching across multiple chains
             </p>
-          </div>
-
-          <div className='flex'>
-            <div className='flex items-center'>
-              <div
-                className='border border-white rounded-[10px] p-2 cursor-pointer'
-                style={{ borderWidth: '1px' }}
-                onClick={refreshData}
-              >
-                <span className='mr-2'>↻</span>
-                Refresh Data
-              </div>
-            </div>
           </div>
         </div>
 
@@ -87,7 +73,7 @@ export default function CacheStatus() {
                   {(100 - cacheStats.cacheFilledPercentage).toFixed(2)}%
                 </p>
                 <p className='text-[#B1B1B1] text-sm mt-1'>
-                  {(cacheStats.cacheSizeMB - cacheStats.queueSizeMB).toFixed(2)}
+                  {cacheStats.queueSizeMB.toFixed(2)}
                   mb/
                   {cacheStats.cacheSizeMB.toFixed(2)}mb
                 </p>

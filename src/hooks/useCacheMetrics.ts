@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   CacheMetricsService,
   CacheStats,
@@ -16,7 +16,6 @@ interface CacheMetricsResult {
   isLoadingCacheStats: boolean;
   errorTotalBytecodes: Error | null;
   errorCacheStats: Error | null;
-  refreshData: () => void;
   currentBlockchainId: string | null;
 }
 
@@ -39,7 +38,6 @@ export function useCacheMetrics(): CacheMetricsResult {
     null
   );
   const [errorCacheStats, setErrorCacheStats] = useState<Error | null>(null);
-  const [refreshFlag, setRefreshFlag] = useState<boolean>(false);
 
   // Track if this is the initial mount
   const isInitialMount = useRef(true);
@@ -49,11 +47,6 @@ export function useCacheMetrics(): CacheMetricsResult {
 
   // Create memoized service instance to avoid recreation on each render
   const service = useMemo(() => new CacheMetricsService(), []);
-
-  // Memoized refresh function
-  const refreshData = useCallback(() => {
-    setRefreshFlag(true);
-  }, []);
 
   // Effect to fetch total bytecodes
   useEffect(() => {
@@ -73,8 +66,6 @@ export function useCacheMetrics(): CacheMetricsResult {
     const shouldFetch =
       // On initial mount
       isInitialMount.current ||
-      // When user explicitly requests a refresh
-      refreshFlag ||
       // When we don't have data yet
       !totalBytecodes;
 
@@ -99,13 +90,7 @@ export function useCacheMetrics(): CacheMetricsResult {
       .finally(() => {
         setIsLoadingTotalBytecodes(false);
       });
-  }, [
-    currentBlockchainId,
-    refreshFlag,
-    service,
-    isLoadingTotalBytecodes,
-    totalBytecodes,
-  ]);
+  }, [currentBlockchainId, service, isLoadingTotalBytecodes, totalBytecodes]);
 
   // Effect to fetch cache stats
   useEffect(() => {
@@ -118,8 +103,6 @@ export function useCacheMetrics(): CacheMetricsResult {
     const shouldFetch =
       // On initial mount
       isInitialMount.current ||
-      // When user explicitly requests a refresh
-      refreshFlag ||
       // When we don't have data yet
       !cacheStats;
 
@@ -142,20 +125,7 @@ export function useCacheMetrics(): CacheMetricsResult {
       .finally(() => {
         setIsLoadingCacheStats(false);
       });
-  }, [
-    currentBlockchainId,
-    refreshFlag,
-    service,
-    isLoadingCacheStats,
-    cacheStats,
-  ]);
-
-  // Reset the refresh flag after both fetches complete
-  useEffect(() => {
-    if (!isLoadingTotalBytecodes && !isLoadingCacheStats && refreshFlag) {
-      setRefreshFlag(false);
-    }
-  }, [isLoadingTotalBytecodes, isLoadingCacheStats, refreshFlag]);
+  }, [currentBlockchainId, service, isLoadingCacheStats, cacheStats]);
 
   // Mark initial mount as complete after first render
   useEffect(() => {
@@ -171,7 +141,6 @@ export function useCacheMetrics(): CacheMetricsResult {
     isLoadingCacheStats: isLoadingCacheStats || isLoadingBlockchain,
     errorTotalBytecodes,
     errorCacheStats,
-    refreshData,
     currentBlockchainId,
   };
 }
