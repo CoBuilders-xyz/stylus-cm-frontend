@@ -22,16 +22,21 @@ import {
   formatSize,
   formatDate,
   formatRiskLevel,
+  getRiskBadgeVariant,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from './ui/button';
 
 interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
+  onRowClick?: (contract: Contract) => void;
+  onContractSelect?: (contractId: string, initialData?: Contract) => void;
 }
 
 // Table header component with sorting functionality
@@ -111,27 +116,34 @@ const SortableTableHead = React.memo(
 
 SortableTableHead.displayName = 'SortableTableHead';
 
-// A helper function to get badge variant based on risk level
-const getRiskBadgeVariant = (risk?: string | null) => {
-  if (!risk) return 'secondary';
-
-  switch (risk.toLowerCase()) {
-    case 'high':
-      return 'destructive';
-    case 'medium':
-      return 'default';
-    case 'low':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
-};
-
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
-  ({ contract, viewType }: { contract: Contract; viewType: string }) => {
+  ({
+    contract,
+    viewType,
+    onRowClick,
+    onContractSelect,
+  }: {
+    contract: Contract;
+    viewType: string;
+    onRowClick?: (contract: Contract) => void;
+    onContractSelect?: (contractId: string, initialData?: Contract) => void;
+  }) => {
+    const handleClick = () => {
+      if (onContractSelect) {
+        // Use the new handler that takes ID and initial data
+        onContractSelect(contract.id, contract);
+      } else if (onRowClick) {
+        // Fallback to original handler for backward compatibility
+        onRowClick(contract);
+      }
+    };
+
     return (
-      <TableRow className='h-20'>
+      <TableRow
+        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors hover:bg-gradient-to-r hover:from-[#0B436E] hover:to-[#1581D4] transition-colors duration-300'
+        onClick={handleClick}
+      >
         <TableCell className='py-6 text-lg w-[250px]'>
           {viewType === 'my-contracts' && contract.name ? (
             <div className='flex flex-col'>
@@ -189,9 +201,9 @@ const ContractRow = React.memo(
         </TableCell>
         {viewType === 'explore-contracts' && (
           <TableCell className='py-6'>
-            <button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
+            <Button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
               +
-            </button>
+            </Button>
           </TableCell>
         )}
       </TableRow>
@@ -236,20 +248,20 @@ const Pagination = React.memo(
               : 'No results'}
           </span>
           <div className='flex space-x-1'>
-            <button
+            <Button
               onClick={() => handlePageChange(1)}
               disabled={!pagination.hasPreviousPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               First
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={!pagination.hasPreviousPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               ◀
-            </button>
+            </Button>
             {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
               .filter(
                 (page) =>
@@ -262,7 +274,7 @@ const Pagination = React.memo(
                   {idx > 0 && arr[idx - 1] !== page - 1 && (
                     <span className='px-2 py-1'>...</span>
                   )}
-                  <button
+                  <Button
                     onClick={() => handlePageChange(page)}
                     className={`px-2 py-1 rounded-md ${
                       pagination.page === page
@@ -271,23 +283,23 @@ const Pagination = React.memo(
                     }`}
                   >
                     {page}
-                  </button>
+                  </Button>
                 </React.Fragment>
               ))}
-            <button
+            <Button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={!pagination.hasNextPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               ▶
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handlePageChange(pagination.totalPages)}
               disabled={!pagination.hasNextPage}
               className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               Last
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -300,6 +312,8 @@ Pagination.displayName = 'Pagination';
 function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
+  onRowClick,
+  onContractSelect,
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
@@ -383,10 +397,10 @@ function ContractsTable({
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
         {viewType === 'my-contracts' ? (
-          <button className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'>
+          <Button className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'>
             <span>+</span>
             <span>Add Contract</span>
-          </button>
+          </Button>
         ) : (
           <div className='relative'>
             <input
@@ -397,9 +411,12 @@ function ContractsTable({
               onChange={handleSearchInputChange}
               onKeyDown={handleKeyDown}
             />
-            <button className='absolute left-1 p-3' onClick={handleSearch}>
-              <Search className='w-4 h-4' />
-            </button>
+            <Button
+              className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
+              onClick={handleSearch}
+            >
+              <Search className='w-3 h-3' />
+            </Button>
           </div>
         )}
       </div>
@@ -419,101 +436,107 @@ function ContractsTable({
       )}
 
       {!isLoading && !error && (
-        <div className='overflow-hidden'>
-          <Table className='w-full'>
-            <TableHeader className='bg-black text-white'>
-              <TableRow className='h-20 hover:bg-transparent'>
-                <SortableTableHead
-                  className='w-[250px]'
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Contract
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.LAST_BID}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Bid
-                </SortableTableHead>
-                <SortableTableHead
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Effective Bid
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.BYTECODE_SIZE}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Size
-                </SortableTableHead>
-                <SortableTableHead
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Min. Bid
-                </SortableTableHead>
-                <SortableTableHead
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Eviction Risk
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.TOTAL_BID_INVESTMENT}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Total Spent
-                </SortableTableHead>
-                <SortableTableHead
-                  sortField={ContractSortField.IS_CACHED}
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSort={setSorting}
-                >
-                  Cache Status
-                </SortableTableHead>
-                {viewType === 'explore-contracts' && (
-                  <TableHead className='font-medium text-base py-6'></TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody className='text-white [&>tr]:py-2'>
-              {displayContracts.length > 0 ? (
-                displayContracts.map((contract) => (
-                  <ContractRow
-                    key={contract.id}
-                    contract={contract}
-                    viewType={viewType}
-                  />
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={viewType === 'explore-contracts' ? 9 : 8}
-                    className='text-center py-12 bg-black'
-                  >
-                    <NoticeBanner
-                      image={noContractsFoundImage}
-                      title='No Contracts Found'
-                      description='No contracts found.'
-                    />
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className='w-full'>
+          <ScrollArea orientation='both' className='h-[600px]'>
+            <div className='min-w-full'>
+              <Table className='w-full'>
+                <TableHeader className='bg-black text-white sticky top-0 z-10'>
+                  <TableRow className='h-20 hover:bg-transparent'>
+                    <SortableTableHead
+                      className='w-[250px]'
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Contract
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.LAST_BID}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Effective Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.BYTECODE_SIZE}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Size
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Min. Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Eviction Risk
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.TOTAL_BID_INVESTMENT}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Total Spent
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.IS_CACHED}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Cache Status
+                    </SortableTableHead>
+                    {viewType === 'explore-contracts' && (
+                      <TableHead className='font-medium text-base py-6'></TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody className='text-white [&>tr]:py-2 '>
+                  {displayContracts.length > 0 ? (
+                    displayContracts.map((contract) => (
+                      <ContractRow
+                        key={contract.address}
+                        contract={contract}
+                        viewType={viewType}
+                        onRowClick={onRowClick}
+                        onContractSelect={onContractSelect}
+                      />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                        className='text-center py-12 bg-black'
+                      >
+                        <NoticeBanner
+                          image={noContractsFoundImage}
+                          title='No Contracts Found'
+                          description='No contracts found.'
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
         </div>
       )}
 

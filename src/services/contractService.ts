@@ -59,6 +59,23 @@ export interface EvictionRisk {
 }
 
 /**
+ * Alert data interface for contract monitoring
+ */
+export interface Alert {
+  id: string;
+  type: 'eviction' | 'noGas' | 'lowGas' | 'bidSafety';
+  value: string;
+  isActive: boolean;
+  lastTriggered: string | null;
+  lastNotified: string | null;
+  triggeredCount: number;
+  emailChannelEnabled: boolean;
+  slackChannelEnabled: boolean;
+  telegramChannelEnabled: boolean;
+  webhookChannelEnabled: boolean;
+}
+
+/**
  * Contract data interface
  */
 export interface Contract {
@@ -75,6 +92,17 @@ export interface Contract {
   evictionRisk: EvictionRisk | null;
   minBid: string;
   name?: string; // Optional field possibly used on frontend
+  alerts?: Alert[]; // Optional alerts for contract monitoring
+  biddingHistory?: Array<{
+    bytecodeHash: string;
+    contractAddress: string;
+    bid: string;
+    actualBid: string;
+    size: string;
+    timestamp: string;
+    blockNumber: string;
+    transactionHash: string;
+  }>; // Optional bidding history
 }
 
 /**
@@ -117,6 +145,7 @@ export interface UserContract {
   name?: string;
   blockchain: Blockchain;
   contract: Contract;
+  alerts?: Alert[]; // Contract alerts configured by the user
   [key: string]: unknown; // Allow for additional properties
 }
 
@@ -231,60 +260,35 @@ export class ContractService {
   }
 
   /**
-   * Get a specific contract by ID
-   * @param id Contract ID
-   * @returns Promise with the contract details
+   * Get a specific user contract by ID
+   * @param user The authenticated user
+   * @returns Promise with the user contract
    */
-  async getContractById(id: string): Promise<Contract> {
-    return this.apiClient.get<Contract>(`/contracts/${id}`);
+  async getUserContract(id: string): Promise<UserContract> {
+    return this.apiClient.get<UserContract>(`/user-contracts/${id}`);
   }
 
   /**
-   * Create a new contract
-   * @param contractData Contract data to create
-   * @returns Promise with the created contract
+   * Update a user contract's name
+   * @param id User contract ID
+   * @param name New name for the contract
+   * @returns Promise with the updated user contract
    */
-  async createContract(contractData: CreateContractData): Promise<Contract> {
-    if (!contractData.blockchainId) {
-      if (!this.currentBlockchainId) {
-        throw new Error('No blockchain ID available for createContract');
-      }
-
-      // Use the current blockchain ID
-      contractData = {
-        ...contractData,
-        blockchainId: this.currentBlockchainId,
-      };
-    }
-
-    return this.apiClient.post<Contract, CreateContractData>(
-      '/contracts',
-      contractData
-    );
-  }
-
-  /**
-   * Update an existing contract
-   * @param id Contract ID
-   * @param updateData Data to update
-   * @returns Promise with the updated contract
-   */
-  async updateContract(
+  async updateUserContractName(
     id: string,
-    updateData: Partial<Contract>
-  ): Promise<Contract> {
-    return this.apiClient.put<Contract, Partial<Contract>>(
-      `/contracts/${id}`,
-      updateData
-    );
+    name: string
+  ): Promise<UserContract> {
+    return this.apiClient.patch<UserContract>(`/user-contracts/${id}/name`, {
+      name,
+    });
   }
 
   /**
-   * Delete a contract
-   * @param id Contract ID
-   * @returns Promise with the operation result
+   * Delete a user contract
+   * @param id User contract ID
+   * @returns Promise that resolves when the contract is deleted
    */
-  async deleteContract(id: string): Promise<void> {
-    return this.apiClient.delete<void>(`/contracts/${id}`);
+  async deleteUserContract(id: string): Promise<void> {
+    return this.apiClient.delete<void>(`/user-contracts/${id}`);
   }
 }

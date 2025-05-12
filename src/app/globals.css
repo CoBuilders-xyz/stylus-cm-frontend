@@ -141,7 +141,7 @@
   }
 
   /* Custom row hover gradient */
-  tbody tr:hover {
+  /* tbody tr:hover {
     background: linear-gradient(
       7.59deg,
       #0b436e -19.45%,
@@ -149,4 +149,14 @@
     ) !important;
     transition: background 0.3s ease;
   }
+   */
+
+  tbody tr:hover {
+    background: transparent;
+    transition: background 0.3s ease;
+  }
+}
+
+button:hover {
+  cursor: pointer;
 }

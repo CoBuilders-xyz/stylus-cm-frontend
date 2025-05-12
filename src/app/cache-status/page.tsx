@@ -2,7 +2,7 @@
 
 export default function CacheStatusPage() {
   return (
-    <div className='flex flex-col w-full'>
+    <div className='flex flex-col w-full  pt-16'>
       <div
         className='w-full p-8 px-10'
         style={{
