@@ -1,5 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useBlockchainService } from './useBlockchainService';
+import {
+  CacheMetricsService,
+  BidAverageTimespan,
+} from '@/services/cacheMetricsService';
 
 /**
  * Interface for cache manager activity period data
@@ -10,44 +14,9 @@ export interface CacheManagerActivityPeriod {
 }
 
 /**
- * Mock data for cache manager activity
- */
-const MOCK_DATA: Record<
-  CacheManagerActivityTimespan,
-  CacheManagerActivityPeriod[]
-> = {
-  D: [
-    { period: '2025-05-05', count: 39 },
-    { period: '2025-05-06', count: 49 },
-    { period: '2025-05-07', count: 18 },
-    { period: '2025-05-08', count: 73 },
-    { period: '2025-05-09', count: 16 },
-    { period: '2025-05-12', count: 8 },
-  ],
-  W: [
-    { period: '2025-18', count: 125 },
-    { period: '2025-19', count: 143 },
-    { period: '2025-20', count: 98 },
-    { period: '2025-21', count: 112 },
-  ],
-  M: [
-    { period: '2025-01', count: 328 },
-    { period: '2025-02', count: 415 },
-    { period: '2025-03', count: 389 },
-    { period: '2025-04', count: 456 },
-    { period: '2025-05', count: 287 },
-  ],
-  Y: [
-    { period: '2023', count: 3240 },
-    { period: '2024', count: 4125 },
-    { period: '2025', count: 1875 },
-  ],
-};
-
-/**
  * Timespan options for cache manager activity data
  */
-export type CacheManagerActivityTimespan = 'D' | 'W' | 'M' | 'Y';
+export type CacheManagerActivityTimespan = BidAverageTimespan;
 
 /**
  * Interface for the hook result
@@ -56,39 +25,82 @@ export interface CacheManagerActivityResult {
   activityData: CacheManagerActivityPeriod[];
   totalActivity: number;
   isLoading: boolean;
+  error: Error | null;
   currentBlockchainId: string | null;
   timespan: CacheManagerActivityTimespan;
   setTimespan: (timespan: CacheManagerActivityTimespan) => void;
+  refresh: () => void;
 }
 
 /**
  * Hook to access cache manager activity data
- * Currently uses mock data
  */
 export function useCacheManagerActivity(
   initialTimespan: CacheManagerActivityTimespan = 'D'
 ): CacheManagerActivityResult {
   const { currentBlockchainId, isLoading: isLoadingBlockchain } =
     useBlockchainService(false);
+  const [activityData, setActivityData] = useState<
+    CacheManagerActivityPeriod[]
+  >([]);
+  const [totalActivity, setTotalActivity] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
   const [timespan, setTimespan] =
     useState<CacheManagerActivityTimespan>(initialTimespan);
+  const [refreshCounter, setRefreshCounter] = useState<number>(0);
 
-  // Get mock data based on selected timespan
-  const activityData = useMemo(() => {
-    return MOCK_DATA[timespan] || [];
-  }, [timespan]);
+  // Track if this is the initial mount
+  const isInitialMount = useRef(true);
 
-  // Calculate total activity
-  const totalActivity = useMemo(() => {
-    return activityData.reduce((total, item) => total + item.count, 0);
-  }, [activityData]);
+  // Create memoized service instance to avoid recreation on each render
+  const service = useMemo(() => new CacheMetricsService(), []);
+
+  // Function to manually refresh data
+  const refresh = () => {
+    setRefreshCounter((prevCounter) => prevCounter + 1);
+  };
+
+  // Effect to fetch activity data
+  useEffect(() => {
+    // Skip if no blockchain is selected
+    if (!currentBlockchainId) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    service
+      .getBidTrends(currentBlockchainId, timespan)
+      .then((data) => {
+        setActivityData(data.periods);
+        setTotalActivity(data.global.count);
+      })
+      .catch((err) => {
+        console.error('Error fetching bid trends data:', err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [currentBlockchainId, service, timespan, refreshCounter]);
+
+  // Mark initial mount as complete after first render
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+  }, []);
 
   return {
     activityData,
     totalActivity,
-    isLoading: isLoadingBlockchain, // For now, just use blockchain loading state
+    isLoading: isLoading || isLoadingBlockchain,
+    error,
     currentBlockchainId,
     timespan,
     setTimespan,
+    refresh,
   };
 }

@@ -76,8 +76,14 @@ const CustomCursor = (props: CustomCursorProps) => {
 
 export default function CacheManagerActivity() {
   // Use the cache manager activity hook
-  const { activityData, totalActivity, isLoading, timespan, setTimespan } =
-    useCacheManagerActivity('D');
+  const {
+    activityData,
+    totalActivity,
+    isLoading,
+    error,
+    timespan,
+    setTimespan,
+  } = useCacheManagerActivity('D');
 
   // Format X-axis ticks based on timespan
   const formatXAxisTick = (value: string) => {
@@ -344,6 +350,10 @@ export default function CacheManagerActivity() {
         {isLoading ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
             <Skeleton className='h-[200px] w-full bg-slate-700' />
+          </div>
+        ) : error ? (
+          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-red-500'>
+            Error loading chart data. Please try again.
           </div>
         ) : activityData.length === 0 ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-gray-400'>

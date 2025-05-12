@@ -47,7 +47,30 @@ export interface BidAverageResponse {
 }
 
 /**
- * Timespan options for bid average data
+ * Interface for bid trends period data
+ */
+export interface BidTrendsPeriod {
+  period: string;
+  count: number;
+}
+
+/**
+ * Interface for global bid trends data
+ */
+export interface BidTrendsGlobal {
+  count: number;
+}
+
+/**
+ * Interface for bid trends response
+ */
+export interface BidTrendsResponse {
+  periods: BidTrendsPeriod[];
+  global: BidTrendsGlobal;
+}
+
+/**
+ * Timespan options for bid data
  */
 export type BidAverageTimespan = 'D' | 'W' | 'M' | 'Y';
 
@@ -116,6 +139,25 @@ export class CacheMetricsService {
 
     return this.apiClient.get<BidAverageResponse>(
       `/blockchains/${blockchainId}/bid-average?${params.toString()}`
+    );
+  }
+
+  /**
+   * Get bid trends data for a specific blockchain
+   * @param blockchainId The blockchain ID
+   * @param timespan The timespan (D=Day, W=Week, M=Month, Y=Year)
+   * @returns Promise with bid trends information
+   */
+  async getBidTrends(
+    blockchainId: string,
+    timespan: BidAverageTimespan
+  ): Promise<BidTrendsResponse> {
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('timespan', timespan);
+
+    return this.apiClient.get<BidTrendsResponse>(
+      `/blockchains/${blockchainId}/bid-trends?${params.toString()}`
     );
   }
 }
