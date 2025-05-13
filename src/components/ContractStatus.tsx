@@ -17,7 +17,6 @@ export function ContractStatus({
   bidBlockTimestamp,
   effectiveBid,
   lastBid,
-  viewType = 'my-contracts',
 }: ContractStatusProps) {
   if (isLoading) {
     return (
@@ -40,10 +39,7 @@ export function ContractStatus({
   }
 
   // For explore-contracts view, use default value if effectiveBid is not provided
-  const displayEffectiveBid =
-    viewType === 'explore-contracts' && !effectiveBid
-      ? '0.03'
-      : effectiveBid || '';
+  const displayEffectiveBid = effectiveBid || '';
 
   return (
     <div className='grid grid-cols-2 gap-4 mb-6'>
