@@ -456,13 +456,6 @@ export function BidNowSection({
           </div>
         )}
 
-        {/* Normal Gas Price Info */}
-        {/* {!isGasPriceHigh && gasPriceGwei && (
-          <div className='text-xs text-blue-200 mb-2'>
-            Current network fee: {gasPriceGwei} Gwei
-          </div>
-        )} */}
-
         <div className='flex justify-between items-start'>
           <div>
             <p className='font-bold'>Bid now</p>
