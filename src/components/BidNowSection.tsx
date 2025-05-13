@@ -9,7 +9,8 @@ import cacheManagerAbi from '@/config/abis/cacheManager/cacheManager.json';
 import { Abi } from 'viem';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useContractService } from '@/hooks/useContractService';
-import { formatEth, formatRoundedEth } from '@/utils/formatting';
+import { formatEther } from 'viem';
+import { formatRoundedEth } from '@/utils/formatting';
 import { toast } from 'sonner';
 
 interface BidNowSectionProps {
@@ -613,7 +614,7 @@ export function BidNowSection({
               >
                 Low Risk:{' '}
                 {formatRoundedEth(
-                  formatEth(suggestedBids.suggestedBids.lowRisk)
+                  formatEther(BigInt(suggestedBids.suggestedBids.lowRisk))
                 )}
               </Button>
               <Button
@@ -627,7 +628,7 @@ export function BidNowSection({
               >
                 Mid Risk:{' '}
                 {formatRoundedEth(
-                  formatEth(suggestedBids.suggestedBids.midRisk)
+                  formatEther(BigInt(suggestedBids.suggestedBids.midRisk))
                 )}
               </Button>
               <Button
@@ -641,7 +642,7 @@ export function BidNowSection({
               >
                 High Risk:{' '}
                 {formatRoundedEth(
-                  formatEth(suggestedBids.suggestedBids.highRisk)
+                  formatEther(BigInt(suggestedBids.suggestedBids.highRisk))
                 )}
               </Button>
             </div>

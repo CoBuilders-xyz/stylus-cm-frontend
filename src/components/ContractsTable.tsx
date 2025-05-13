@@ -18,11 +18,11 @@ import {
 import { useAuthentication } from '@/context/AuthenticationProvider';
 import { Contract, PaginationMeta } from '@/services/contractService';
 import {
-  formatEth,
   formatSize,
   formatDate,
   formatRiskLevel,
   getRiskBadgeVariant,
+  formatRoundedEth,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
@@ -31,6 +31,7 @@ import NoticeBanner from '@/components/NoticeBanner';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
+import { formatEther } from 'viem';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -149,7 +150,7 @@ const ContractRow = React.memo(
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.lastBid ? (
-            formatEth(contract.lastBid) + ' ETH'
+            formatRoundedEth(formatEther(BigInt(contract.lastBid))) + ' ETH'
           ) : (
             <Badge
               variant='outline'
@@ -161,7 +162,8 @@ const ContractRow = React.memo(
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.effectiveBid ? (
-            formatEth(contract.effectiveBid) + ' ETH'
+            formatRoundedEth(formatEther(BigInt(contract.effectiveBid))) +
+            ' ETH'
           ) : (
             <Badge
               variant='outline'
@@ -176,7 +178,7 @@ const ContractRow = React.memo(
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.minBid ? (
-            formatEth(contract.minBid) + ' ETH'
+            formatRoundedEth(formatEther(BigInt(contract.minBid))) + ' ETH'
           ) : (
             <Badge
               variant='outline'
@@ -205,7 +207,9 @@ const ContractRow = React.memo(
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.totalBidInvestment
-            ? formatEth(contract.totalBidInvestment) + ' ETH'
+            ? formatRoundedEth(
+                formatEther(BigInt(contract.totalBidInvestment))
+              ) + ' ETH'
             : 'N/A'}
         </TableCell>
         <TableCell className='py-6'>

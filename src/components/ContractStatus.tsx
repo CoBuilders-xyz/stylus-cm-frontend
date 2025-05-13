@@ -1,5 +1,6 @@
 import React from 'react';
-import { formatEth, formatDate } from '@/utils/formatting';
+import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { formatEther } from 'viem';
 
 interface ContractStatusProps {
   isLoading: boolean;
@@ -62,11 +63,15 @@ export function ContractStatus({
         <div className='text-gray-400 text-sm'>Effective Bid</div>
         <div className='text-xl font-bold'>
           {displayEffectiveBid
-            ? formatEth(displayEffectiveBid) + ' ETH'
+            ? formatRoundedEth(formatEther(BigInt(displayEffectiveBid))) +
+              ' ETH'
             : 'N/A'}
         </div>
         <div className='text-xs text-gray-400'>
-          Bid: {lastBid ? formatEth(lastBid) + ' ETH' : 'N/A'}
+          Bid:{' '}
+          {lastBid
+            ? formatRoundedEth(formatEther(BigInt(lastBid))) + ' ETH'
+            : 'N/A'}
         </div>
       </div>
     </div>

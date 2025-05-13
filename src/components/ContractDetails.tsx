@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Contract } from '@/services/contractService';
-import { formatEth, formatDate } from '@/utils/formatting';
+import { formatEther } from 'viem';
+import { formatDate, formatRoundedEth } from '@/utils/formatting';
 import {
   MoreHorizontal,
   PlusCircle,
@@ -176,7 +177,9 @@ export default function ContractDetails({
       const formattedDate = formatDate(historyItem.timestamp);
 
       // Format bid amount
-      const bidAmount = formatEth(historyItem.actualBid);
+      const bidAmount = formatRoundedEth(
+        formatEther(BigInt(historyItem.actualBid))
+      );
 
       return {
         id: index, // Using index as id since the API might not provide one
@@ -210,10 +213,10 @@ export default function ContractDetails({
               contractData.blockchain.cacheManagerAddress.substring(
                 contractData.blockchain.cacheManagerAddress.length - 4
               ),
-            bid: formatEth(contractData.lastBid),
+            bid: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
             type: 'automatic bid',
             date: formatDate(contractData.bidBlockTimestamp),
-            amount: formatEth(contractData.lastBid),
+            amount: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
             contractName: contractName,
             originAddress: '0x0000....0000',
           },

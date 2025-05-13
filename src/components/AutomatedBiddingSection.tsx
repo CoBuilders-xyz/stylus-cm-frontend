@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { Abi } from 'viem';
 import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
-import { formatWei, formatEth } from '@/utils/formatting';
+import { formatEther, parseEther } from 'viem';
+
 import { useReadContract, useAccount } from 'wagmi';
 
 interface AutomatedBiddingSectionProps {
@@ -94,8 +95,8 @@ export function AutomatedBiddingSection({
       userContracts.forEach((contract, index) => {
         console.log(`Contract ${index + 1}:`, {
           address: contract.contractAddress,
-          maxBid: formatEth(contract.maxBid.toString()) + ' ETH',
-          lastBid: formatEth(contract.lastBid.toString()) + ' ETH',
+          maxBid: formatEther(contract.maxBid) + ' ETH',
+          lastBid: formatEther(contract.lastBid) + ' ETH',
           enabled: contract.enabled ? 'Active' : 'Inactive',
         });
       });
@@ -104,7 +105,7 @@ export function AutomatedBiddingSection({
 
   // Format user balance for display
   const formattedUserBalance = userBalance
-    ? formatEth(userBalance.toString())
+    ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
   // Check if current contract is automated
@@ -139,7 +140,7 @@ export function AutomatedBiddingSection({
         setAutomatedBidding(automatedContract.enabled);
 
         // Format the max bid to ETH for display
-        const maxBidEth = formatEth(automatedContract.maxBid.toString());
+        const maxBidEth = formatEther(automatedContract.maxBid.toString());
         setMaxBidAmount(maxBidEth);
 
         console.log(
@@ -442,7 +443,7 @@ export function AutomatedBiddingSection({
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
         functionName: 'insertOrUpdateContract',
-        args: [contract.address, formatWei(inputValue), automatedBidding] as [
+        args: [contract.address, parseEther(inputValue), automatedBidding] as [
           string,
           bigint,
           boolean
