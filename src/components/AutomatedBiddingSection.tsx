@@ -44,9 +44,6 @@ export function AutomatedBiddingSection({
   const [fundingError, setFundingError] = useState<string | null>(null);
   */
   // Track the last checked contract address to detect changes
-  const [lastCheckedAddress, setLastCheckedAddress] = useState<string | null>(
-    null
-  );
 
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
@@ -114,15 +111,12 @@ export function AutomatedBiddingSection({
     if (
       contract?.address &&
       userContracts &&
-      Array.isArray(userContracts) &&
+      Array.isArray(userContracts)
       // Check if this is a new contract or different from the last checked one
-      contract.address !== lastCheckedAddress
     ) {
       console.log('Checking contract automation status for:', contract.address);
-      console.log('Previous checked address:', lastCheckedAddress);
 
       // Remember this contract address to detect future changes
-      setLastCheckedAddress(contract.address);
 
       // Look for the contract in user's automated contracts
       const automatedContract = userContracts.find(
@@ -153,13 +147,7 @@ export function AutomatedBiddingSection({
         setMaxBidAmount('');
       }
     }
-  }, [
-    contract?.address,
-    userContracts,
-    setAutomatedBidding,
-    setMaxBidAmount,
-    lastCheckedAddress,
-  ]);
+  }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
 
   // Store the last transaction parameters for retry functionality
   const [lastTxParams, setLastTxParams] = useState<{
@@ -311,12 +299,6 @@ export function AutomatedBiddingSection({
         // Immediately refetch the balance and contracts to get updated data
         refetchBalance();
         refetchUserContracts();
-
-        // Force an update of the last checked address on the next render cycle
-        // This gives refetchUserContracts time to complete before we check again
-        setTimeout(() => {
-          setLastCheckedAddress(null);
-        }, 500);
 
         // Log the values we're keeping
         console.log('Keeping user values after successful transaction:', {
