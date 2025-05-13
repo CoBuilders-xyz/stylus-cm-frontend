@@ -193,27 +193,8 @@ export function BidNowSection({
   const handleSelectBid = (bid: string) => {
     // Format the bid value for display and use
     try {
-      // Convert from Wei to ETH with proper precision
-      const bidBigInt = BigInt(bid);
-      const divisor = BigInt(10 ** 18);
-
-      // Calculate whole and decimal parts
-      const wholePart = bidBigInt / divisor;
-      const fractionalPart = bidBigInt % divisor;
-
-      // Format with sufficient decimal places (up to 18)
-      const fractionalStr = fractionalPart.toString().padStart(18, '0');
-
-      // Remove trailing zeros
-      const trimmedFractional = fractionalStr.replace(/0+$/, '');
-
-      // Create the final ETH value as a string
-      let ethValue = wholePart.toString();
-      if (trimmedFractional.length > 0) {
-        ethValue += '.' + trimmedFractional;
-      }
+      const ethValue = formatEther(BigInt(bid));
       const formattedBid = formatRoundedEth(ethValue, 8);
-      console.log('Formatted bid:', formattedBid);
       setBidAmount(formattedBid);
     } catch (error) {
       console.error('Error converting bid value:', error);
