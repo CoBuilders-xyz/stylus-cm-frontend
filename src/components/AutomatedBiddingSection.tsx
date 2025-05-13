@@ -9,7 +9,11 @@ import { Abi } from 'viem';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
-import { showSuccessToast, showErrorToast } from '@/components/ui/Toast';
+import {
+  showSuccessToast,
+  showErrorToast,
+  showSomethingWentWrongToast,
+} from '@/components/Toast';
 
 import { useReadContract, useAccount } from 'wagmi';
 
@@ -198,6 +202,7 @@ export function AutomatedBiddingSection({
   const handleRetry = useCallback(() => {
     if (!lastTxParams) {
       console.error('No previous transaction parameters found to retry');
+      showSomethingWentWrongToast();
       return;
     }
 
@@ -355,11 +360,13 @@ export function AutomatedBiddingSection({
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
+      showSomethingWentWrongToast();
       return;
     }
 
     if (!contract || !contract.address) {
       console.error('No contract address provided');
+      showSomethingWentWrongToast();
       return;
     }
 
@@ -393,6 +400,7 @@ export function AutomatedBiddingSection({
       });
     } catch (err) {
       console.error('Error submitting transaction:', err);
+      showSomethingWentWrongToast();
     }
   };
 
@@ -418,6 +426,7 @@ export function AutomatedBiddingSection({
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
+      showSomethingWentWrongToast();
       return;
     }
 
@@ -445,6 +454,7 @@ export function AutomatedBiddingSection({
     } catch (err) {
       console.error('Error adding funds:', err);
       setIsAddingFunds(false);
+      showSomethingWentWrongToast();
     }
   };
 
@@ -455,6 +465,7 @@ export function AutomatedBiddingSection({
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
+      showSomethingWentWrongToast();
       return;
     }
 
@@ -479,6 +490,7 @@ export function AutomatedBiddingSection({
     } catch (err) {
       console.error('Error withdrawing funds:', err);
       setIsWithdrawingFunds(false);
+      showSomethingWentWrongToast();
     }
   };
 

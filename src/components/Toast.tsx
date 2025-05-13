@@ -86,3 +86,11 @@ export const showErrorToast = ({
     }
   );
 };
+
+/**
+ * Shows a simple error toast with "Something went wrong" message.
+ * Use this after console.error for a consistent error UI.
+ */
+export const showSomethingWentWrongToast = () => {
+  showErrorToast({ message: 'Something went wrong' });
+};

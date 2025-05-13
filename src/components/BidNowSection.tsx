@@ -11,7 +11,11 @@ import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useContractService } from '@/hooks/useContractService';
 import { formatEther } from 'viem';
 import { formatRoundedEth } from '@/utils/formatting';
-import { showSuccessToast, showErrorToast } from '@/components/ui/Toast';
+import {
+  showSuccessToast,
+  showErrorToast,
+  showSomethingWentWrongToast,
+} from '@/components/Toast';
 
 interface BidNowSectionProps {
   contract: Contract;
@@ -368,6 +372,7 @@ export function BidNowSection({
 
     if (isContractCached) {
       console.error('Cannot place bid on already cached contracts');
+      showSomethingWentWrongToast();
       return;
     }
 
@@ -375,12 +380,14 @@ export function BidNowSection({
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
+      showSomethingWentWrongToast();
       return;
     }
 
     if (!bidAmount || parseFloat(bidAmount) < 0 || inputError) {
       console.error('Please enter a valid bid amount');
       setInputError('Enter a valid amount to Bid');
+      showSomethingWentWrongToast();
       return;
     }
 
@@ -412,6 +419,7 @@ export function BidNowSection({
           err instanceof Error ? err.message : 'Unknown error'
         }`
       );
+      showSomethingWentWrongToast();
     }
   };
 
