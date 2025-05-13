@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
-import { toast } from 'sonner';
 import { Abi } from 'viem';
-import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
+import { showSuccessToast, showErrorToast } from '@/components/ui/Toast';
 
 import { useReadContract, useAccount } from 'wagmi';
 
@@ -213,45 +213,10 @@ export function AutomatedBiddingSection({
   // Show error toast if transaction fails
   useEffect(() => {
     if (isError && error) {
-      toast.custom(
-        (t) => (
-          <div className='flex items-center justify-between w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg gap-2'>
-            <div className='flex-grow whitespace-nowrap mx-3 text-sm'>
-              An error occurred while setting up automated bidding
-            </div>
-
-            <Button
-              variant='outline'
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent toast from closing
-                handleRetry();
-                toast.dismiss(t);
-              }}
-              className='flex-shrink-0 flex items-center justify-center gap-1 bg-transparent text-white border-white/30 hover:bg-white/10 whitespace-nowrap'
-              size='sm'
-            >
-              <RefreshCw className='h-3.5 w-3.5 mr-1' />
-              Retry
-            </Button>
-            <Button
-              onClick={() => toast.dismiss(t)}
-              className='flex-shrink-0 bg-transparent text-white border-white/30 hover:bg-white/10'
-              size='sm'
-              aria-label='Dismiss'
-            >
-              <X className='h-3 w-3' />
-            </Button>
-          </div>
-        ),
-        {
-          duration: 5000, // Show for 5 seconds
-          position: 'bottom-center', // Position at bottom center
-          id: 'transaction-error-' + Date.now(), // to prevent duplicate toasts
-          style: {
-            width: 'auto',
-          },
-        }
-      );
+      showErrorToast({
+        message: 'An error occurred while setting up automated bidding',
+        onRetry: handleRetry,
+      });
 
       reset();
     }
@@ -260,23 +225,9 @@ export function AutomatedBiddingSection({
   // Show success toast when transaction completes
   useEffect(() => {
     if (isSuccess) {
-      toast.custom(
-        () => (
-          <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
-            <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
-              Automated bidding configured successfully
-            </div>
-          </div>
-        ),
-        {
-          duration: 5000, // Show for 5 seconds
-          position: 'bottom-center', // Position at bottom center
-          id: 'transaction-success-' + Date.now(), // to prevent duplicate toasts
-          style: {
-            width: 'auto',
-          },
-        }
-      );
+      showSuccessToast({
+        message: 'Automated bidding configured successfully',
+      });
 
       // Call the onSuccess callback if provided
       if (onSuccess) {
