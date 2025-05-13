@@ -35,7 +35,7 @@ import EditableContractName, {
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
 import ContractStatus from './ContractStatus';
-
+import { showSomethingWentWrongToast } from '@/components/Toast';
 interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
@@ -330,6 +330,33 @@ export default function ContractDetails({
     setContractName(newName);
   };
 
+  // Function to reload contract data after successful operations
+  const reloadContractData = () => {
+    // Reload contract data after successful operation
+    if (viewType === 'my-contracts' && contractService && userContractId) {
+      contractService
+        .getUserContract(userContractId)
+        .then((userContract) => {
+          if (userContract && userContract.contract) {
+            // Clone the contract object to avoid reference issues
+            const contractWithAlerts = {
+              ...userContract.contract,
+              name:
+                userContract.name ||
+                userContract.contract.name ||
+                'Contract Name',
+              alerts: userContract.alerts || userContract.contract.alerts || [],
+            };
+            setContractData(contractWithAlerts);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to reload contract data:', error);
+          showSomethingWentWrongToast();
+        });
+    }
+  };
+
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Main content with ScrollArea */}
@@ -443,40 +470,7 @@ export default function ContractDetails({
                   contract={contractData}
                   bidAmount={bidAmount}
                   setBidAmount={setBidAmount}
-                  onSuccess={() => {
-                    // Reload contract data after successful bid
-                    if (
-                      viewType === 'my-contracts' &&
-                      contractService &&
-                      userContractId
-                    ) {
-                      contractService
-                        .getUserContract(userContractId)
-                        .then((userContract) => {
-                          if (userContract && userContract.contract) {
-                            // Clone the contract object to avoid reference issues
-                            const contractWithAlerts = {
-                              ...userContract.contract,
-                              name:
-                                userContract.name ||
-                                userContract.contract.name ||
-                                'Contract Name',
-                              alerts:
-                                userContract.alerts ||
-                                userContract.contract.alerts ||
-                                [],
-                            };
-                            setContractData(contractWithAlerts);
-                          }
-                        })
-                        .catch((error) => {
-                          console.error(
-                            'Failed to reload contract data after bid:',
-                            error
-                          );
-                        });
-                    }
-                  }}
+                  onSuccess={reloadContractData}
                 />
 
                 {/* Automated Bidding section */}
@@ -488,40 +482,7 @@ export default function ContractDetails({
                   automationFunding={automationFunding}
                   setAutomationFunding={setAutomationFunding}
                   contract={contractData}
-                  onSuccess={() => {
-                    // Reload contract data after successful setup
-                    if (
-                      viewType === 'my-contracts' &&
-                      contractService &&
-                      userContractId
-                    ) {
-                      contractService
-                        .getUserContract(userContractId)
-                        .then((userContract) => {
-                          if (userContract && userContract.contract) {
-                            // Clone the contract object to avoid reference issues
-                            const contractWithAlerts = {
-                              ...userContract.contract,
-                              name:
-                                userContract.name ||
-                                userContract.contract.name ||
-                                'Contract Name',
-                              alerts:
-                                userContract.alerts ||
-                                userContract.contract.alerts ||
-                                [],
-                            };
-                            setContractData(contractWithAlerts);
-                          }
-                        })
-                        .catch((error) => {
-                          console.error(
-                            'Failed to reload contract data after automated bidding setup:',
-                            error
-                          );
-                        });
-                    }
-                  }}
+                  onSuccess={reloadContractData}
                 />
               </div>
 
