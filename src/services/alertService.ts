@@ -85,6 +85,11 @@ export interface UserAlertPreferences {
 }
 
 /**
+ * Notification channel type
+ */
+export type NotificationChannel = 'email' | 'telegram' | 'slack' | 'webhook';
+
+/**
  * Alert service for handling alert-related API requests
  */
 export class AlertService {
@@ -149,5 +154,19 @@ export class AlertService {
       '/users/alerts-settings',
       preferences as unknown as Record<string, unknown>
     );
+  }
+
+  /**
+   * Send a test notification to verify notification channel setup
+   * @param notificationChannel The channel to test (email, telegram, slack, webhook)
+   * @returns Promise with the test notification result
+   */
+  async testNotification(
+    notificationChannel: NotificationChannel
+  ): Promise<{ success: boolean; message?: string }> {
+    // The API returns a 201 status code on success
+    return this.apiClient.post('/notifications/test/send', {
+      notificationChannel,
+    });
   }
 }
