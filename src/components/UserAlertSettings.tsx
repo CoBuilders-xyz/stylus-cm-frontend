@@ -5,11 +5,14 @@ import { Button } from '@/components/ui/button';
 import { useSidePanel } from './SidePanel';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { UserAlertPreferences } from '@/services/alertService';
+import {
+  UserAlertPreferences,
+  NotificationChannel,
+} from '@/services/alertService';
 import { useAlertService } from '@/hooks/useAlertService';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { showSuccessToast, showErrorToast } from '@/components/Toast';
 
 interface UserAlertSettingsProps {
   onSuccess?: () => void;
@@ -198,6 +201,52 @@ export default function UserAlertSettings({
     if (webhookError) validateWebhook(e.target.value);
   };
 
+  // Function to test notification channels
+  const testNotification = async (channel: NotificationChannel) => {
+    if (!alertService) {
+      setError('Alert service not initialized');
+      return;
+    }
+
+    try {
+      // Validate destination before testing
+      let isValid = true;
+
+      if (channel === 'email' && !validateEmail(emailDestination)) {
+        isValid = false;
+      }
+
+      if (channel === 'telegram' && !validateTelegram(telegramDestination)) {
+        isValid = false;
+      }
+
+      if (channel === 'webhook' && !validateWebhook(webhookDestination)) {
+        isValid = false;
+      }
+
+      if (!isValid) {
+        // If validation fails, don't proceed with test
+        return;
+      }
+
+      // Call the test notification service
+      const result = await alertService.testNotification(channel);
+
+      // Show success toast - if we get here, the test was successful (API returns 201)
+      showSuccessToast({
+        message:
+          result.message || `Test ${channel} notification sent successfully`,
+      });
+    } catch (err) {
+      console.error(`Failed to test ${channel} notification:`, err);
+
+      // Show error toast
+      showErrorToast({
+        message: `Failed to test ${channel} notification`,
+      });
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!alertService) {
       setError('Alert service not initialized');
@@ -235,23 +284,9 @@ export default function UserAlertSettings({
         !hasChangedWebhook
       ) {
         // Show custom toast for no changes
-        toast.custom(
-          () => (
-            <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
-              <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
-                No changes to save
-              </div>
-            </div>
-          ),
-          {
-            duration: 5000, // Show for 5 seconds
-            position: 'bottom-center', // Position at bottom center
-            id: 'no-changes-' + Date.now(), // to prevent duplicate toasts
-            style: {
-              width: 'auto',
-            },
-          }
-        );
+        showSuccessToast({
+          message: 'No changes to save',
+        });
 
         if (onSuccess) {
           onSuccess();
@@ -290,23 +325,9 @@ export default function UserAlertSettings({
       setHasChangedWebhook(false);
 
       // Show custom toast for success
-      toast.custom(
-        () => (
-          <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
-            <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
-              Alert preferences saved successfully
-            </div>
-          </div>
-        ),
-        {
-          duration: 5000, // Show for 5 seconds
-          position: 'bottom-center', // Position at bottom center
-          id: 'success-' + Date.now(), // to prevent duplicate toasts
-          style: {
-            width: 'auto',
-          },
-        }
-      );
+      showSuccessToast({
+        message: 'Alert preferences saved successfully',
+      });
 
       if (onSuccess) {
         onSuccess();
@@ -316,23 +337,9 @@ export default function UserAlertSettings({
       setError('Failed to save alert preferences. Please try again.');
 
       // Show custom toast for error
-      toast.custom(
-        () => (
-          <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
-            <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
-              Failed to save alert preferences
-            </div>
-          </div>
-        ),
-        {
-          duration: 5000, // Show for 5 seconds
-          position: 'bottom-center', // Position at bottom center
-          id: 'error-' + Date.now(), // to prevent duplicate toasts
-          style: {
-            width: 'auto',
-          },
-        }
-      );
+      showErrorToast({
+        message: 'Failed to save alert preferences',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -404,13 +411,22 @@ export default function UserAlertSettings({
               <label className='block text-sm text-gray-300 mb-1'>
                 Email Address
               </label>
-              <Input
-                type='email'
-                placeholder='Email Address'
-                value={emailDestination}
-                onChange={handleEmailDestinationChange}
-                className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
-              />
+              <div className='flex gap-2'>
+                <Input
+                  type='email'
+                  placeholder='Email Address'
+                  value={emailDestination}
+                  onChange={handleEmailDestinationChange}
+                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                />
+                <Button
+                  onClick={() => testNotification('email')}
+                  disabled={!emailDestination}
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                >
+                  Test
+                </Button>
+              </div>
               {emailError && (
                 <p className='text-red-500 text-xs mt-1'>{emailError}</p>
               )}
@@ -445,13 +461,22 @@ export default function UserAlertSettings({
               <label className='block text-sm text-gray-300 mb-1'>
                 Telegram Chat ID
               </label>
-              <Input
-                type='text'
-                placeholder='@tg-user'
-                value={telegramDestination}
-                onChange={handleTelegramDestinationChange}
-                className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
-              />
+              <div className='flex gap-2'>
+                <Input
+                  type='text'
+                  placeholder='@tg-user'
+                  value={telegramDestination}
+                  onChange={handleTelegramDestinationChange}
+                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                />
+                <Button
+                  onClick={() => testNotification('telegram')}
+                  disabled={!telegramDestination}
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                >
+                  Test
+                </Button>
+              </div>
               {telegramError && (
                 <p className='text-red-500 text-xs mt-1'>{telegramError}</p>
               )}
@@ -486,13 +511,22 @@ export default function UserAlertSettings({
               <label className='block text-sm text-gray-300 mb-1'>
                 Slack Username
               </label>
-              <Input
-                type='text'
-                placeholder='Username'
-                value={slackDestination}
-                onChange={handleSlackDestinationChange}
-                className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
-              />
+              <div className='flex gap-2'>
+                <Input
+                  type='text'
+                  placeholder='Username'
+                  value={slackDestination}
+                  onChange={handleSlackDestinationChange}
+                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                />
+                <Button
+                  onClick={() => testNotification('slack')}
+                  disabled={!slackDestination}
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                >
+                  Test
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -524,13 +558,22 @@ export default function UserAlertSettings({
               <label className='block text-sm text-gray-300 mb-1'>
                 Webhook URL
               </label>
-              <Input
-                type='url'
-                placeholder='https://url.co/'
-                value={webhookDestination}
-                onChange={handleWebhookDestinationChange}
-                className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
-              />
+              <div className='flex gap-2'>
+                <Input
+                  type='url'
+                  placeholder='https://url.co/'
+                  value={webhookDestination}
+                  onChange={handleWebhookDestinationChange}
+                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                />
+                <Button
+                  onClick={() => testNotification('webhook')}
+                  disabled={!webhookDestination}
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                >
+                  Test
+                </Button>
+              </div>
               {webhookError && (
                 <p className='text-red-500 text-xs mt-1'>{webhookError}</p>
               )}
