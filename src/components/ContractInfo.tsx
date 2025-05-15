@@ -1,10 +1,11 @@
 import React from 'react';
 import { Contract, Alert } from '@/services/contractService';
+import { formatEther } from 'viem';
 import {
-  formatEth,
   formatSize,
   formatRiskLevel,
   getRiskBadgeVariant,
+  formatRoundedEth,
 } from '@/utils/formatting';
 import { PlusCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,9 @@ export function ContractInfo({
       label: 'Total Spent',
       content: (
         <span className='font-medium'>
-          {formatEth(contractData.totalBidInvestment)}
+          {formatRoundedEth(
+            formatEther(BigInt(contractData.totalBidInvestment))
+          ) + ' ETH'}
         </span>
       ),
     },

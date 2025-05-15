@@ -1,20 +1,32 @@
 /**
- * Format utilities for displaying contract data
+ * Format ETH value with rounding to significant figures
+ * @param ethValue ETH amount as string or number
+ * @param decimals Number of significant figures to show
+ * @returns Formatted ETH amount with specified number of significant figures
  */
-
-/**
- * Format an Ethereum amount from Wei to ETH with readable formatting
- * @param wei Wei amount as string
- * @returns Formatted ETH amount with units
- */
-export const formatEth = (wei: string): string => {
-  // Convert Wei to ETH (1 ETH = 10^18 Wei)
+export const formatRoundedEth = (
+  ethValue: string | number,
+  decimals: number = 3
+): string => {
   try {
-    const weiNum = BigInt(wei);
-    const ethValue = Number(weiNum) / 1e18;
-    return ethValue.toFixed(6) + ' ETH';
+    // Convert input to number if it's a string
+    const value =
+      typeof ethValue === 'string' ? parseFloat(ethValue) : ethValue;
+
+    // Handle zero case
+    if (value === 0) return '0';
+
+    // Format to specified number of significant digits
+    // For 123456 → show 123000
+    // For 0.000451234 → show 0.000451
+    const formattedValue = value.toPrecision(decimals);
+
+    // Remove trailing zeros after decimal and unnecessary decimal point
+    const cleanedValue = parseFloat(formattedValue).toString();
+
+    return cleanedValue;
   } catch {
-    return wei;
+    return ethValue.toString();
   }
 };
 
@@ -94,7 +106,7 @@ export const getRiskBadgeVariant = (risk?: string | null) => {
 
 // Also export as a class for better organization if preferred
 export class Format {
-  static eth = formatEth;
+  static roundedEth = formatRoundedEth;
   static size = formatSize;
   static date = formatDate;
   static evictionRiskColor = getEvictionRiskColor;

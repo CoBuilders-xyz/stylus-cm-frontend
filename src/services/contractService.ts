@@ -91,8 +91,11 @@ export interface Contract {
   effectiveBid: string;
   evictionRisk: EvictionRisk | null;
   minBid: string;
+  maxBid?: string; // Maximum bid for automated bidding
+  isAutomated?: boolean; // Whether automated bidding is enabled
   name?: string; // Optional field possibly used on frontend
   alerts?: Alert[]; // Optional alerts for contract monitoring
+  userContractId?: string; // Optional user contract ID
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
@@ -102,6 +105,7 @@ export interface Contract {
     timestamp: string;
     blockNumber: string;
     transactionHash: string;
+    originAddress: string;
   }>; // Optional bidding history
 }
 
@@ -147,6 +151,35 @@ export interface UserContract {
   contract: Contract;
   alerts?: Alert[]; // Contract alerts configured by the user
   [key: string]: unknown; // Allow for additional properties
+}
+
+/**
+ * Bid risk levels interface
+ */
+export interface BidRiskLevels {
+  lowRisk: string;
+  midRisk: string;
+  highRisk: string;
+}
+
+/**
+ * Cache statistics interface
+ */
+export interface CacheStats {
+  utilization: number;
+  evictionRate: number;
+  medianBidPerByte: string;
+  competitiveness: number;
+  cacheSizeBytes: string;
+  usedCacheSizeBytes: string;
+}
+
+/**
+ * Suggested bids response interface
+ */
+export interface SuggestedBidsResponse {
+  suggestedBids: BidRiskLevels;
+  cacheStats: CacheStats;
 }
 
 /**
@@ -290,5 +323,28 @@ export class ContractService {
    */
   async deleteUserContract(id: string): Promise<void> {
     return this.apiClient.delete<void>(`/user-contracts/${id}`);
+  }
+
+  /**
+   * Get suggested bids for a contract by address
+   * @param address Contract address
+   * @param blockchainId Blockchain ID (will use current blockchain ID if not provided)
+   * @returns Promise with suggested bids response
+   */
+  async getSuggestedBidsByAddress(
+    address: string,
+    blockchainId?: string
+  ): Promise<SuggestedBidsResponse> {
+    const targetBlockchainId = blockchainId || this.currentBlockchainId;
+
+    if (!targetBlockchainId) {
+      throw new Error(
+        'No blockchain ID available for getSuggestedBidsByAddress'
+      );
+    }
+
+    return this.apiClient.get<SuggestedBidsResponse>(
+      `/contracts/suggest-bids/by-address/${address}?blockchainId=${targetBlockchainId}`
+    );
   }
 }

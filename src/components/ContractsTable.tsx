@@ -18,11 +18,11 @@ import {
 import { useAuthentication } from '@/context/AuthenticationProvider';
 import { Contract, PaginationMeta } from '@/services/contractService';
 import {
-  formatEth,
   formatSize,
   formatDate,
   formatRiskLevel,
   getRiskBadgeVariant,
+  formatRoundedEth,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
@@ -31,11 +31,11 @@ import NoticeBanner from '@/components/NoticeBanner';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
+import { formatEther } from 'viem';
 
 interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
-  onRowClick?: (contract: Contract) => void;
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
 }
 
@@ -121,21 +121,15 @@ const ContractRow = React.memo(
   ({
     contract,
     viewType,
-    onRowClick,
     onContractSelect,
   }: {
     contract: Contract;
     viewType: string;
-    onRowClick?: (contract: Contract) => void;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
-        // Use the new handler that takes ID and initial data
         onContractSelect(contract.id, contract);
-      } else if (onRowClick) {
-        // Fallback to original handler for backward compatibility
-        onRowClick(contract);
       }
     };
 
@@ -155,16 +149,44 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.lastBid)}
+          {contract.lastBid ? (
+            formatRoundedEth(formatEther(BigInt(contract.lastBid))) + ' ETH'
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.effectiveBid)}
+          {contract.effectiveBid ? (
+            formatRoundedEth(formatEther(BigInt(contract.effectiveBid))) +
+            ' ETH'
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {formatSize(contract.bytecode.size)}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.minBid || '0')}
+          {contract.minBid ? (
+            formatRoundedEth(formatEther(BigInt(contract.minBid))) + ' ETH'
+          ) : (
+            <Badge
+              variant='outline'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              N/A
+            </Badge>
+          )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.evictionRisk ? (
@@ -184,7 +206,11 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell className='py-6 text-lg'>
-          {formatEth(contract.totalBidInvestment)}
+          {contract.totalBidInvestment
+            ? formatRoundedEth(
+                formatEther(BigInt(contract.totalBidInvestment))
+              ) + ' ETH'
+            : 'N/A'}
         </TableCell>
         <TableCell className='py-6'>
           <div className='flex flex-col'>
@@ -312,7 +338,6 @@ Pagination.displayName = 'Pagination';
 function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
-  onRowClick,
   onContractSelect,
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
@@ -515,7 +540,6 @@ function ContractsTable({
                         key={contract.address}
                         contract={contract}
                         viewType={viewType}
-                        onRowClick={onRowClick}
                         onContractSelect={onContractSelect}
                       />
                     ))

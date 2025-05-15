@@ -137,10 +137,14 @@ export function useContracts(
             return {
               ...contract,
               ...rest,
+              userContractId: userContract.id,
               // Preserve name from top level if exists
               name: rest.name || '',
               // Pass evictionRisk as is (could be null)
               evictionRisk: contract.evictionRisk,
+              // Pass automation fields if they exist
+              maxBid: contract.maxBid,
+              isAutomated: contract.isAutomated,
               // Ensure bytecode exists with minimal required properties
               bytecode: {
                 ...contract.bytecode,

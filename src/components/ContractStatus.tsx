@@ -1,5 +1,6 @@
 import React from 'react';
-import { formatEth, formatDate } from '@/utils/formatting';
+import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { formatEther } from 'viem';
 
 interface ContractStatusProps {
   isLoading: boolean;
@@ -16,7 +17,6 @@ export function ContractStatus({
   bidBlockTimestamp,
   effectiveBid,
   lastBid,
-  viewType = 'my-contracts',
 }: ContractStatusProps) {
   if (isLoading) {
     return (
@@ -39,10 +39,7 @@ export function ContractStatus({
   }
 
   // For explore-contracts view, use default value if effectiveBid is not provided
-  const displayEffectiveBid =
-    viewType === 'explore-contracts' && !effectiveBid
-      ? '0.03'
-      : effectiveBid || '';
+  const displayEffectiveBid = effectiveBid || '';
 
   return (
     <div className='grid grid-cols-2 gap-4 mb-6'>
@@ -61,10 +58,16 @@ export function ContractStatus({
       <div className='border border-[#2C2E30] rounded-md p-4'>
         <div className='text-gray-400 text-sm'>Effective Bid</div>
         <div className='text-xl font-bold'>
-          {formatEth(displayEffectiveBid)}
+          {displayEffectiveBid
+            ? formatRoundedEth(formatEther(BigInt(displayEffectiveBid))) +
+              ' ETH'
+            : 'N/A'}
         </div>
         <div className='text-xs text-gray-400'>
-          Bid: {formatEth(lastBid || '')}
+          Bid:{' '}
+          {lastBid
+            ? formatRoundedEth(formatEther(BigInt(lastBid))) + ' ETH'
+            : 'N/A'}
         </div>
       </div>
     </div>

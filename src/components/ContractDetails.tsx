@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Contract } from '@/services/contractService';
-import { formatEth, formatDate } from '@/utils/formatting';
+import { formatEther } from 'viem';
+import { formatDate, formatRoundedEth } from '@/utils/formatting';
 import {
   MoreHorizontal,
   PlusCircle,
@@ -34,7 +35,7 @@ import EditableContractName, {
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
 import ContractStatus from './ContractStatus';
-
+import { showSomethingWentWrongToast } from '@/components/Toast';
 interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
@@ -64,6 +65,8 @@ export default function ContractDetails({
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
   const [automatedBidding, setAutomatedBidding] = useState(false);
+  const [maxBidAmount, setMaxBidAmount] = useState('');
+  const [automationFunding, setAutomationFunding] = useState('');
 
   // State for contract data and loading
   const [contractData, setContractData] = useState<Contract | null>(
@@ -115,6 +118,7 @@ export default function ContractDetails({
           if (userContract && userContract.contract) {
             // Clone the contract object to avoid reference issues
             const contractWithAlerts = {
+              userContractId: userContract.id,
               ...userContract.contract,
               // Use name from the top-level userContract, as that's the user-customized name
               name:
@@ -145,11 +149,6 @@ export default function ContractDetails({
     fetchContractData();
   }, [contractService, contractId, viewType, initialContractData]);
 
-  // Minimum bid based on contract data or calculation
-  const minBidAmount = contractData
-    ? formatEth(contractData.minBid || contractData.lastBid)
-    : '0';
-
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
     if (!contractData || !contractData.biddingHistory) return [];
@@ -168,11 +167,19 @@ export default function ContractDetails({
           historyItem.contractAddress.length - 4
         );
 
+      const displayOriginAddress =
+        historyItem.originAddress.substring(0, 6) +
+        '...' +
+        historyItem.originAddress.substring(
+          historyItem.originAddress.length - 4
+        );
       // Format the date using the formatDate utility for consistency
       const formattedDate = formatDate(historyItem.timestamp);
 
       // Format bid amount
-      const bidAmount = formatEth(historyItem.actualBid).split(' ')[0];
+      const bidAmount = formatRoundedEth(
+        formatEther(BigInt(historyItem.actualBid))
+      );
 
       return {
         id: index, // Using index as id since the API might not provide one
@@ -183,6 +190,7 @@ export default function ContractDetails({
         amount: bidAmount,
         transactionHash: historyItem.transactionHash,
         contractName: contractName,
+        originAddress: displayOriginAddress,
       };
     });
   };
@@ -205,11 +213,12 @@ export default function ContractDetails({
               contractData.blockchain.cacheManagerAddress.substring(
                 contractData.blockchain.cacheManagerAddress.length - 4
               ),
-            bid: formatEth(contractData.lastBid).split(' ')[0],
+            bid: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
             type: 'automatic bid',
             date: formatDate(contractData.bidBlockTimestamp),
-            amount: formatEth(contractData.lastBid).split(' ')[0],
+            amount: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
             contractName: contractName,
+            originAddress: '0x0000....0000',
           },
         ]
       : [];
@@ -243,11 +252,6 @@ export default function ContractDetails({
       </div>
     );
   }
-
-  // Handler for bid submission
-  const handleSubmitBid = () => {
-    // Here would be API call to submit bid
-  };
 
   // Handler for adding contract to my contracts
   const handleAddToMyContracts = () => {
@@ -326,9 +330,37 @@ export default function ContractDetails({
     setContractName(newName);
   };
 
+  // Function to reload contract data after successful operations
+  const reloadContractData = () => {
+    // Reload contract data after successful operation
+    if (viewType === 'my-contracts' && contractService && userContractId) {
+      contractService
+        .getUserContract(userContractId)
+        .then((userContract) => {
+          if (userContract && userContract.contract) {
+            // Clone the contract object to avoid reference issues
+            const contractWithAlerts = {
+              ...userContract.contract,
+              name:
+                userContract.name ||
+                userContract.contract.name ||
+                'Contract Name',
+              alerts: userContract.alerts || userContract.contract.alerts || [],
+            };
+            setContractData(contractWithAlerts);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to reload contract data:', error);
+          showSomethingWentWrongToast();
+        });
+    }
+  };
+
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Main content with ScrollArea */}
+
       <ScrollArea className='flex-1'>
         <div className='p-6'>
           {/* Top Section: Contract Address and Name with Options */}
@@ -405,7 +437,6 @@ export default function ContractDetails({
               </Button>
             </div>
           </div>
-
           {/* Rest of component remains mostly the same except uses contractData directly */}
           {viewType === 'my-contracts' ? (
             <>
@@ -436,16 +467,22 @@ export default function ContractDetails({
               <div className='space-y-4 mb-8'>
                 {/* Bid now section */}
                 <BidNowSection
-                  minBidAmount={minBidAmount}
+                  contract={contractData}
                   bidAmount={bidAmount}
                   setBidAmount={setBidAmount}
-                  onSubmitBid={handleSubmitBid}
+                  onSuccess={reloadContractData}
                 />
 
                 {/* Automated Bidding section */}
                 <AutomatedBiddingSection
                   automatedBidding={automatedBidding}
                   setAutomatedBidding={setAutomatedBidding}
+                  maxBidAmount={maxBidAmount}
+                  setMaxBidAmount={setMaxBidAmount}
+                  automationFunding={automationFunding}
+                  setAutomationFunding={setAutomationFunding}
+                  contract={contractData}
+                  onSuccess={reloadContractData}
                 />
               </div>
 

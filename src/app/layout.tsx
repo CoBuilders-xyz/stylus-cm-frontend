@@ -5,6 +5,8 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
 import { AuthenticationProvider } from '../context/AuthenticationProvider';
+import { Toaster } from '@/components/ui/sonner';
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -26,6 +28,7 @@ export default function RootLayout({
             {children}
           </AuthenticationProvider>
         </RainbowKitProvider>
+        <Toaster />
       </body>
     </html>
   );
