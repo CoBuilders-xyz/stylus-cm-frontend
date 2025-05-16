@@ -5,7 +5,7 @@ import Image from 'next/image';
 import logo from 'public/logo.svg';
 import { Megaphone } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
-
+import { GasTankModal } from './GasTankModal';
 // import BlockchainSelector from './BlockchainSelector';
 import ConnectWallet from './ConnectWallet';
 import ConnectionBanner from './ConnectionBanner';
@@ -26,6 +26,7 @@ export default function Header() {
         <Link href='/my-contracts'>My Contracts</Link>
       </div>
       <div className='space-x-4 text-xs flex items-center'>
+        <GasTankModal />
         <div
           className='border border-white rounded-[10px] p-2 flex items-center justify-center cursor-pointer hover:bg-gray-900'
           style={{ borderWidth: '1px' }}
