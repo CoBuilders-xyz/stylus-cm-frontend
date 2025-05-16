@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,45 +24,56 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBlockchainService } from '@/hooks/useBlockchainService';
+import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import {
   FuelIcon as GasStation,
   ArrowUpCircle,
   ArrowDownCircle,
 } from 'lucide-react';
+import { Abi, formatEther } from 'viem';
+import { useReadContract, useAccount } from 'wagmi';
 
 export function GasTankModal() {
-  const [balance, setBalance] = useState(0);
+  // Internal state
   const [open, setOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const isDesktop = useMediaQuery('(min-width: 768px)');
+
+  // Get the current blockchain
+  const { currentBlockchain } = useBlockchainService();
+
+  // Get the connected account
+  const { address: userAddress, isConnected } = useAccount();
+
+  // Get user balance from cache manager automation contract
+  const {
+    data: userBalance,
+    refetch: refetchBalance,
+    isLoading,
+  } = useReadContract({
+    address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
+    abi: cacheManagerAutomationAbi.abi as Abi,
+    functionName: 'getUserBalance',
+    account: userAddress, // Include the user's address to properly sign the request
+    query: {
+      enabled:
+        !!currentBlockchain?.cacheManagerAutomationAddress &&
+        isConnected &&
+        !!userAddress,
+    },
+  });
+
+  // Format balance from Wei to ETH for display
+  const balanceInEth = userBalance
+    ? Number(formatEther(userBalance as bigint))
+    : 0;
 
   // Determine if any transaction is pending
   const isTransactionPending = isDepositing || isWithdrawing;
-
-  // Fetch balance on component mount
-  useEffect(() => {
-    fetchBalance();
-  }, []);
-
-  // Function to fetch the user's gas balance
-  async function fetchBalance() {
-    setIsLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Mock balance - in a real app, this would come from your blockchain API
-      const fetchedBalance = 0.05;
-      setBalance(fetchedBalance);
-    } catch (error) {
-      console.error('Failed to fetch balance:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   function onOpenChange(open: boolean) {
     // Prevent closing if transaction is pending
@@ -72,6 +83,9 @@ export function GasTankModal() {
     if (!open) {
       setDepositAmount('');
       setWithdrawAmount('');
+    } else {
+      // Refresh balance when opening the modal
+      refetchBalance();
     }
   }
 
@@ -112,7 +126,9 @@ export function GasTankModal() {
   }
 
   function handleSetMaxWithdraw() {
-    setWithdrawAmount(balance.toString());
+    // Set the withdraw amount to the maximum available balance
+    // Format to 6 decimal places to avoid floating point precision issues
+    setWithdrawAmount(balanceInEth.toFixed(6));
   }
 
   if (isDesktop) {
@@ -124,7 +140,7 @@ export function GasTankModal() {
             {isLoading ? (
               <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
             ) : (
-              <span>{balance.toFixed(3)} ETH</span>
+              <span>{balanceInEth.toFixed(3)} ETH</span>
             )}
           </Button>
         </DialogTrigger>
@@ -136,7 +152,7 @@ export function GasTankModal() {
             </DialogDescription>
           </DialogHeader>
           <GasTankContent
-            balance={balance}
+            balance={balanceInEth}
             depositAmount={depositAmount}
             withdrawAmount={withdrawAmount}
             setDepositAmount={setDepositAmount}
@@ -147,7 +163,8 @@ export function GasTankModal() {
             isDepositing={isDepositing}
             isWithdrawing={isWithdrawing}
             isTransactionPending={isTransactionPending}
-            refreshBalance={fetchBalance}
+            refreshBalance={refetchBalance}
+            isBalanceLoading={isLoading}
           />
         </DialogContent>
       </Dialog>
@@ -162,7 +179,7 @@ export function GasTankModal() {
           {isLoading ? (
             <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
           ) : (
-            <span>{balance.toFixed(3)} ETH</span>
+            <span>{balanceInEth.toFixed(3)} ETH</span>
           )}
         </Button>
       </DrawerTrigger>
@@ -175,7 +192,7 @@ export function GasTankModal() {
         </DrawerHeader>
         <div className='px-4'>
           <GasTankContent
-            balance={balance}
+            balance={balanceInEth}
             depositAmount={depositAmount}
             withdrawAmount={withdrawAmount}
             setDepositAmount={setDepositAmount}
@@ -186,7 +203,8 @@ export function GasTankModal() {
             isDepositing={isDepositing}
             isWithdrawing={isWithdrawing}
             isTransactionPending={isTransactionPending}
-            refreshBalance={fetchBalance}
+            refreshBalance={refetchBalance}
+            isBalanceLoading={isLoading}
           />
         </div>
         <DrawerFooter className='pt-2'>
@@ -218,6 +236,7 @@ interface GasTankContentProps {
   isWithdrawing: boolean;
   isTransactionPending: boolean;
   refreshBalance: () => void;
+  isBalanceLoading: boolean;
 }
 
 function GasTankContent({
@@ -233,6 +252,7 @@ function GasTankContent({
   isWithdrawing,
   isTransactionPending,
   refreshBalance,
+  isBalanceLoading,
 }: GasTankContentProps) {
   return (
     <div className='py-4'>
@@ -240,14 +260,18 @@ function GasTankContent({
         <div className='text-sm text-gray-400'>Current Balance</div>
         <div className='flex items-center gap-2 text-3xl font-bold'>
           <GasStation className='h-8 w-8' />
-          <span>{balance.toFixed(3)} ETH</span>
+          {isBalanceLoading ? (
+            <div className='h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+          ) : (
+            <span>{balance.toFixed(3)} ETH</span>
+          )}
         </div>
         <Button
           variant='ghost'
           size='sm'
-          onClick={refreshBalance}
+          onClick={() => refreshBalance()}
           className='mt-2 text-xs text-gray-400 hover:text-white'
-          disabled={isTransactionPending}
+          disabled={isTransactionPending || isBalanceLoading}
         >
           Refresh
         </Button>
@@ -284,7 +308,7 @@ function GasTankContent({
                 min='0.001'
                 step='0.001'
                 className='bg-[#252a33] border-[#2a2d34]'
-                disabled={isTransactionPending}
+                disabled={isTransactionPending || isBalanceLoading}
               />
             </div>
           </div>
@@ -294,7 +318,8 @@ function GasTankContent({
             disabled={
               isTransactionPending ||
               !depositAmount ||
-              Number(depositAmount) <= 0
+              Number(depositAmount) <= 0 ||
+              isBalanceLoading
             }
           >
             {isDepositing ? (
@@ -323,21 +348,23 @@ function GasTankContent({
                   max={balance.toString()}
                   step='0.001'
                   className='bg-[#252a33] border-[#2a2d34]'
-                  disabled={isTransactionPending}
+                  disabled={isTransactionPending || isBalanceLoading}
                 />
                 <Button
                   type='button'
                   size='sm'
                   onClick={handleSetMaxWithdraw}
                   className='absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 py-1 text-xs bg-[#2a2d34] hover:bg-[#353a44] rounded-md'
-                  disabled={isTransactionPending || balance <= 0}
+                  disabled={
+                    isTransactionPending || balance <= 0 || isBalanceLoading
+                  }
                 >
                   Max
                 </Button>
               </div>
             </div>
             <p className='text-xs text-gray-400'>
-              Maximum withdrawal: {balance.toFixed(3)} ETH
+              Maximum withdrawal: {balance.toFixed(6)} ETH
             </p>
           </div>
           <Button
@@ -347,7 +374,8 @@ function GasTankContent({
               isTransactionPending ||
               !withdrawAmount ||
               Number(withdrawAmount) <= 0 ||
-              Number(withdrawAmount) > balance
+              Number(withdrawAmount) > balance ||
+              isBalanceLoading
             }
           >
             {isWithdrawing ? (
