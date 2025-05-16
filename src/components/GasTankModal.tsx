@@ -32,21 +32,24 @@ import {
 
 interface GasTankProps {
   balance: number;
-  onDeposit: (amount: number) => void;
-  onWithdraw: (amount: number) => void;
+  isPending?: boolean;
 }
 
-export function GasTankModal({
-  balance = 0.05,
-  onDeposit = () => {},
-  onWithdraw = () => {},
-}: GasTankProps) {
+export function GasTankModal({ balance = 0.05 }: GasTankProps) {
   const [open, setOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [isDepositing, setIsDepositing] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
+  // Determine if any transaction is pending
+  const isTransactionPending = isDepositing || isWithdrawing;
+
   function onOpenChange(open: boolean) {
+    // Prevent closing if transaction is pending
+    if (isTransactionPending) return;
+
     setOpen(open);
     if (!open) {
       setDepositAmount('');
@@ -54,19 +57,33 @@ export function GasTankModal({
     }
   }
 
-  function handleDeposit() {
+  async function handleDeposit() {
     const amount = Number.parseFloat(depositAmount);
     if (!isNaN(amount) && amount > 0) {
-      onDeposit(amount);
-      setDepositAmount('');
+      try {
+        setIsDepositing(true);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setDepositAmount('');
+      } catch (error) {
+        console.error('Deposit failed:', error);
+      } finally {
+        setIsDepositing(false);
+      }
     }
   }
 
-  function handleWithdraw() {
+  async function handleWithdraw() {
     const amount = Number.parseFloat(withdrawAmount);
     if (!isNaN(amount) && amount > 0 && amount <= balance) {
-      onWithdraw(amount);
-      setWithdrawAmount('');
+      try {
+        setIsWithdrawing(true);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setWithdrawAmount('');
+      } catch (error) {
+        console.error('Withdrawal failed:', error);
+      } finally {
+        setIsWithdrawing(false);
+      }
     }
   }
 
@@ -99,6 +116,9 @@ export function GasTankModal({
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
             handleSetMaxWithdraw={handleSetMaxWithdraw}
+            isDepositing={isDepositing}
+            isWithdrawing={isWithdrawing}
+            isTransactionPending={isTransactionPending}
           />
         </DialogContent>
       </Dialog>
@@ -130,6 +150,9 @@ export function GasTankModal({
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
             handleSetMaxWithdraw={handleSetMaxWithdraw}
+            isDepositing={isDepositing}
+            isWithdrawing={isWithdrawing}
+            isTransactionPending={isTransactionPending}
           />
         </div>
         <DrawerFooter className='pt-2'>
@@ -137,6 +160,7 @@ export function GasTankModal({
             <Button
               variant='outline'
               className='border-[#2a2d34] bg-[#252a33] hover:bg-[#2a2d34] hover:text-white'
+              disabled={isTransactionPending}
             >
               Close
             </Button>
@@ -156,6 +180,9 @@ interface GasTankContentProps {
   handleDeposit: () => void;
   handleWithdraw: () => void;
   handleSetMaxWithdraw: () => void;
+  isDepositing: boolean;
+  isWithdrawing: boolean;
+  isTransactionPending: boolean;
 }
 
 function GasTankContent({
@@ -167,6 +194,9 @@ function GasTankContent({
   handleDeposit,
   handleWithdraw,
   handleSetMaxWithdraw,
+  isDepositing,
+  isWithdrawing,
+  isTransactionPending,
 }: GasTankContentProps) {
   return (
     <div className='py-4'>
@@ -183,12 +213,14 @@ function GasTankContent({
           <TabsTrigger
             value='deposit'
             className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
+            disabled={isTransactionPending}
           >
             Deposit
           </TabsTrigger>
           <TabsTrigger
             value='withdraw'
             className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
+            disabled={isTransactionPending}
           >
             Withdraw
           </TabsTrigger>
@@ -207,14 +239,23 @@ function GasTankContent({
                 min='0.001'
                 step='0.001'
                 className='bg-[#252a33] border-[#2a2d34]'
+                disabled={isTransactionPending}
               />
             </div>
           </div>
           <Button
             onClick={handleDeposit}
             className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
+            disabled={isTransactionPending}
           >
-            Deposit Gas
+            {isDepositing ? (
+              <div className='flex items-center gap-2'>
+                <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+                <span>Depositing...</span>
+              </div>
+            ) : (
+              'Deposit Gas'
+            )}
           </Button>
         </TabsContent>
         <TabsContent value='withdraw' className='space-y-4 pt-4'>
@@ -233,12 +274,14 @@ function GasTankContent({
                   max={balance.toString()}
                   step='0.001'
                   className='bg-[#252a33] border-[#2a2d34]'
+                  disabled={isTransactionPending}
                 />
                 <Button
                   type='button'
                   size='sm'
                   onClick={handleSetMaxWithdraw}
                   className='absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 py-1 text-xs bg-[#2a2d34] hover:bg-[#353a44] rounded-md'
+                  disabled={isTransactionPending}
                 >
                   Max
                 </Button>
@@ -252,11 +295,19 @@ function GasTankContent({
             onClick={handleWithdraw}
             className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
             disabled={
+              isTransactionPending ||
               Number.parseFloat(withdrawAmount) > balance ||
               Number.parseFloat(withdrawAmount) <= 0
             }
           >
-            Withdraw Gas
+            {isWithdrawing ? (
+              <div className='flex items-center gap-2'>
+                <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+                <span>Withdrawing...</span>
+              </div>
+            ) : (
+              'Withdraw Gas'
+            )}
           </Button>
         </TabsContent>
       </Tabs>
