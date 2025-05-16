@@ -29,13 +29,13 @@ import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/Cach
 import {
   FuelIcon as GasStation,
   ArrowUpCircle,
-  ArrowDownCircle,
   AlertCircle,
 } from 'lucide-react';
 import { type Abi, formatEther } from 'viem';
 import { useReadContract, useAccount } from 'wagmi';
 import { useWeb3 } from '@/hooks/useWeb3';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from './ui/skeleton';
 
 export function GasTankModal() {
   // Internal state
@@ -171,7 +171,7 @@ export function GasTankModal() {
           <Button variant='ghost' className='flex items-center gap-2'>
             <GasStation className='h-5 w-5' />
             {isLoading ? (
-              <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+              <Skeleton className='h-4 w-[72px]' />
             ) : (
               <span>{balanceInEth.toFixed(3)} ETH</span>
             )}
@@ -207,7 +207,7 @@ export function GasTankModal() {
         <Button variant='ghost' className='flex items-center gap-2'>
           <GasStation className='h-5 w-5' />
           {isLoading ? (
-            <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+            <Skeleton className='h-4 w-[72px]' />
           ) : (
             <span>{balanceInEth.toFixed(3)} ETH</span>
           )}
@@ -282,7 +282,7 @@ function GasTankContent({
         <div className='flex items-center gap-2 text-3xl font-bold'>
           <GasStation className='h-8 w-8' />
           {isBalanceLoading ? (
-            <div className='h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+            <Skeleton className='h-7 w-[157px] mt-2' />
           ) : (
             <span>{balance.toFixed(3)} ETH</span>
           )}
@@ -361,14 +361,6 @@ function GasTankContent({
               {balance.toFixed(6)} ETH.
             </AlertDescription>
           </Alert>
-
-          <div className='flex items-center justify-between'>
-            <div>
-              <div className='text-sm font-medium'>Available to withdraw</div>
-              <div className='text-2xl font-bold'>{balance.toFixed(6)} ETH</div>
-            </div>
-            <ArrowDownCircle className='h-6 w-6 text-red-500' />
-          </div>
 
           <Button
             onClick={handleWithdraw}
