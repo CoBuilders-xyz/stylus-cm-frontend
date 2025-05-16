@@ -30,16 +30,17 @@ import {
   FuelIcon as GasStation,
   ArrowUpCircle,
   ArrowDownCircle,
+  AlertCircle,
 } from 'lucide-react';
-import { Abi, formatEther } from 'viem';
+import { type Abi, formatEther } from 'viem';
 import { useReadContract, useAccount } from 'wagmi';
 import { useWeb3 } from '@/hooks/useWeb3';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function GasTankModal() {
   // Internal state
   const [open, setOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
-  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -95,7 +96,6 @@ export function GasTankModal() {
     setOpen(open);
     if (!open) {
       setDepositAmount('');
-      setWithdrawAmount('');
     } else {
       // Refresh balance when opening the modal
       refetchBalance();
@@ -107,9 +107,6 @@ export function GasTankModal() {
     if (!isNaN(amount) && amount > 0 && currentBlockchain) {
       try {
         setIsDepositing(true);
-
-        // Convert ETH amount to Wei for the contract
-        // const amountInWei = parseEther(depositAmount);
 
         // Create transaction parameters
         const txParams = {
@@ -138,21 +135,10 @@ export function GasTankModal() {
   }
 
   async function handleWithdraw() {
-    const amount = Number.parseFloat(withdrawAmount);
-    if (
-      !isNaN(amount) &&
-      amount > 0 &&
-      amount <= balanceInEth &&
-      currentBlockchain
-    ) {
+    if (balanceInEth > 0 && currentBlockchain) {
       try {
         setIsWithdrawing(true);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Convert ETH amount to Wei for the contract
-        // const amountInWei = parseEther(withdrawAmount);
-
-        // Call the withdraw function
         // Create transaction parameters
         const txParams = {
           address:
@@ -169,8 +155,6 @@ export function GasTankModal() {
           );
         });
 
-        // Clear input and refresh balance
-        setWithdrawAmount('');
         await refetchBalance();
       } catch (error) {
         console.error('Withdrawal failed:', error);
@@ -178,12 +162,6 @@ export function GasTankModal() {
         setIsWithdrawing(false);
       }
     }
-  }
-
-  function handleSetMaxWithdraw() {
-    // Set the withdraw amount to the maximum available balance
-    // Format to 6 decimal places to avoid floating point precision issues
-    setWithdrawAmount(balanceInEth.toFixed(6));
   }
 
   if (isDesktop) {
@@ -209,12 +187,9 @@ export function GasTankModal() {
           <GasTankContent
             balance={balanceInEth}
             depositAmount={depositAmount}
-            withdrawAmount={withdrawAmount}
             setDepositAmount={setDepositAmount}
-            setWithdrawAmount={setWithdrawAmount}
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
-            handleSetMaxWithdraw={handleSetMaxWithdraw}
             isDepositing={isDepositing}
             isWithdrawing={isWithdrawing}
             isTransactionPending={isTransactionPending}
@@ -242,19 +217,16 @@ export function GasTankModal() {
         <DrawerHeader className='text-left'>
           <DrawerTitle>Gas Tank</DrawerTitle>
           <DrawerDescription className='text-gray-400'>
-            Manage your gas balance for transactions.
+            Manage your gas balance for automated bidding transactions.
           </DrawerDescription>
         </DrawerHeader>
         <div className='px-4'>
           <GasTankContent
             balance={balanceInEth}
             depositAmount={depositAmount}
-            withdrawAmount={withdrawAmount}
             setDepositAmount={setDepositAmount}
-            setWithdrawAmount={setWithdrawAmount}
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
-            handleSetMaxWithdraw={handleSetMaxWithdraw}
             isDepositing={isDepositing}
             isWithdrawing={isWithdrawing}
             isTransactionPending={isTransactionPending}
@@ -281,12 +253,9 @@ export function GasTankModal() {
 interface GasTankContentProps {
   balance: number;
   depositAmount: string;
-  withdrawAmount: string;
   setDepositAmount: (value: string) => void;
-  setWithdrawAmount: (value: string) => void;
   handleDeposit: () => void;
   handleWithdraw: () => void;
-  handleSetMaxWithdraw: () => void;
   isDepositing: boolean;
   isWithdrawing: boolean;
   isTransactionPending: boolean;
@@ -297,12 +266,9 @@ interface GasTankContentProps {
 function GasTankContent({
   balance,
   depositAmount,
-  withdrawAmount,
   setDepositAmount,
-  setWithdrawAmount,
   handleDeposit,
   handleWithdraw,
-  handleSetMaxWithdraw,
   isDepositing,
   isWithdrawing,
   isTransactionPending,
@@ -388,50 +354,26 @@ function GasTankContent({
           </Button>
         </TabsContent>
         <TabsContent value='withdraw' className='space-y-4 pt-4'>
-          <div className='space-y-2'>
-            <Label htmlFor='withdraw-amount'>Withdraw Amount (ETH)</Label>
-            <div className='flex items-center gap-2'>
-              <ArrowDownCircle className='h-5 w-5 text-red-500' />
-              <div className='relative flex-1'>
-                <Input
-                  id='withdraw-amount'
-                  type='number'
-                  placeholder='0.00'
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  min='0.001'
-                  max={balance.toString()}
-                  step='0.001'
-                  className='bg-[#252a33] border-[#2a2d34]'
-                  disabled={isTransactionPending || isBalanceLoading}
-                />
-                <Button
-                  type='button'
-                  size='sm'
-                  onClick={handleSetMaxWithdraw}
-                  className='absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 py-1 text-xs bg-[#2a2d34] hover:bg-[#353a44] rounded-md'
-                  disabled={
-                    isTransactionPending || balance <= 0 || isBalanceLoading
-                  }
-                >
-                  Max
-                </Button>
-              </div>
+          <Alert className='bg-[#252a33] border-[#2a2d34] mb-4'>
+            <AlertCircle className='h-4 w-4 text-yellow-500' />
+            <AlertDescription className='text-sm text-gray-300 ml-2'>
+              Withdrawing will remove your entire balance of{' '}
+              {balance.toFixed(6)} ETH.
+            </AlertDescription>
+          </Alert>
+
+          <div className='flex items-center justify-between'>
+            <div>
+              <div className='text-sm font-medium'>Available to withdraw</div>
+              <div className='text-2xl font-bold'>{balance.toFixed(6)} ETH</div>
             </div>
-            <p className='text-xs text-gray-400'>
-              Maximum withdrawal: {balance.toFixed(6)} ETH
-            </p>
+            <ArrowDownCircle className='h-6 w-6 text-red-500' />
           </div>
+
           <Button
             onClick={handleWithdraw}
-            className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
-            disabled={
-              isTransactionPending ||
-              !withdrawAmount ||
-              Number(withdrawAmount) <= 0 ||
-              Number(withdrawAmount) > balance ||
-              isBalanceLoading
-            }
+            className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34] mt-4'
+            disabled={isTransactionPending || balance <= 0 || isBalanceLoading}
           >
             {isWithdrawing ? (
               <div className='flex items-center gap-2'>
@@ -439,7 +381,7 @@ function GasTankContent({
                 <span>Withdrawing...</span>
               </div>
             ) : (
-              'Withdraw Gas'
+              'Withdraw All Gas'
             )}
           </Button>
         </TabsContent>
