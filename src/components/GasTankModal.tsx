@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { Abi, formatEther } from 'viem';
 import { useReadContract, useAccount } from 'wagmi';
+import { useWeb3 } from '@/hooks/useWeb3';
 
 export function GasTankModal() {
   // Internal state
@@ -67,6 +68,18 @@ export function GasTankModal() {
     },
   });
 
+  // Get the write contract function
+  const {
+    writeContract,
+    // , status, error, reset, gasPriceGwei, isGasPriceHigh
+  } = useWeb3({
+    // Set gas protection configuration
+    gasProtection: {
+      maxGasPriceGwei: 500, // Maximum gas price in Gwei
+      gasLimit: BigInt(500000), // Gas limit
+    },
+  });
+
   // Format balance from Wei to ETH for display
   const balanceInEth = userBalance
     ? Number(formatEther(userBalance as bigint))
@@ -91,14 +104,31 @@ export function GasTankModal() {
 
   async function handleDeposit() {
     const amount = Number.parseFloat(depositAmount);
-    if (!isNaN(amount) && amount > 0) {
+    if (!isNaN(amount) && amount > 0 && currentBlockchain) {
       try {
         setIsDepositing(true);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Update balance after successful deposit
-        setBalance((prevBalance) => prevBalance + amount);
+        // Convert ETH amount to Wei for the contract
+        // const amountInWei = parseEther(depositAmount);
+
+        // Create transaction parameters
+        const txParams = {
+          address:
+            currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
+          abi: cacheManagerAutomationAbi.abi as Abi,
+          functionName: 'fundBalance',
+          args: [] as const, // Even though this function doesn't take args, wagmi requires this property
+          value: depositAmount, // Amount to add in ETH
+        };
+
+        // Send the transaction
+        writeContract(txParams, (hash) => {
+          console.log(`Add funds transaction submitted with hash: ${hash}`);
+        });
+
+        // Clear input and refresh balance
         setDepositAmount('');
+        await refetchBalance();
       } catch (error) {
         console.error('Deposit failed:', error);
       } finally {
@@ -109,14 +139,39 @@ export function GasTankModal() {
 
   async function handleWithdraw() {
     const amount = Number.parseFloat(withdrawAmount);
-    if (!isNaN(amount) && amount > 0 && amount <= balance) {
+    if (
+      !isNaN(amount) &&
+      amount > 0 &&
+      amount <= balanceInEth &&
+      currentBlockchain
+    ) {
       try {
         setIsWithdrawing(true);
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Update balance after successful withdrawal
-        setBalance((prevBalance) => prevBalance - amount);
+        // Convert ETH amount to Wei for the contract
+        // const amountInWei = parseEther(withdrawAmount);
+
+        // Call the withdraw function
+        // Create transaction parameters
+        const txParams = {
+          address:
+            currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
+          abi: cacheManagerAutomationAbi.abi as Abi,
+          functionName: 'withdrawBalance',
+          args: [] as const, // Even though this function doesn't take args, wagmi requires this property
+        };
+
+        // Send the transaction
+        writeContract(txParams, (hash) => {
+          console.log(
+            `Withdraw funds transaction submitted with hash: ${hash}`
+          );
+        });
+
+        // Clear input and refresh balance
         setWithdrawAmount('');
+        await refetchBalance();
       } catch (error) {
         console.error('Withdrawal failed:', error);
       } finally {
