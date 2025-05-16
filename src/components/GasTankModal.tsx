@@ -70,6 +70,10 @@ export function GasTankModal({
     }
   }
 
+  function handleSetMaxWithdraw() {
+    setWithdrawAmount(balance.toString());
+  }
+
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -79,11 +83,11 @@ export function GasTankModal({
             <span>{balance.toFixed(3)} ETH</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className='sm:max-w-[425px]'>
+        <DialogContent className='sm:max-w-[425px] bg-[#1a1d24] border-[#2a2d34] text-white'>
           <DialogHeader>
             <DialogTitle>Gas Tank</DialogTitle>
-            <DialogDescription>
-              Manage your gas balance for transactions.
+            <DialogDescription className='text-gray-400'>
+              Manage your gas balance for automated bidding transactions.
             </DialogDescription>
           </DialogHeader>
           <GasTankContent
@@ -94,6 +98,7 @@ export function GasTankModal({
             setWithdrawAmount={setWithdrawAmount}
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
+            handleSetMaxWithdraw={handleSetMaxWithdraw}
           />
         </DialogContent>
       </Dialog>
@@ -108,10 +113,10 @@ export function GasTankModal({
           <span>{balance.toFixed(3)} ETH</span>
         </Button>
       </DrawerTrigger>
-      <DrawerContent>
+      <DrawerContent className='bg-[#1a1d24] text-white'>
         <DrawerHeader className='text-left'>
           <DrawerTitle>Gas Tank</DrawerTitle>
-          <DrawerDescription>
+          <DrawerDescription className='text-gray-400'>
             Manage your gas balance for transactions.
           </DrawerDescription>
         </DrawerHeader>
@@ -124,11 +129,17 @@ export function GasTankModal({
             setWithdrawAmount={setWithdrawAmount}
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
+            handleSetMaxWithdraw={handleSetMaxWithdraw}
           />
         </div>
         <DrawerFooter className='pt-2'>
           <DrawerClose asChild>
-            <Button variant='outline'>Close</Button>
+            <Button
+              variant='outline'
+              className='border-[#2a2d34] bg-[#252a33] hover:bg-[#2a2d34] hover:text-white'
+            >
+              Close
+            </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
@@ -144,6 +155,7 @@ interface GasTankContentProps {
   setWithdrawAmount: (value: string) => void;
   handleDeposit: () => void;
   handleWithdraw: () => void;
+  handleSetMaxWithdraw: () => void;
 }
 
 function GasTankContent({
@@ -154,11 +166,12 @@ function GasTankContent({
   setWithdrawAmount,
   handleDeposit,
   handleWithdraw,
+  handleSetMaxWithdraw,
 }: GasTankContentProps) {
   return (
     <div className='py-4'>
       <div className='mb-6 flex flex-col items-center justify-center'>
-        <div className='text-sm text-muted-foreground'>Current Balance</div>
+        <div className='text-sm text-gray-400'>Current Balance</div>
         <div className='flex items-center gap-2 text-3xl font-bold'>
           <GasStation className='h-8 w-8' />
           <span>{balance.toFixed(3)} ETH</span>
@@ -166,9 +179,19 @@ function GasTankContent({
       </div>
 
       <Tabs defaultValue='deposit' className='w-full'>
-        <TabsList className='grid w-full grid-cols-2'>
-          <TabsTrigger value='deposit'>Deposit</TabsTrigger>
-          <TabsTrigger value='withdraw'>Withdraw</TabsTrigger>
+        <TabsList className='grid w-full grid-cols-2 bg-[#252a33] rounded-md p-1'>
+          <TabsTrigger
+            value='deposit'
+            className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
+          >
+            Deposit
+          </TabsTrigger>
+          <TabsTrigger
+            value='withdraw'
+            className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
+          >
+            Withdraw
+          </TabsTrigger>
         </TabsList>
         <TabsContent value='deposit' className='space-y-4 pt-4'>
           <div className='space-y-2'>
@@ -183,10 +206,14 @@ function GasTankContent({
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min='0.001'
                 step='0.001'
+                className='bg-[#252a33] border-[#2a2d34]'
               />
             </div>
           </div>
-          <Button onClick={handleDeposit} className='w-full'>
+          <Button
+            onClick={handleDeposit}
+            className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
+          >
             Deposit Gas
           </Button>
         </TabsContent>
@@ -195,24 +222,35 @@ function GasTankContent({
             <Label htmlFor='withdraw-amount'>Withdraw Amount (ETH)</Label>
             <div className='flex items-center gap-2'>
               <ArrowDownCircle className='h-5 w-5 text-red-500' />
-              <Input
-                id='withdraw-amount'
-                type='number'
-                placeholder='0.00'
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                min='0.001'
-                max={balance.toString()}
-                step='0.001'
-              />
+              <div className='relative flex-1'>
+                <Input
+                  id='withdraw-amount'
+                  type='number'
+                  placeholder='0.00'
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  min='0.001'
+                  max={balance.toString()}
+                  step='0.001'
+                  className='bg-[#252a33] border-[#2a2d34]'
+                />
+                <Button
+                  type='button'
+                  size='sm'
+                  onClick={handleSetMaxWithdraw}
+                  className='absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 py-1 text-xs bg-[#2a2d34] hover:bg-[#353a44] rounded-md'
+                >
+                  Max
+                </Button>
+              </div>
             </div>
-            <p className='text-xs text-muted-foreground'>
+            <p className='text-xs text-gray-400'>
               Maximum withdrawal: {balance.toFixed(3)} ETH
             </p>
           </div>
           <Button
             onClick={handleWithdraw}
-            className='w-full'
+            className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
             disabled={
               Number.parseFloat(withdrawAmount) > balance ||
               Number.parseFloat(withdrawAmount) <= 0
