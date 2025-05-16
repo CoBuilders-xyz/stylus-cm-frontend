@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,10 +30,11 @@ import {
   FuelIcon as GasStation,
   ArrowUpCircle,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { type Abi, formatEther } from 'viem';
 import { useReadContract, useAccount } from 'wagmi';
-import { useWeb3 } from '@/hooks/useWeb3';
+import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from './ui/skeleton';
 
@@ -41,8 +42,7 @@ export function GasTankModal() {
   // Internal state
   const [open, setOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
-  const [isDepositing, setIsDepositing] = useState(false);
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   // Get the current blockchain
@@ -69,11 +69,8 @@ export function GasTankModal() {
     },
   });
 
-  // Get the write contract function
-  const {
-    writeContract,
-    // , status, error, reset, gasPriceGwei, isGasPriceHigh
-  } = useWeb3({
+  // Use the web3 hook with its full state
+  const { writeContract, status, reset } = useWeb3({
     // Set gas protection configuration
     gasProtection: {
       maxGasPriceGwei: 500, // Maximum gas price in Gwei
@@ -81,17 +78,32 @@ export function GasTankModal() {
     },
   });
 
+  // Track transaction states based on useWeb3 status
+  const isTransactionInProgress =
+    status === TransactionStatus.PENDING ||
+    status === TransactionStatus.PREPARING;
+  const isSuccess = status === TransactionStatus.SUCCESS;
+
   // Format balance from Wei to ETH for display
   const balanceInEth = userBalance
     ? Number(formatEther(userBalance as bigint))
     : 0;
 
-  // Determine if any transaction is pending
-  const isTransactionPending = isDepositing || isWithdrawing;
+  // Refresh balance after successful transaction
+  useEffect(() => {
+    if (isSuccess) {
+      // Clear the deposit amount upon success
+      setDepositAmount('');
+
+      // Reset transaction state and refresh balance
+      reset();
+      refetchBalance();
+    }
+  }, [isSuccess, reset, refetchBalance]);
 
   function onOpenChange(open: boolean) {
-    // Prevent closing if transaction is pending
-    if (isTransactionPending) return;
+    // Prevent closing if transaction is in progress
+    if (isTransactionInProgress) return;
 
     setOpen(open);
     if (!open) {
@@ -102,12 +114,10 @@ export function GasTankModal() {
     }
   }
 
-  async function handleDeposit() {
+  function handleDeposit() {
     const amount = Number.parseFloat(depositAmount);
     if (!isNaN(amount) && amount > 0 && currentBlockchain) {
       try {
-        setIsDepositing(true);
-
         // Create transaction parameters
         const txParams = {
           address:
@@ -122,23 +132,15 @@ export function GasTankModal() {
         writeContract(txParams, (hash) => {
           console.log(`Add funds transaction submitted with hash: ${hash}`);
         });
-
-        // Clear input and refresh balance
-        setDepositAmount('');
-        await refetchBalance();
       } catch (error) {
         console.error('Deposit failed:', error);
-      } finally {
-        setIsDepositing(false);
       }
     }
   }
 
-  async function handleWithdraw() {
+  function handleWithdraw() {
     if (balanceInEth > 0 && currentBlockchain) {
       try {
-        setIsWithdrawing(true);
-
         // Create transaction parameters
         const txParams = {
           address:
@@ -154,12 +156,8 @@ export function GasTankModal() {
             `Withdraw funds transaction submitted with hash: ${hash}`
           );
         });
-
-        await refetchBalance();
       } catch (error) {
         console.error('Withdrawal failed:', error);
-      } finally {
-        setIsWithdrawing(false);
       }
     }
   }
@@ -190,9 +188,7 @@ export function GasTankModal() {
             setDepositAmount={setDepositAmount}
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
-            isDepositing={isDepositing}
-            isWithdrawing={isWithdrawing}
-            isTransactionPending={isTransactionPending}
+            isTransactionInProgress={isTransactionInProgress}
             refreshBalance={refetchBalance}
             isBalanceLoading={isLoading}
           />
@@ -227,9 +223,7 @@ export function GasTankModal() {
             setDepositAmount={setDepositAmount}
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
-            isDepositing={isDepositing}
-            isWithdrawing={isWithdrawing}
-            isTransactionPending={isTransactionPending}
+            isTransactionInProgress={isTransactionInProgress}
             refreshBalance={refetchBalance}
             isBalanceLoading={isLoading}
           />
@@ -239,7 +233,7 @@ export function GasTankModal() {
             <Button
               variant='outline'
               className='border-[#2a2d34] bg-[#252a33] hover:bg-[#2a2d34] hover:text-white'
-              disabled={isTransactionPending}
+              disabled={isTransactionInProgress}
             >
               Close
             </Button>
@@ -256,9 +250,7 @@ interface GasTankContentProps {
   setDepositAmount: (value: string) => void;
   handleDeposit: () => void;
   handleWithdraw: () => void;
-  isDepositing: boolean;
-  isWithdrawing: boolean;
-  isTransactionPending: boolean;
+  isTransactionInProgress: boolean;
   refreshBalance: () => void;
   isBalanceLoading: boolean;
 }
@@ -269,9 +261,7 @@ function GasTankContent({
   setDepositAmount,
   handleDeposit,
   handleWithdraw,
-  isDepositing,
-  isWithdrawing,
-  isTransactionPending,
+  isTransactionInProgress,
   refreshBalance,
   isBalanceLoading,
 }: GasTankContentProps) {
@@ -292,7 +282,7 @@ function GasTankContent({
           size='sm'
           onClick={() => refreshBalance()}
           className='mt-2 text-xs text-gray-400 hover:text-white'
-          disabled={isTransactionPending || isBalanceLoading}
+          disabled={isTransactionInProgress || isBalanceLoading}
         >
           Refresh
         </Button>
@@ -303,14 +293,14 @@ function GasTankContent({
           <TabsTrigger
             value='deposit'
             className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
-            disabled={isTransactionPending}
+            disabled={isTransactionInProgress}
           >
             Deposit
           </TabsTrigger>
           <TabsTrigger
             value='withdraw'
             className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
-            disabled={isTransactionPending}
+            disabled={isTransactionInProgress}
           >
             Withdraw
           </TabsTrigger>
@@ -328,8 +318,12 @@ function GasTankContent({
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min='0.001'
                 step='0.001'
-                className='bg-[#252a33] border-[#2a2d34]'
-                disabled={isTransactionPending || isBalanceLoading}
+                className={`bg-[#252a33] border-[#2a2d34] ${
+                  isTransactionInProgress
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                    : ''
+                }`}
+                disabled={isTransactionInProgress || isBalanceLoading}
               />
             </div>
           </div>
@@ -337,15 +331,15 @@ function GasTankContent({
             onClick={handleDeposit}
             className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
             disabled={
-              isTransactionPending ||
+              isTransactionInProgress ||
               !depositAmount ||
               Number(depositAmount) <= 0 ||
               isBalanceLoading
             }
           >
-            {isDepositing ? (
+            {isTransactionInProgress ? (
               <div className='flex items-center gap-2'>
-                <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+                <Loader2 className='h-4 w-4 animate-spin' />
                 <span>Depositing...</span>
               </div>
             ) : (
@@ -365,11 +359,13 @@ function GasTankContent({
           <Button
             onClick={handleWithdraw}
             className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34] mt-4'
-            disabled={isTransactionPending || balance <= 0 || isBalanceLoading}
+            disabled={
+              isTransactionInProgress || balance <= 0 || isBalanceLoading
+            }
           >
-            {isWithdrawing ? (
+            {isTransactionInProgress ? (
               <div className='flex items-center gap-2'>
-                <div className='h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent'></div>
+                <Loader2 className='h-4 w-4 animate-spin' />
                 <span>Withdrawing...</span>
               </div>
             ) : (
