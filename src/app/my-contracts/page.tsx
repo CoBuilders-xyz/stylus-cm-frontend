@@ -7,6 +7,7 @@ import ContractDetails from '@/components/ContractDetails';
 import AddContract from '@/components/AddContract';
 import AlertsSettings from '@/components/AlertsSettings';
 import { Contract, Alert } from '@/services/contractService';
+import { Alert as AlertServiceAlert } from '@/services/alertService';
 import { useContractService } from '@/hooks/useContractService';
 
 export default function MyContractsPage() {
@@ -29,7 +30,9 @@ export default function MyContractsPage() {
   const [alertsContractId, setAlertsContractId] = useState<string>('');
   const [alertsContractAddress, setAlertsContractAddress] =
     useState<string>('');
-  const [alertsContractAlerts, setAlertsContractAlerts] = useState<Alert[]>([]);
+  const [alertsContractAlerts, setAlertsContractAlerts] = useState<
+    AlertServiceAlert[]
+  >([]);
 
   const panelWidth = '53%';
 
@@ -62,7 +65,12 @@ export default function MyContractsPage() {
   ) => {
     setAlertsContractId(userContractId);
     setAlertsContractAddress(address);
-    setAlertsContractAlerts(alerts || []);
+    // Convert contractService Alert[] to alertService Alert[] by adding userContractId
+    const formattedAlerts = (alerts || []).map((alert) => ({
+      ...alert,
+      userContractId, // Add the required userContractId property
+    })) as AlertServiceAlert[];
+    setAlertsContractAlerts(formattedAlerts);
     setIsAlertsPanelOpen(true);
   };
 
