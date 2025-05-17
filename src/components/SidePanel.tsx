@@ -12,6 +12,7 @@ interface SidePanelProps {
   onClose: () => void;
   children?: React.ReactNode;
   width?: string; // Allow customizable width
+  zIndex?: number; // Allow customizable z-index for stacking panels
 }
 
 const SidePanel: React.FC<SidePanelProps> = ({
@@ -19,15 +20,17 @@ const SidePanel: React.FC<SidePanelProps> = ({
   onClose,
   children,
   width = '400px', // Default width of 400px
+  zIndex = 40, // Default z-index
 }) => {
   return (
     <SidePanelContext.Provider value={{ onClose }}>
       <div
-        className={`fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl z-40 transition-all duration-300 ease-in-out overflow-auto ${
+        className={`fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-auto ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
           width,
+          zIndex,
           // Start below header, which has padding of 4 (p-4)
           marginTop: 'var(--header-height, 64px)',
           height: 'calc(100vh - var(--header-height, 64px))',

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Contract, Alert } from '@/services/contractService';
 import { formatEther } from 'viem';
+import { Contract } from '@/services/contractService';
+import type { Alert as ContractAlert } from '@/services/contractService';
 import {
   formatSize,
   formatRiskLevel,
@@ -113,7 +114,7 @@ export function ContractInfo({
                 .filter((alert) => alert.isActive)
                 .map((alert) => {
                   // Helper to format alert display text
-                  const getAlertText = (alert: Alert) => {
+                  const getAlertText = (alert: ContractAlert) => {
                     switch (alert.type) {
                       case 'eviction':
                         return 'Eviction';
