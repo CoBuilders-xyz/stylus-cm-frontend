@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
+import { useBlockchainService } from '@/hooks/useBlockchainService';
 import Image from 'next/image';
 import noManagedImage from 'public/no-managed.svg';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,16 +37,20 @@ import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
 import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
+import { Badge } from '@/components/ui/badge';
+
 interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
+  onAddContract?: (contract: Contract) => void;
 }
 
 export default function ContractDetails({
   contractId,
   initialContractData,
   viewType = 'explore-contracts',
+  onAddContract,
 }: ContractDetailsProps) {
   // Get the onClose function from the SidePanel context
   const { onClose } = useSidePanel();
@@ -55,6 +60,9 @@ export default function ContractDetails({
 
   // Get the contracts updater
   const { signalContractUpdated } = useContractsUpdater();
+
+  // Get the blockchain service
+  const { currentBlockchainId } = useBlockchainService();
 
   // Reference to the EditableContractName component
   const contractNameRef = useRef<EditableContractNameRef>(null);
@@ -254,8 +262,43 @@ export default function ContractDetails({
   }
 
   // Handler for adding contract to my contracts
-  const handleAddToMyContracts = () => {
-    // Here would be API call to add contract
+  const handleAddToMyContracts = async () => {
+    if (!contractService || !contractData) {
+      console.error('Contract service or data not available');
+      return;
+    }
+
+    // Verify we have a valid blockchain ID
+    if (!currentBlockchainId) {
+      console.error('No valid blockchain ID available');
+      return;
+    }
+
+    try {
+      // Create a properly typed name variable
+      const name: string | undefined =
+        typeof contractName === 'string' && contractName !== 'Contract Name'
+          ? contractName
+          : undefined;
+
+      // Use the actual contract address from the current contract data
+      const result = await contractService.createContract(
+        contractData.address,
+        currentBlockchainId, // This is string | null, but createContract expects string | undefined
+        name
+      );
+
+      // Signal that a contract was added to trigger a reload of the my-contracts list
+      signalContractUpdated(result.id, 'name');
+
+      // Close the panel with a small delay to ensure visual feedback
+      setTimeout(() => {
+        onClose();
+      }, 100);
+    } catch (error) {
+      console.error('Failed to add contract:', error);
+      // You could add error handling UI here
+    }
   };
 
   // Handler for contract alerts
@@ -313,8 +356,13 @@ export default function ContractDetails({
   };
 
   const handleManageContract = () => {
-    // Here would be the implementation to add and manage this contract
-    handleAddToMyContracts();
+    // If we have the onAddContract prop, use it (this allows the parent to control the flow)
+    if (onAddContract && contractData) {
+      onAddContract(contractData);
+    } else {
+      // Otherwise, fall back to the direct API call
+      handleAddToMyContracts();
+    }
   };
 
   // Handler for name change
@@ -420,11 +468,21 @@ export default function ContractDetails({
                     </>
                   ) : (
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer'
-                      onClick={handleManageContract}
+                      className={`${
+                        !contractData.isSavedByUser
+                          ? 'hover:bg-gray-800 cursor-pointer'
+                          : 'cursor-not-allowed opacity-50'
+                      }`}
+                      onClick={
+                        !contractData.isSavedByUser
+                          ? handleManageContract
+                          : undefined
+                      }
                     >
                       <PlusCircle className='h-4 w-4 mr-2' />
-                      Manage This Contract
+                      {contractData.isSavedByUser
+                        ? 'Contract Already Added'
+                        : 'Manage This Contract'}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -515,27 +573,42 @@ export default function ContractDetails({
 
               {/* Add to My Contracts Section */}
               <div className='px-6 text-center'>
-                <div className='flex justify-center'>
-                  <Image
-                    src={noManagedImage}
-                    alt='Add contract'
-                    width={200}
-                    height={200}
-                  />
-                </div>
-                <h3 className='text-xl font-bold mb-2'>
-                  Add this contract to place bids
-                </h3>
-                <p className='text-gray-400 text-sm mb-4'>
-                  Add this contract to your managed list to place bids, set
-                  automations and more.
-                </p>
-                <Button
-                  className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                  onClick={handleAddToMyContracts}
-                >
-                  Add to My Contracts
-                </Button>
+                {!contractData.isSavedByUser ? (
+                  <>
+                    <div className='flex justify-center'>
+                      <Image
+                        src={noManagedImage}
+                        alt='Add contract'
+                        width={200}
+                        height={200}
+                      />
+                    </div>
+                    <h3 className='text-xl font-bold mb-2'>
+                      Add this contract to place bids
+                    </h3>
+                    <p className='text-gray-400 text-sm mb-4'>
+                      Add this contract to your managed list to place bids, set
+                      automations and more.
+                    </p>
+                    <Button
+                      className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                      onClick={handleManageContract}
+                    >
+                      Add to My Contracts
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className='flex justify-center'>
+                      <Badge
+                        variant='secondary'
+                        className='px-4 py-2 text-base font-semibold'
+                      >
+                        Contract already added to your list
+                      </Badge>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}

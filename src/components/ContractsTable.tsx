@@ -37,6 +37,8 @@ interface ContractsTableProps {
   contracts?: Contract[];
   viewType?: 'explore-contracts' | 'my-contracts';
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
+  onAddContract?: (contract: Contract) => void;
+  onAddNewContract?: () => void;
 }
 
 // Table header component with sorting functionality
@@ -122,14 +124,23 @@ const ContractRow = React.memo(
     contract,
     viewType,
     onContractSelect,
+    onAddContract,
   }: {
     contract: Contract;
     viewType: string;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
+    onAddContract?: (contract: Contract) => void;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
         onContractSelect(contract.id, contract);
+      }
+    };
+
+    const handleAddContractClick = (e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent row click event
+      if (onAddContract) {
+        onAddContract(contract);
       }
     };
 
@@ -225,11 +236,24 @@ const ContractRow = React.memo(
             </span>
           </div>
         </TableCell>
-        {viewType === 'explore-contracts' && (
+        {viewType === 'explore-contracts' && !contract.isSavedByUser && (
           <TableCell className='py-6'>
-            <Button className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'>
+            <Button
+              className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
+              onClick={handleAddContractClick}
+            >
               +
             </Button>
+          </TableCell>
+        )}
+        {viewType === 'explore-contracts' && contract.isSavedByUser && (
+          <TableCell className='py-6'>
+            <Badge
+              variant='secondary'
+              className='px-3 py-1 text-sm font-semibold w-fit'
+            >
+              Added
+            </Badge>
           </TableCell>
         )}
       </TableRow>
@@ -339,6 +363,8 @@ function ContractsTable({
   contracts: initialContracts,
   viewType = 'explore-contracts',
   onContractSelect,
+  onAddContract,
+  onAddNewContract,
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
@@ -422,25 +448,36 @@ function ContractsTable({
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
         {viewType === 'my-contracts' ? (
-          <Button className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'>
+          <Button
+            className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+            onClick={onAddNewContract}
+          >
             <span>+</span>
             <span>Add Contract</span>
           </Button>
         ) : (
-          <div className='relative'>
-            <input
-              type='text'
-              placeholder='Search contracts...'
-              className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
-              value={searchInput}
-              onChange={handleSearchInputChange}
-              onKeyDown={handleKeyDown}
-            />
+          <div className='flex items-center gap-3'>
+            <div className='relative'>
+              <input
+                type='text'
+                placeholder='Search contracts...'
+                className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
+                value={searchInput}
+                onChange={handleSearchInputChange}
+                onKeyDown={handleKeyDown}
+              />
+              <Button
+                className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
+                onClick={handleSearch}
+              >
+                <Search className='w-3 h-3' />
+              </Button>
+            </div>
             <Button
-              className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
-              onClick={handleSearch}
+              className='p-2 h-10 w-10 bg-black text-white border border-white rounded-md flex items-center justify-center'
+              onClick={onAddNewContract}
             >
-              <Search className='w-3 h-3' />
+              +
             </Button>
           </div>
         )}
@@ -541,6 +578,7 @@ function ContractsTable({
                         contract={contract}
                         viewType={viewType}
                         onContractSelect={onContractSelect}
+                        onAddContract={onAddContract}
                       />
                     ))
                   ) : (

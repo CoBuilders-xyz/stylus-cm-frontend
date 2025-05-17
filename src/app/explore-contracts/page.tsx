@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import ContractsTable from '@/components/ContractsTable';
 import SidePanel from '@/components/SidePanel';
 import ContractDetails from '@/components/ContractDetails';
+import AddContract from '@/components/AddContract';
 import { Contract } from '@/services/contractService';
 
 export default function ExploreContractsPage() {
@@ -13,6 +14,12 @@ export default function ExploreContractsPage() {
   const [selectedContractData, setSelectedContractData] =
     useState<Contract | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [activePanelContent, setActivePanelContent] = useState<
+    'details' | 'add'
+  >('details');
+  const [contractAddressToAdd, setContractAddressToAdd] = useState<
+    string | undefined
+  >(undefined);
   const panelWidth = '53%'; // Changed to 53% of screen width
 
   // Set CSS variable for header height
@@ -37,10 +44,25 @@ export default function ExploreContractsPage() {
     };
   }, []);
 
-  // New handler with contractId and initial data
+  // Handler for contract selection (view details)
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
     setSelectedContractId(contractId);
     setSelectedContractData(initialData || null);
+    setActivePanelContent('details');
+    setIsPanelOpen(true);
+  };
+
+  // Handler for adding an existing contract (from table row or details)
+  const handleAddExistingContract = (contract: Contract) => {
+    setContractAddressToAdd(contract.address);
+    setActivePanelContent('add');
+    setIsPanelOpen(true);
+  };
+
+  // Handler for adding a new contract
+  const handleAddNewContract = () => {
+    setContractAddressToAdd(undefined);
+    setActivePanelContent('add');
     setIsPanelOpen(true);
   };
 
@@ -60,6 +82,8 @@ export default function ExploreContractsPage() {
             contracts={[]}
             viewType='explore-contracts'
             onContractSelect={handleContractSelect}
+            onAddContract={handleAddExistingContract}
+            onAddNewContract={handleAddNewContract}
           />
         </div>
       </div>
@@ -69,11 +93,22 @@ export default function ExploreContractsPage() {
         onClose={handleClosePanel}
         width={panelWidth}
       >
-        {selectedContractId && (
-          <ContractDetails
-            contractId={selectedContractId}
-            initialContractData={selectedContractData || undefined}
-            viewType='explore-contracts'
+        {isPanelOpen &&
+          activePanelContent === 'details' &&
+          selectedContractId && (
+            <ContractDetails
+              contractId={selectedContractId}
+              initialContractData={selectedContractData || undefined}
+              viewType='explore-contracts'
+              onAddContract={handleAddExistingContract}
+            />
+          )}
+        {isPanelOpen && activePanelContent === 'add' && (
+          <AddContract
+            initialAddress={contractAddressToAdd}
+            onSuccess={() => {
+              setIsPanelOpen(false);
+            }}
           />
         )}
       </SidePanel>

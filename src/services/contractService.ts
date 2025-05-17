@@ -96,6 +96,7 @@ export interface Contract {
   name?: string; // Optional field possibly used on frontend
   alerts?: Alert[]; // Optional alerts for contract monitoring
   userContractId?: string; // Optional user contract ID
+  isSavedByUser?: boolean; // Flag to indicate if the contract is already saved by the user
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
@@ -346,5 +347,30 @@ export class ContractService {
     return this.apiClient.get<SuggestedBidsResponse>(
       `/contracts/suggest-bids/by-address/${address}?blockchainId=${targetBlockchainId}`
     );
+  }
+
+  /**
+   * Create a new user contract
+   * @param address Contract address
+   * @param blockchainId Blockchain ID (optional, will use current blockchain ID if not provided)
+   * @param name Optional name for the contract
+   * @returns Promise with the created user contract
+   */
+  async createContract(
+    address: string,
+    blockchainId?: string,
+    name?: string
+  ): Promise<UserContract> {
+    const targetBlockchainId = blockchainId || this.currentBlockchainId;
+
+    if (!targetBlockchainId) {
+      throw new Error('No blockchain ID available for createContract');
+    }
+
+    return this.apiClient.post<UserContract>('/user-contracts', {
+      address,
+      blockchainId: targetBlockchainId,
+      name,
+    });
   }
 }
