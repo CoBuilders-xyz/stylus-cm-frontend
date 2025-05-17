@@ -10,10 +10,10 @@ export class BlockchainService {
 
   /**
    * Create a new BlockchainService instance
-   * @param accessToken JWT token for authentication
+   * @param accessToken JWT token for authentication (optional for non-authenticated endpoints)
    */
-  constructor(accessToken: string) {
-    this.apiClient = new ApiClient(accessToken);
+  constructor(accessToken?: string) {
+    this.apiClient = new ApiClient(accessToken || '');
   }
 
   /**

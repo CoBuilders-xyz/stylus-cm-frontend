@@ -19,9 +19,12 @@ interface BlockchainServiceResult {
  * Hook to access the BlockchainService
  * Automatically uses the authentication token from context
  * Also provides the current blockchain based on connected chain
- * Returns null if not authenticated
+ * @param requireAuth If true, the service will only be created if the user is authenticated
+ * If false, the service will be created without authentication for non-authenticated endpoints
  */
-export function useBlockchainService(): BlockchainServiceResult {
+export function useBlockchainService(
+  requireAuth: boolean = true
+): BlockchainServiceResult {
   const { accessToken, isAuthenticated } = useAuthentication();
   const { chain } = useAccount();
   const [currentBlockchain, setCurrentBlockchain] = useState<Blockchain | null>(
@@ -35,12 +38,13 @@ export function useBlockchainService(): BlockchainServiceResult {
 
   // Use memoization to ensure we don't create a new service instance on every render
   const service = useMemo(() => {
-    if (!isAuthenticated || !accessToken) {
+    if (requireAuth && (!isAuthenticated || !accessToken)) {
       return null;
     }
 
+    // If authentication is not required or user is authenticated, create service
     return new BlockchainService(accessToken);
-  }, [accessToken, isAuthenticated]);
+  }, [accessToken, isAuthenticated, requireAuth]);
 
   // Effect to fetch current blockchain based on chain ID
   useEffect(() => {

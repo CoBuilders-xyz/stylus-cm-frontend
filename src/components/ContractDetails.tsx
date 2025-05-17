@@ -38,7 +38,6 @@ import AutomatedBiddingSection from './AutomatedBiddingSection';
 import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
 import { Badge } from '@/components/ui/badge';
-
 interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
