@@ -76,7 +76,7 @@ export default function ConnectionBanner() {
       {isOnline && isConnected && isAuthLoading && (
         <span className='flex items-center justify-center'>
           <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
-          Please sign transaction to authenticate
+          Please sign message to authenticate
         </span>
       )}
 
