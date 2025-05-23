@@ -13,6 +13,7 @@ export interface BiddingHistoryItem {
   transactionHash?: string;
   contractName: string;
   originAddress: string;
+  isAutomated: boolean;
 }
 
 interface BiddingHistoryProps {
@@ -97,7 +98,11 @@ export function BiddingHistory({
                     <div className='w-8 h-8 bg-blue-600 rounded-full mr-3 flex items-center justify-center text-xs font-bold'>
                       {bid.contractName.substring(0, 2).toUpperCase() || 'CN'}
                     </div>
-                    <div className='font-mono text-sm'>{bid.originAddress}</div>
+                    <div className='font-mono text-sm'>
+                      {bid.isAutomated
+                        ? 'Cache Manager Automation'
+                        : bid.originAddress}
+                    </div>
                   </div>
                 </TableCell>
 
@@ -111,14 +116,12 @@ export function BiddingHistory({
                   <div
                     className={`px-3 py-2 text-white text-xs rounded-md inline-block
                       ${
-                        bid.type.includes('automatic')
+                        bid.isAutomated
                           ? 'bg-[#1A1A1A] border border-[#333]'
                           : 'bg-[#1A1A1A] border border-[#333]'
                       }`}
                   >
-                    {bid.type.includes('automatic')
-                      ? 'Automated Bid'
-                      : 'Manual Bid'}
+                    {bid.isAutomated ? 'Automated Bid' : 'Manual Bid'}
                   </div>
                 </TableCell>
 

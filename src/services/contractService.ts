@@ -107,6 +107,13 @@ export interface Contract {
     blockNumber: string;
     transactionHash: string;
     originAddress: string;
+    isAutomated?: boolean;
+    automationDetails?: {
+      user: string;
+      minBid: string;
+      maxBid: string;
+      userBalance: string;
+    };
   }>; // Optional bidding history
 }
 
