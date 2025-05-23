@@ -167,10 +167,8 @@ export default function ContractDetails({
     if (!contractData || !contractData.biddingHistory) return [];
 
     return contractData.biddingHistory.map((historyItem, index) => {
-      // Determine if it's an automatic or manual bid
-      const isAutomaticBid =
-        historyItem.contractAddress.toLowerCase() ===
-        contractData.blockchain.cacheManagerAutomationAddress.toLowerCase();
+      // Use isAutomated directly from the API response
+      const isAutomated = historyItem.isAutomated === true;
 
       // Format the address for display
       const displayAddress =
@@ -198,12 +196,13 @@ export default function ContractDetails({
         id: index, // Using index as id since the API might not provide one
         address: displayAddress,
         bid: bidAmount,
-        type: isAutomaticBid ? 'automatic bid' : 'manual bid',
+        type: isAutomated ? 'automated bid' : 'manual bid',
         date: formattedDate,
         amount: bidAmount,
         transactionHash: historyItem.transactionHash,
         contractName: contractName,
         originAddress: displayOriginAddress,
+        isAutomated: isAutomated, // Add the isAutomated field to match BiddingHistoryItem
       };
     });
   };
@@ -212,7 +211,7 @@ export default function ContractDetails({
   const bidHistory = processBiddingHistory();
 
   // If there's no bidding history and not loading, create a fallback placeholder
-  const displayBidHistory =
+  const displayBidHistory: BiddingHistoryItem[] =
     bidHistory.length > 0
       ? bidHistory
       : contractData && !isLoadingContract
@@ -232,6 +231,7 @@ export default function ContractDetails({
             amount: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
             contractName: contractName,
             originAddress: '0x0000....0000',
+            isAutomated: true, // Add isAutomated field to match BiddingHistoryItem
           },
         ]
       : [];
