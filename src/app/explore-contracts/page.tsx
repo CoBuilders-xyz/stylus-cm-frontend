@@ -73,9 +73,8 @@ export default function ExploreContractsPage() {
   return (
     <div className='min-h-screen pt-18'>
       <div
-        className={`transition-all duration-300 ease-in-out ${
-          isPanelOpen ? 'pr-[53%]' : 'pr-0'
-        }`}
+        className={`transition-all duration-300 ease-in-out`}
+        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
       >
         <div className='p-10'>
           <ContractsTable
