@@ -346,7 +346,7 @@ export default function UserAlertSettings({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919] shadow-xl overflow-hidden border-l border-gray-800'>
+    <div className='text-white flex flex-col h-full bg-[#1A1919] shadow-xl overflow-hidden'>
       {/* Title header with gradient background and noise texture */}
       <div
         className='relative overflow-hidden'
