@@ -210,31 +210,8 @@ export default function ContractDetails({
   // Get the processed bidding history
   const bidHistory = processBiddingHistory();
 
-  // If there's no bidding history and not loading, create a fallback placeholder
-  const displayBidHistory: BiddingHistoryItem[] =
-    bidHistory.length > 0
-      ? bidHistory
-      : contractData && !isLoadingContract
-      ? [
-          // Fallback to a placeholder if no history available
-          {
-            id: 0,
-            address:
-              contractData.blockchain.cacheManagerAddress.substring(0, 6) +
-              '...' +
-              contractData.blockchain.cacheManagerAddress.substring(
-                contractData.blockchain.cacheManagerAddress.length - 4
-              ),
-            bid: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
-            type: 'automatic bid',
-            date: formatDate(contractData.bidBlockTimestamp),
-            amount: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
-            contractName: contractName,
-            originAddress: '0x0000....0000',
-            isAutomated: true, // Add isAutomated field to match BiddingHistoryItem
-          },
-        ]
-      : [];
+  // Use the actual bidding history without creating fallback placeholders
+  const displayBidHistory: BiddingHistoryItem[] = bidHistory;
 
   // If we're still loading and don't have contract data, show a loading state
   if (isLoadingContract && !contractData) {
