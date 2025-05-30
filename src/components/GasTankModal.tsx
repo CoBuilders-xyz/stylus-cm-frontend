@@ -37,6 +37,7 @@ import { useReadContract, useAccount } from 'wagmi';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from './ui/skeleton';
+import { formatRoundedEth } from '@/utils/formatting';
 
 export function GasTankModal() {
   // Internal state
@@ -171,7 +172,7 @@ export function GasTankModal() {
             {isLoading ? (
               <Skeleton className='h-4 w-[72px]' />
             ) : (
-              <span>{balanceInEth.toFixed(3)} ETH</span>
+              <span>{formatRoundedEth(balanceInEth, 3)} ETH</span>
             )}
           </Button>
         </DialogTrigger>
@@ -205,7 +206,7 @@ export function GasTankModal() {
           {isLoading ? (
             <Skeleton className='h-4 w-[72px]' />
           ) : (
-            <span>{balanceInEth.toFixed(3)} ETH</span>
+            <span>{formatRoundedEth(balanceInEth, 3)} ETH</span>
           )}
         </Button>
       </DrawerTrigger>
@@ -269,12 +270,19 @@ function GasTankContent({
     <div className='py-4'>
       <div className='mb-6 flex flex-col items-center justify-center'>
         <div className='text-sm text-gray-400'>Current Balance</div>
-        <div className='flex items-center gap-2 text-3xl font-bold'>
-          <GasStation className='h-8 w-8' />
-          {isBalanceLoading ? (
-            <Skeleton className='h-7 w-[157px] mt-2' />
-          ) : (
-            <span>{balance.toFixed(3)} ETH</span>
+        <div className='flex flex-col items-center'>
+          <div className='flex items-center gap-2 text-3xl font-bold'>
+            <GasStation className='h-8 w-8' />
+            {isBalanceLoading ? (
+              <Skeleton className='h-7 w-[157px] mt-2' />
+            ) : (
+              <span>{formatRoundedEth(balance, 8)} ETH</span>
+            )}
+          </div>
+          {!isBalanceLoading && (
+            <div className='text-xs text-gray-500 mt-1 self-end'>
+              {balance} ETH
+            </div>
           )}
         </div>
         <Button
@@ -351,8 +359,7 @@ function GasTankContent({
           <Alert className='bg-[#252a33] border-[#2a2d34] mb-4'>
             <AlertCircle className='h-4 w-4 text-yellow-500' />
             <AlertDescription className='text-sm text-gray-300 ml-2'>
-              Withdrawing will remove your entire balance of{' '}
-              {balance.toFixed(6)} ETH.
+              Withdrawing will remove your entire balance of {balance} ETH.
             </AlertDescription>
           </Alert>
 
