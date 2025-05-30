@@ -40,13 +40,10 @@ export function AutomatedBiddingSection({
 }: AutomatedBiddingSectionProps) {
   // Local state for input values to ensure they update immediately
   const [inputValue, setInputValue] = useState(maxBidAmount);
-  /* Temporarily commented out while funding input is hidden
   const [fundingValue, setFundingValue] = useState(automationFunding);
-  */
   const [inputError, setInputError] = useState<string | null>(null);
-  /* Temporarily commented out while funding input is hidden
   const [fundingError, setFundingError] = useState<string | null>(null);
-  */
+
   // Track the last checked contract address to detect changes
 
   // Get the current blockchain
@@ -317,14 +314,23 @@ export function AutomatedBiddingSection({
     setMaxBidAmount(value);
   };
 
-  /* Temporarily commented out while funding input is hidden
   // Handle automation funding input change
   const handleFundingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
+    // Update local state immediately to show typing in real-time
+    setFundingValue(value);
+
+    // Clear the error if input is emptied
+    if (!value) {
+      setFundingError(null);
+    } else {
+      // Only validate the format for non-empty values
+      validateNumericInput(value, setFundingError);
+    }
+
     setAutomationFunding(value);
   };
-  */
 
   // Handle set bid button click
   const handleSetBid = () => {
@@ -336,23 +342,17 @@ export function AutomatedBiddingSection({
       hasError = true;
     }
 
-    // No longer checking for automationFunding since the input is hidden
-    // if (!automationFunding) {
-    //   setInputError('Enter a valid Amount');
-    //   hasError = true;
-    // }
+    if (!fundingValue) {
+      setFundingError('Enter a valid Amount');
+      hasError = true;
+    }
 
     if (hasError) return;
 
     const isMaxBidValid = validateNumericInput(inputValue, setInputError);
-    // We're not validating automationFunding anymore since we're using a fixed value
-    // const isFundingValid = validateNumericInput(
-    //   automationFunding,
-    //   setInputError
-    // );
+    const isFundingValid = validateNumericInput(fundingValue, setFundingError);
 
-    // if (!isMaxBidValid || !isFundingValid) {
-    if (!isMaxBidValid) {
+    if (!isMaxBidValid || !isFundingValid) {
       return;
     }
 
@@ -469,7 +469,6 @@ export function AutomatedBiddingSection({
       {automatedBidding && (
         <div className='mt-4 relative z-10'>
           <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
-            {/* Row 1: Automation Funding - Temporarily hidden
             <div className='self-center'>
               <p className='font-bold'>Automation Funding</p>
             </div>
@@ -502,7 +501,6 @@ export function AutomatedBiddingSection({
               </div>
             </div>
             <div></div>
-            */}
 
             {/* Row 2: Maximum Bid Amount */}
             <div className='self-center'>
