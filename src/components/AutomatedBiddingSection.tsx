@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { Abi } from 'viem';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
 import {
@@ -18,8 +18,6 @@ import {
 import { useReadContract, useAccount } from 'wagmi';
 
 interface AutomatedBiddingSectionProps {
-  automatedBidding: boolean;
-  setAutomatedBidding: (value: boolean) => void;
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
@@ -29,8 +27,6 @@ interface AutomatedBiddingSectionProps {
 }
 
 export function AutomatedBiddingSection({
-  automatedBidding,
-  setAutomatedBidding,
   maxBidAmount = '',
   setMaxBidAmount = () => {},
   automationFunding = '0', // Default to 0 for automation funding - initial amount to deposit when setting up automated bidding
@@ -44,7 +40,11 @@ export function AutomatedBiddingSection({
   const [inputError, setInputError] = useState<string | null>(null);
   const [fundingError, setFundingError] = useState<string | null>(null);
 
-  // Track the last checked contract address to detect changes
+  // Separate state for controlling panel visibility
+  const [showAutomationPanel, setShowAutomationPanel] = useState(false);
+
+  // Local state for the automated bidding toggle within the form - enabled by default
+  const [automatedBidding, setAutomatedBidding] = useState(true);
 
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
@@ -82,25 +82,6 @@ export function AutomatedBiddingSection({
       },
     });
 
-  // Log user contracts when available for debugging
-  useEffect(() => {
-    if (
-      userContracts &&
-      Array.isArray(userContracts) &&
-      userContracts.length > 0
-    ) {
-      console.log('User automated contracts found:', userContracts);
-      userContracts.forEach((contract, index) => {
-        console.log(`Contract ${index + 1}:`, {
-          address: contract.contractAddress,
-          maxBid: formatEther(contract.maxBid) + ' ETH',
-          lastBid: formatEther(contract.lastBid) + ' ETH',
-          enabled: contract.enabled ? 'Active' : 'Inactive',
-        });
-      });
-    }
-  }, [userContracts]);
-
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
@@ -126,11 +107,6 @@ export function AutomatedBiddingSection({
       );
 
       if (automatedContract) {
-        console.log(
-          'Contract found in automated contracts:',
-          automatedContract
-        );
-
         // Update UI with the automated contract's values
         setAutomatedBidding(automatedContract.enabled);
 
@@ -144,7 +120,7 @@ export function AutomatedBiddingSection({
       } else {
         console.log('Contract is not automated:', contract.address);
         // If not found, reset to default values
-        setAutomatedBidding(false);
+        setAutomatedBidding(true);
         setMaxBidAmount('');
       }
     }
@@ -194,6 +170,11 @@ export function AutomatedBiddingSection({
       setAutomationFunding(automationFunding);
     }
   }, [setAutomationFunding, automationFunding, contract?.address]);
+
+  // Sync local automated bidding state with prop
+  useEffect(() => {
+    setAutomatedBidding(automatedBidding);
+  }, [automatedBidding]);
 
   // Function to handle retry of the last transaction
   const handleRetry = useCallback(() => {
@@ -382,7 +363,7 @@ export function AutomatedBiddingSection({
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'insertOrUpdateContract',
+        functionName: 'insertContract',
         args: [contract.address, parseEther(inputValue), automatedBidding] as [
           string,
           bigint,
@@ -435,28 +416,23 @@ export function AutomatedBiddingSection({
 
       <div className='flex justify-between items-start relative z-10'>
         <div>
-          <p className='font-bold'>Enable Automated Bidding</p>
+          <p className='font-bold'>Automated Bidding Configuration</p>
           <p className='text-sm text-blue-200'>
-            Set a maximum bid value to maintain your position in the cache
+            Configure automated bidding to maintain your position in the cache
             without manual intervention.
           </p>
         </div>
-        <SwitchPrimitive.Root
-          checked={automatedBidding}
-          onCheckedChange={setAutomatedBidding}
-          className={cn(
-            'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-            'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-            'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-          )}
+        <button
+          onClick={() => setShowAutomationPanel(!showAutomationPanel)}
+          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
+          disabled={isTransactionInProgress}
         >
-          <SwitchPrimitive.Thumb
-            className={cn(
-              'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-              'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-            )}
-          />
-        </SwitchPrimitive.Root>
+          {showAutomationPanel ? (
+            <ChevronUp className='w-5 h-5 text-white' />
+          ) : (
+            <ChevronDown className='w-5 h-5 text-white' />
+          )}
+        </button>
       </div>
 
       {/* Display user balance */}
@@ -465,10 +441,37 @@ export function AutomatedBiddingSection({
         <span className='font-semibold'>{formattedUserBalance} ETH</span>
       </div>
 
-      {/* Input fields - shown only when automated bidding is enabled */}
-      {automatedBidding && (
+      {/* Form with all inputs including the toggle - shown only when panel is open */}
+      {showAutomationPanel && (
         <div className='mt-4 relative z-10'>
           <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
+            {/* Row 1: Enable Automated Bidding Toggle */}
+            <div className='self-center'>
+              <p className='font-bold'>Enable Automated Bidding</p>
+            </div>
+            <div className='flex justify-end'>
+              <SwitchPrimitive.Root
+                checked={automatedBidding}
+                onCheckedChange={setAutomatedBidding}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]',
+                  isTransactionInProgress ? 'opacity-60 cursor-not-allowed' : ''
+                )}
+                disabled={isTransactionInProgress}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+            <div></div>
+
+            {/* Row 2: Automation Funding */}
             <div className='self-center'>
               <p className='font-bold'>Automation Funding</p>
             </div>
@@ -502,7 +505,7 @@ export function AutomatedBiddingSection({
             </div>
             <div></div>
 
-            {/* Row 2: Maximum Bid Amount */}
+            {/* Row 3: Maximum Bid Amount */}
             <div className='self-center'>
               <p className='font-bold'>Maximum Bid Amount</p>
             </div>
