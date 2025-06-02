@@ -208,6 +208,32 @@ export default function UserAlertSettings({
       return;
     }
 
+    // Check if there are unsaved changes for this channel
+    let hasUnsavedChanges = false;
+
+    if (channel === 'email' && hasChangedEmail) {
+      hasUnsavedChanges = true;
+    } else if (channel === 'telegram' && hasChangedTelegram) {
+      hasUnsavedChanges = true;
+    } else if (channel === 'slack' && hasChangedSlack) {
+      hasUnsavedChanges = true;
+    } else if (channel === 'webhook' && hasChangedWebhook) {
+      hasUnsavedChanges = true;
+    }
+
+    // If there are unsaved changes, save first
+    if (hasUnsavedChanges) {
+      try {
+        await handleSaveSettings(false);
+        // If save was successful, the change flags will be reset
+        // Continue to test notification
+      } catch (err) {
+        // If save failed, don't proceed with test
+        console.error('Failed to save before testing:', err);
+        return;
+      }
+    }
+
     try {
       // Validate destination before testing
       let isValid = true;
@@ -247,7 +273,7 @@ export default function UserAlertSettings({
     }
   };
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (shouldTriggerOnSuccess = true) => {
     if (!alertService) {
       setError('Alert service not initialized');
       return;
@@ -288,7 +314,7 @@ export default function UserAlertSettings({
           message: 'No changes to save',
         });
 
-        if (onSuccess) {
+        if (shouldTriggerOnSuccess && onSuccess) {
           onSuccess();
         }
         return;
@@ -329,7 +355,7 @@ export default function UserAlertSettings({
         message: 'Alert preferences saved successfully',
       });
 
-      if (onSuccess) {
+      if (shouldTriggerOnSuccess && onSuccess) {
         onSuccess();
       }
     } catch (err) {
@@ -422,9 +448,9 @@ export default function UserAlertSettings({
                 <Button
                   onClick={() => testNotification('email')}
                   disabled={!emailDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >
-                  Test
+                  {hasChangedEmail ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
               {emailError && (
@@ -472,9 +498,9 @@ export default function UserAlertSettings({
                 <Button
                   onClick={() => testNotification('telegram')}
                   disabled={!telegramDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >
-                  Test
+                  {hasChangedTelegram ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
               {telegramError && (
@@ -522,9 +548,9 @@ export default function UserAlertSettings({
                 <Button
                   onClick={() => testNotification('slack')}
                   disabled={!slackDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >
-                  Test
+                  {hasChangedSlack ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
             </div>
@@ -569,9 +595,9 @@ export default function UserAlertSettings({
                 <Button
                   onClick={() => testNotification('webhook')}
                   disabled={!webhookDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[80px]'
+                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >
-                  Test
+                  {hasChangedWebhook ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
               {webhookError && (
@@ -586,7 +612,7 @@ export default function UserAlertSettings({
         <div className='mt-6 mb-4'>
           <Button
             className='w-full px-4 py-2 bg-black text-white font-medium hover:bg-gray-900 rounded-md'
-            onClick={handleSaveSettings}
+            onClick={() => handleSaveSettings()}
             disabled={isLoading}
           >
             {isLoading ? 'Saving...' : 'Save Alert Settings'}
