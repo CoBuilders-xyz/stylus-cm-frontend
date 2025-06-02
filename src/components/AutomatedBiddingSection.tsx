@@ -42,6 +42,7 @@ export function AutomatedBiddingSection({
 
   // Separate state for controlling panel visibility
   const [showAutomationPanel, setShowAutomationPanel] = useState(false);
+  const [contractExists, setContractExists] = useState(false);
 
   // Local state for the automated bidding toggle within the form - enabled by default
   const [automatedBidding, setAutomatedBidding] = useState(true);
@@ -101,27 +102,25 @@ export function AutomatedBiddingSection({
       // Remember this contract address to detect future changes
 
       // Look for the contract in user's automated contracts
-      const automatedContract = userContracts.find(
+      const existingContract = userContracts.find(
         (c) =>
           c.contractAddress.toLowerCase() === contract.address.toLowerCase()
       );
 
-      if (automatedContract) {
+      if (existingContract) {
         // Update UI with the automated contract's values
-        setAutomatedBidding(automatedContract.enabled);
+        setAutomatedBidding(existingContract.enabled);
 
         // Format the max bid to ETH for display
-        const maxBidEth = formatEther(automatedContract.maxBid.toString());
+        const maxBidEth = formatEther(existingContract.maxBid.toString());
         setMaxBidAmount(maxBidEth);
-
-        console.log(
-          `Automation status: ${automatedContract.enabled}, Max bid: ${maxBidEth} ETH`
-        );
+        setContractExists(true);
       } else {
         console.log('Contract is not automated:', contract.address);
         // If not found, reset to default values
         setAutomatedBidding(true);
         setMaxBidAmount('');
+        setContractExists(false);
       }
     }
   }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
@@ -314,7 +313,7 @@ export function AutomatedBiddingSection({
   };
 
   // Handle set bid button click
-  const handleSetBid = () => {
+  const handleSetAutomation = () => {
     let hasError = false;
 
     // When button is clicked, check for empty values and show error if needed
@@ -369,7 +368,7 @@ export function AutomatedBiddingSection({
           bigint,
           boolean
         ],
-        value: '0', // Using fixed value of '0' for automation funding
+        value: fundingValue,
       };
 
       // Store the parameters for retry functionality
@@ -381,6 +380,73 @@ export function AutomatedBiddingSection({
       });
     } catch (err) {
       console.error('Error submitting transaction:', err);
+      showSomethingWentWrongToast();
+    }
+  };
+
+  const handleUpdateAutomation = () => {
+    let hasError = false;
+
+    // When button is clicked, check for empty values and show error if needed
+    if (!inputValue) {
+      setInputError('Enter a valid Bid Amount');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    const isMaxBidValid = validateNumericInput(inputValue, setInputError);
+
+    if (!isMaxBidValid) {
+      return;
+    }
+
+    if (!currentBlockchain) {
+      console.error(
+        'No blockchain connected. Please connect your wallet to the correct network.'
+      );
+      showSomethingWentWrongToast();
+      return;
+    }
+
+    if (!contract || !contract.address) {
+      console.error('No contract address provided');
+      showSomethingWentWrongToast();
+      return;
+    }
+
+    try {
+      console.log('Updating automation with values:', {
+        contractAddress: contract.address,
+        maxBidAmount: inputValue,
+        automatedBidding: automatedBidding,
+      });
+
+      // Create transaction parameters for updateContract
+      const txParams = {
+        address:
+          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
+        abi: cacheManagerAutomationAbi.abi as Abi,
+        functionName: 'updateContract',
+        args: [contract.address, parseEther(inputValue), automatedBidding] as [
+          string,
+          bigint,
+          boolean
+        ],
+      };
+
+      // Store the parameters for retry functionality
+      setLastTxParams({
+        ...txParams,
+        value: '0', // updateContract is nonpayable, so no ETH value needed
+      });
+
+      // Send the transaction
+      writeContract(txParams, (hash) => {
+        console.log(`Update transaction submitted with hash: ${hash}`);
+      });
+    } catch (err) {
+      console.error('Error submitting update transaction:', err);
       showSomethingWentWrongToast();
     }
   };
@@ -490,7 +556,7 @@ export function AutomatedBiddingSection({
                         ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
                         : ''
                     }`}
-                    disabled={isTransactionInProgress}
+                    disabled={isTransactionInProgress || contractExists}
                   />
                   <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                     ETH
@@ -537,9 +603,14 @@ export function AutomatedBiddingSection({
                 )}
               </div>
             </div>
-            <div className='self-start pl-2'>
+            <div></div>
+          </div>
+
+          {/* Button positioned to the right below the inputs */}
+          <div className='flex justify-end mt-4'>
+            {contractExists ? (
               <Button
-                onClick={handleSetBid}
+                onClick={handleUpdateAutomation}
                 className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
                 disabled={isTransactionInProgress || isSuccess}
               >
@@ -548,10 +619,24 @@ export function AutomatedBiddingSection({
                     <Loader2 className='h-4 w-4 animate-spin' />
                   </div>
                 ) : (
-                  'Set Bid'
+                  'Update Automation'
                 )}
               </Button>
-            </div>
+            ) : (
+              <Button
+                onClick={handleSetAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                disabled={isTransactionInProgress || isSuccess}
+              >
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  </div>
+                ) : (
+                  'Set Automation'
+                )}
+              </Button>
+            )}
           </div>
         </div>
       )}
