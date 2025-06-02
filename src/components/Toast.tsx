@@ -20,10 +20,8 @@ export const showSuccessToast = ({
 }: SuccessToastProps = {}) => {
   toast.custom(
     () => (
-      <div className='flex items-center w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg'>
-        <div className='flex-grow whitespace-nowrap mx-3 text-sm text-center'>
-          {message}
-        </div>
+      <div className='flex items-center justify-center bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg min-w-fit'>
+        <div className='text-sm text-center whitespace-nowrap'>{message}</div>
       </div>
     ),
     {
@@ -31,7 +29,10 @@ export const showSuccessToast = ({
       position: 'bottom-center', // Position at bottom center
       id: 'success-' + Date.now(), // to prevent duplicate toasts
       style: {
-        width: 'auto',
+        position: 'fixed',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        margin: 0,
       },
     }
   );
@@ -46,10 +47,8 @@ export const showErrorToast = ({
 }: ErrorToastProps = {}) => {
   toast.custom(
     (t) => (
-      <div className='flex items-center justify-between w-full bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg gap-2'>
-        <div className='flex-grow whitespace-nowrap mx-3 text-sm'>
-          {message}
-        </div>
+      <div className='flex items-center justify-between bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg gap-2 min-w-fit'>
+        <div className='flex-grow text-sm whitespace-nowrap'>{message}</div>
 
         {onRetry && (
           <Button
@@ -81,7 +80,10 @@ export const showErrorToast = ({
       position: 'bottom-center', // Position at bottom center
       id: 'error-' + Date.now(), // to prevent duplicate toasts
       style: {
-        width: 'auto',
+        position: 'fixed',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        margin: 0,
       },
     }
   );
