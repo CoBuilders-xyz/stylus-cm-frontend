@@ -77,7 +77,6 @@ export default function ContractDetails({
 
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
-  const [automatedBidding, setAutomatedBidding] = useState(false);
   const [maxBidAmount, setMaxBidAmount] = useState('');
   const [automationFunding, setAutomationFunding] = useState('');
 
@@ -517,8 +516,6 @@ export default function ContractDetails({
 
                 {/* Automated Bidding section */}
                 <AutomatedBiddingSection
-                  automatedBidding={automatedBidding}
-                  setAutomatedBidding={setAutomatedBidding}
                   maxBidAmount={maxBidAmount}
                   setMaxBidAmount={setMaxBidAmount}
                   automationFunding={automationFunding}

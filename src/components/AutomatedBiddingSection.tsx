@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { Abi } from 'viem';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
 import {
@@ -18,8 +18,6 @@ import {
 import { useReadContract, useAccount } from 'wagmi';
 
 interface AutomatedBiddingSectionProps {
-  automatedBidding: boolean;
-  setAutomatedBidding: (value: boolean) => void;
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
@@ -29,8 +27,6 @@ interface AutomatedBiddingSectionProps {
 }
 
 export function AutomatedBiddingSection({
-  automatedBidding,
-  setAutomatedBidding,
   maxBidAmount = '',
   setMaxBidAmount = () => {},
   automationFunding = '0', // Default to 0 for automation funding - initial amount to deposit when setting up automated bidding
@@ -40,14 +36,16 @@ export function AutomatedBiddingSection({
 }: AutomatedBiddingSectionProps) {
   // Local state for input values to ensure they update immediately
   const [inputValue, setInputValue] = useState(maxBidAmount);
-  /* Temporarily commented out while funding input is hidden
   const [fundingValue, setFundingValue] = useState(automationFunding);
-  */
   const [inputError, setInputError] = useState<string | null>(null);
-  /* Temporarily commented out while funding input is hidden
   const [fundingError, setFundingError] = useState<string | null>(null);
-  */
-  // Track the last checked contract address to detect changes
+
+  // Separate state for controlling panel visibility
+  const [showAutomationPanel, setShowAutomationPanel] = useState(false);
+  const [contractExists, setContractExists] = useState(false);
+
+  // Local state for the automated bidding toggle within the form - enabled by default
+  const [automatedBidding, setAutomatedBidding] = useState(true);
 
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
@@ -85,25 +83,6 @@ export function AutomatedBiddingSection({
       },
     });
 
-  // Log user contracts when available for debugging
-  useEffect(() => {
-    if (
-      userContracts &&
-      Array.isArray(userContracts) &&
-      userContracts.length > 0
-    ) {
-      console.log('User automated contracts found:', userContracts);
-      userContracts.forEach((contract, index) => {
-        console.log(`Contract ${index + 1}:`, {
-          address: contract.contractAddress,
-          maxBid: formatEther(contract.maxBid) + ' ETH',
-          lastBid: formatEther(contract.lastBid) + ' ETH',
-          enabled: contract.enabled ? 'Active' : 'Inactive',
-        });
-      });
-    }
-  }, [userContracts]);
-
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
@@ -123,32 +102,25 @@ export function AutomatedBiddingSection({
       // Remember this contract address to detect future changes
 
       // Look for the contract in user's automated contracts
-      const automatedContract = userContracts.find(
+      const existingContract = userContracts.find(
         (c) =>
           c.contractAddress.toLowerCase() === contract.address.toLowerCase()
       );
 
-      if (automatedContract) {
-        console.log(
-          'Contract found in automated contracts:',
-          automatedContract
-        );
-
+      if (existingContract) {
         // Update UI with the automated contract's values
-        setAutomatedBidding(automatedContract.enabled);
+        setAutomatedBidding(existingContract.enabled);
 
         // Format the max bid to ETH for display
-        const maxBidEth = formatEther(automatedContract.maxBid.toString());
+        const maxBidEth = formatEther(existingContract.maxBid.toString());
         setMaxBidAmount(maxBidEth);
-
-        console.log(
-          `Automation status: ${automatedContract.enabled}, Max bid: ${maxBidEth} ETH`
-        );
+        setContractExists(true);
       } else {
         console.log('Contract is not automated:', contract.address);
         // If not found, reset to default values
-        setAutomatedBidding(false);
+        setAutomatedBidding(true);
         setMaxBidAmount('');
+        setContractExists(false);
       }
     }
   }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
@@ -317,17 +289,26 @@ export function AutomatedBiddingSection({
     setMaxBidAmount(value);
   };
 
-  /* Temporarily commented out while funding input is hidden
   // Handle automation funding input change
   const handleFundingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
+    // Update local state immediately to show typing in real-time
+    setFundingValue(value);
+
+    // Clear the error if input is emptied
+    if (!value) {
+      setFundingError(null);
+    } else {
+      // Only validate the format for non-empty values
+      validateNumericInput(value, setFundingError);
+    }
+
     setAutomationFunding(value);
   };
-  */
 
   // Handle set bid button click
-  const handleSetBid = () => {
+  const handleSetAutomation = () => {
     let hasError = false;
 
     // When button is clicked, check for empty values and show error if needed
@@ -336,23 +317,17 @@ export function AutomatedBiddingSection({
       hasError = true;
     }
 
-    // No longer checking for automationFunding since the input is hidden
-    // if (!automationFunding) {
-    //   setInputError('Enter a valid Amount');
-    //   hasError = true;
-    // }
+    if (!fundingValue) {
+      setFundingError('Enter a valid Amount');
+      hasError = true;
+    }
 
     if (hasError) return;
 
     const isMaxBidValid = validateNumericInput(inputValue, setInputError);
-    // We're not validating automationFunding anymore since we're using a fixed value
-    // const isFundingValid = validateNumericInput(
-    //   automationFunding,
-    //   setInputError
-    // );
+    const isFundingValid = validateNumericInput(fundingValue, setFundingError);
 
-    // if (!isMaxBidValid || !isFundingValid) {
-    if (!isMaxBidValid) {
+    if (!isMaxBidValid || !isFundingValid) {
       return;
     }
 
@@ -382,13 +357,13 @@ export function AutomatedBiddingSection({
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'insertOrUpdateContract',
+        functionName: 'insertContract',
         args: [contract.address, parseEther(inputValue), automatedBidding] as [
           string,
           bigint,
           boolean
         ],
-        value: '0', // Using fixed value of '0' for automation funding
+        value: fundingValue,
       };
 
       // Store the parameters for retry functionality
@@ -400,6 +375,73 @@ export function AutomatedBiddingSection({
       });
     } catch (err) {
       console.error('Error submitting transaction:', err);
+      showSomethingWentWrongToast();
+    }
+  };
+
+  const handleUpdateAutomation = () => {
+    let hasError = false;
+
+    // When button is clicked, check for empty values and show error if needed
+    if (!inputValue) {
+      setInputError('Enter a valid Bid Amount');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    const isMaxBidValid = validateNumericInput(inputValue, setInputError);
+
+    if (!isMaxBidValid) {
+      return;
+    }
+
+    if (!currentBlockchain) {
+      console.error(
+        'No blockchain connected. Please connect your wallet to the correct network.'
+      );
+      showSomethingWentWrongToast();
+      return;
+    }
+
+    if (!contract || !contract.address) {
+      console.error('No contract address provided');
+      showSomethingWentWrongToast();
+      return;
+    }
+
+    try {
+      console.log('Updating automation with values:', {
+        contractAddress: contract.address,
+        maxBidAmount: inputValue,
+        automatedBidding: automatedBidding,
+      });
+
+      // Create transaction parameters for updateContract
+      const txParams = {
+        address:
+          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
+        abi: cacheManagerAutomationAbi.abi as Abi,
+        functionName: 'updateContract',
+        args: [contract.address, parseEther(inputValue), automatedBidding] as [
+          string,
+          bigint,
+          boolean
+        ],
+      };
+
+      // Store the parameters for retry functionality
+      setLastTxParams({
+        ...txParams,
+        value: '0', // updateContract is nonpayable, so no ETH value needed
+      });
+
+      // Send the transaction
+      writeContract(txParams, (hash) => {
+        console.log(`Update transaction submitted with hash: ${hash}`);
+      });
+    } catch (err) {
+      console.error('Error submitting update transaction:', err);
       showSomethingWentWrongToast();
     }
   };
@@ -435,28 +477,23 @@ export function AutomatedBiddingSection({
 
       <div className='flex justify-between items-start relative z-10'>
         <div>
-          <p className='font-bold'>Enable Automated Bidding</p>
+          <p className='font-bold'>Automated Bidding Configuration</p>
           <p className='text-sm text-blue-200'>
-            Set a maximum bid value to maintain your position in the cache
+            Configure automated bidding to maintain your position in the cache
             without manual intervention.
           </p>
         </div>
-        <SwitchPrimitive.Root
-          checked={automatedBidding}
-          onCheckedChange={setAutomatedBidding}
-          className={cn(
-            'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-            'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-            'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-          )}
+        <button
+          onClick={() => setShowAutomationPanel(!showAutomationPanel)}
+          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
+          disabled={isTransactionInProgress}
         >
-          <SwitchPrimitive.Thumb
-            className={cn(
-              'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-              'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-            )}
-          />
-        </SwitchPrimitive.Root>
+          {showAutomationPanel ? (
+            <ChevronUp className='w-5 h-5 text-white' />
+          ) : (
+            <ChevronDown className='w-5 h-5 text-white' />
+          )}
+        </button>
       </div>
 
       {/* Display user balance */}
@@ -465,11 +502,37 @@ export function AutomatedBiddingSection({
         <span className='font-semibold'>{formattedUserBalance} ETH</span>
       </div>
 
-      {/* Input fields - shown only when automated bidding is enabled */}
-      {automatedBidding && (
+      {/* Form with all inputs including the toggle - shown only when panel is open */}
+      {showAutomationPanel && (
         <div className='mt-4 relative z-10'>
           <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
-            {/* Row 1: Automation Funding - Temporarily hidden
+            {/* Row 1: Enable Automated Bidding Toggle */}
+            <div className='self-center'>
+              <p className='font-bold'>Enable Automated Bidding</p>
+            </div>
+            <div className='flex justify-end'>
+              <SwitchPrimitive.Root
+                checked={automatedBidding}
+                onCheckedChange={setAutomatedBidding}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]',
+                  isTransactionInProgress ? 'opacity-60 cursor-not-allowed' : ''
+                )}
+                disabled={isTransactionInProgress}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+            <div></div>
+
+            {/* Row 2: Automation Funding */}
             <div className='self-center'>
               <p className='font-bold'>Automation Funding</p>
             </div>
@@ -488,7 +551,7 @@ export function AutomatedBiddingSection({
                         ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
                         : ''
                     }`}
-                    disabled={isTransactionInProgress}
+                    disabled={isTransactionInProgress || contractExists}
                   />
                   <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                     ETH
@@ -502,9 +565,8 @@ export function AutomatedBiddingSection({
               </div>
             </div>
             <div></div>
-            */}
 
-            {/* Row 2: Maximum Bid Amount */}
+            {/* Row 3: Maximum Bid Amount */}
             <div className='self-center'>
               <p className='font-bold'>Maximum Bid Amount</p>
             </div>
@@ -536,9 +598,14 @@ export function AutomatedBiddingSection({
                 )}
               </div>
             </div>
-            <div className='self-start pl-2'>
+            <div></div>
+          </div>
+
+          {/* Button positioned to the right below the inputs */}
+          <div className='flex justify-end mt-4'>
+            {contractExists ? (
               <Button
-                onClick={handleSetBid}
+                onClick={handleUpdateAutomation}
                 className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
                 disabled={isTransactionInProgress || isSuccess}
               >
@@ -547,10 +614,24 @@ export function AutomatedBiddingSection({
                     <Loader2 className='h-4 w-4 animate-spin' />
                   </div>
                 ) : (
-                  'Set Bid'
+                  'Update Automation'
                 )}
               </Button>
-            </div>
+            ) : (
+              <Button
+                onClick={handleSetAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                disabled={isTransactionInProgress || isSuccess}
+              >
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  </div>
+                ) : (
+                  'Set Automation'
+                )}
+              </Button>
+            )}
           </div>
         </div>
       )}
