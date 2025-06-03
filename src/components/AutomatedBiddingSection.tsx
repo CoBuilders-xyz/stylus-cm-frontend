@@ -170,11 +170,6 @@ export function AutomatedBiddingSection({
     }
   }, [setAutomationFunding, automationFunding, contract?.address]);
 
-  // Sync local automated bidding state with prop
-  useEffect(() => {
-    setAutomatedBidding(automatedBidding);
-  }, [automatedBidding]);
-
   // Function to handle retry of the last transaction
   const handleRetry = useCallback(() => {
     if (!lastTxParams) {
