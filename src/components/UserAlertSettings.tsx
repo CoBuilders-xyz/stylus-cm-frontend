@@ -29,7 +29,7 @@ export default function UserAlertSettings({
   // Email settings
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [emailDestination, setEmailDestination] = useState('');
-  const [emailError, setEmailError] = useState<string | null>(null);
+  // const [emailError, setEmailError] = useState<string | null>(null);
 
   // Telegram settings
   const [telegramEnabled, setTelegramEnabled] = useState(false);
@@ -103,21 +103,21 @@ export default function UserAlertSettings({
   }, [alertService]);
 
   // Email validation
-  const validateEmail = (email: string): boolean => {
-    if (!email && emailEnabled) {
-      setEmailError('Email address is required');
-      return false;
-    }
+  // const validateEmail = (email: string): boolean => {
+  //   if (!email && emailEnabled) {
+  //     setEmailError('Email address is required');
+  //     return false;
+  //   }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email && !emailRegex.test(email)) {
-      setEmailError('Enter a valid Email address');
-      return false;
-    }
+  //   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  //   if (email && !emailRegex.test(email)) {
+  //     setEmailError('Enter a valid Email address');
+  //     return false;
+  //   }
 
-    setEmailError(null);
-    return true;
-  };
+  //   setEmailError(null);
+  //   return true;
+  // };
 
   // Telegram validation
   const validateTelegram = (chatId: string): boolean => {
@@ -150,18 +150,18 @@ export default function UserAlertSettings({
   };
 
   // Update handlers that track changes
-  const handleEmailEnabledChange = (enabled: boolean) => {
-    setEmailEnabled(enabled);
-    setHasChangedEmail(true);
-  };
+  // const handleEmailEnabledChange = (enabled: boolean) => {
+  //   setEmailEnabled(enabled);
+  //   setHasChangedEmail(true);
+  // };
 
-  const handleEmailDestinationChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setEmailDestination(e.target.value);
-    setHasChangedEmail(true);
-    if (emailError) validateEmail(e.target.value);
-  };
+  // const handleEmailDestinationChange = (
+  //   e: React.ChangeEvent<HTMLInputElement>
+  // ) => {
+  //   setEmailDestination(e.target.value);
+  //   setHasChangedEmail(true);
+  //   if (emailError) validateEmail(e.target.value);
+  // };
 
   const handleTelegramEnabledChange = (enabled: boolean) => {
     setTelegramEnabled(enabled);
@@ -238,9 +238,9 @@ export default function UserAlertSettings({
       // Validate destination before testing
       let isValid = true;
 
-      if (channel === 'email' && !validateEmail(emailDestination)) {
-        isValid = false;
-      }
+      // if (channel === 'email' && !validateEmail(emailDestination)) {
+      //   isValid = false;
+      // }
 
       if (channel === 'telegram' && !validateTelegram(telegramDestination)) {
         isValid = false;
@@ -282,9 +282,9 @@ export default function UserAlertSettings({
     // Validate all enabled services
     let isValid = true;
 
-    if (emailEnabled) {
-      isValid = validateEmail(emailDestination) && isValid;
-    }
+    // if (emailEnabled) {
+    //   isValid = validateEmail(emailDestination) && isValid;
+    // }
 
     if (telegramEnabled) {
       isValid = validateTelegram(telegramDestination) && isValid;
@@ -411,7 +411,7 @@ export default function UserAlertSettings({
 
       <div className='p-6 flex-1 overflow-auto'>
         {/* Email Alerts */}
-        {false && ( // TODO: Uncomment this if email notifications are required
+        {/* // Uncomment this if email notifications are required
           <div className='mb-8 rounded-lg bg-black p-6'>
             <div className='flex items-center justify-between mb-2'>
               <h3 className='text-lg font-medium'>Email Alerts</h3>
@@ -460,7 +460,7 @@ export default function UserAlertSettings({
               </div>
             )}
           </div>
-        )}
+        */}
 
         {/* Telegram Alerts */}
         <div className='mb-8 rounded-lg bg-black p-6'>

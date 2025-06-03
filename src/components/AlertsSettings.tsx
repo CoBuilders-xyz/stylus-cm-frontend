@@ -383,7 +383,7 @@ export default function AlertsSettings({
 
           {evictionAlertEnabled && (
             <div className='mt-4 grid grid-cols-2 gap-4'>
-              {false && ( // TODO: Uncomment this if email notifications are required
+              {/* // Uncomment this if email notifications are required
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='evictionEmail'
@@ -400,7 +400,7 @@ export default function AlertsSettings({
                     Email
                   </label>
                 </div>
-              )}
+              */}
               <div className='flex items-center space-x-2'>
                 <Checkbox
                   id='evictionTelegram'
@@ -480,7 +480,7 @@ export default function AlertsSettings({
 
           {noGasAlertEnabled && (
             <div className='mt-4 grid grid-cols-2 gap-4'>
-              {false && ( // TODO: Uncomment this if email notifications are required
+              {/* // Uncomment this if email notifications are required
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='noGasEmail'
@@ -495,7 +495,7 @@ export default function AlertsSettings({
                     Email
                   </label>
                 </div>
-              )}
+              */}
               <div className='flex items-center space-x-2'>
                 <Checkbox
                   id='noGasTelegram'
@@ -582,7 +582,7 @@ export default function AlertsSettings({
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
-                {false && ( // TODO: Uncomment this if email notifications are required
+                {/* // TODO: Uncomment this if email notifications are required
                   <div className='flex items-center space-x-2'>
                     <Checkbox
                       id='lowGasEmail'
@@ -599,7 +599,7 @@ export default function AlertsSettings({
                       Email
                     </label>
                   </div>
-                )}
+                */}
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='lowGasTelegram'
@@ -713,7 +713,7 @@ export default function AlertsSettings({
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
-                {false && ( // TODO: Uncomment this if email notifications are required
+                {/* // Uncomment this if email notifications are required
                   <div className='flex items-center space-x-2'>
                     <Checkbox
                       id='bidSafetyEmail'
@@ -730,7 +730,7 @@ export default function AlertsSettings({
                       Email
                     </label>
                   </div>
-                )}
+                */}
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='bidSafetyTelegram'
