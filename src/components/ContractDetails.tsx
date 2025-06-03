@@ -77,7 +77,6 @@ export default function ContractDetails({
 
   // State for bidding form (only used in my-contracts view)
   const [bidAmount, setBidAmount] = useState('');
-  const [automatedBidding, setAutomatedBidding] = useState(false);
   const [maxBidAmount, setMaxBidAmount] = useState('');
   const [automationFunding, setAutomationFunding] = useState('');
 
@@ -167,10 +166,8 @@ export default function ContractDetails({
     if (!contractData || !contractData.biddingHistory) return [];
 
     return contractData.biddingHistory.map((historyItem, index) => {
-      // Determine if it's an automatic or manual bid
-      const isAutomaticBid =
-        historyItem.contractAddress.toLowerCase() ===
-        contractData.blockchain.cacheManagerAutomationAddress.toLowerCase();
+      // Use isAutomated directly from the API response
+      const isAutomated = historyItem.isAutomated === true;
 
       // Format the address for display
       const displayAddress =
@@ -198,12 +195,13 @@ export default function ContractDetails({
         id: index, // Using index as id since the API might not provide one
         address: displayAddress,
         bid: bidAmount,
-        type: isAutomaticBid ? 'automatic bid' : 'manual bid',
+        type: isAutomated ? 'automated bid' : 'manual bid',
         date: formattedDate,
         amount: bidAmount,
         transactionHash: historyItem.transactionHash,
         contractName: contractName,
         originAddress: displayOriginAddress,
+        isAutomated: isAutomated, // Add the isAutomated field to match BiddingHistoryItem
       };
     });
   };
@@ -211,30 +209,8 @@ export default function ContractDetails({
   // Get the processed bidding history
   const bidHistory = processBiddingHistory();
 
-  // If there's no bidding history and not loading, create a fallback placeholder
-  const displayBidHistory =
-    bidHistory.length > 0
-      ? bidHistory
-      : contractData && !isLoadingContract
-      ? [
-          // Fallback to a placeholder if no history available
-          {
-            id: 0,
-            address:
-              contractData.blockchain.cacheManagerAddress.substring(0, 6) +
-              '...' +
-              contractData.blockchain.cacheManagerAddress.substring(
-                contractData.blockchain.cacheManagerAddress.length - 4
-              ),
-            bid: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
-            type: 'automatic bid',
-            date: formatDate(contractData.bidBlockTimestamp),
-            amount: formatRoundedEth(formatEther(BigInt(contractData.lastBid))),
-            contractName: contractName,
-            originAddress: '0x0000....0000',
-          },
-        ]
-      : [];
+  // Use the actual bidding history without creating fallback placeholders
+  const displayBidHistory: BiddingHistoryItem[] = bidHistory;
 
   // If we're still loading and don't have contract data, show a loading state
   if (isLoadingContract && !contractData) {
@@ -540,8 +516,6 @@ export default function ContractDetails({
 
                 {/* Automated Bidding section */}
                 <AutomatedBiddingSection
-                  automatedBidding={automatedBidding}
-                  setAutomatedBidding={setAutomatedBidding}
                   maxBidAmount={maxBidAmount}
                   setMaxBidAmount={setMaxBidAmount}
                   automationFunding={automationFunding}

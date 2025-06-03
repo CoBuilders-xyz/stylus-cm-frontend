@@ -391,6 +391,28 @@ export function BidNowSection({
       return;
     }
 
+    // Validate that bid is greater than rounded high risk bid to be coherent with the suggested bid amounts.
+    if (suggestedBids) {
+      const highRiskBidEth = parseFloat(
+        formatRoundedEth(
+          formatEther(BigInt(suggestedBids.suggestedBids.highRisk)),
+          8
+        )
+      );
+
+      const currentBidEth = parseFloat(bidAmount);
+      if (currentBidEth < highRiskBidEth) {
+        setInputError(
+          `Bid must be greater or equal to ${formatRoundedEth(
+            highRiskBidEth.toString(),
+            8
+          )} ETH`
+        );
+        showSomethingWentWrongToast();
+        return;
+      }
+    }
+
     try {
       // Reset the reloaded state before starting a new transaction
       setHasReloaded(false);
