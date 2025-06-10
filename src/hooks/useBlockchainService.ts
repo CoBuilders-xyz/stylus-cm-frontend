@@ -15,10 +15,26 @@ interface BlockchainServiceResult {
   error: Error | null;
 }
 
+// Default blockchain configuration - Arbitrum Sepolia
+// This is used when no wallet is connected to allow non-auth routes to function
+const DEFAULT_CHAIN_ID = process.env.NEXT_PUBLIC_DEFAULT_CHAIN_ID; // Arbitrum Sepolia
+
 /**
  * Hook to access the BlockchainService
  * Automatically uses the authentication token from context
  * Also provides the current blockchain based on connected chain
+ *
+ * **Default Blockchain Strategy:**
+ * When no wallet is connected (chain is undefined), this hook will automatically
+ * use Arbitrum Sepolia (chainId: 421614) as the default blockchain. This allows:
+ * - Non-authenticated routes to display blockchain data immediately
+ * - Better UX for users who haven't connected their wallet yet
+ * - Seamless transition when wallet connects with a different chain
+ *
+ * **Fallback Strategy:**
+ * If the default blockchain is not available, it will use the first available
+ * blockchain from the API response.
+ *
  * @param requireAuth If true, the service will only be created if the user is authenticated
  * If false, the service will be created without authentication for non-authenticated endpoints
  */
@@ -46,44 +62,61 @@ export function useBlockchainService(
     return new BlockchainService(accessToken);
   }, [accessToken, isAuthenticated, requireAuth]);
 
-  // Effect to fetch current blockchain based on chain ID
+  // Effect to fetch current blockchain based on chain ID or set default
   useEffect(() => {
-    if (chain && chain.id && service) {
-      setIsLoading(true);
-      setError(null);
+    if (!service) {
+      setCurrentBlockchain(null);
+      setCurrentBlockchainId(null);
+      return;
+    }
 
-      service
-        .getBlockchains()
-        .then((blockchains) => {
-          console.log('blockchains', blockchains);
-          const matchingBlockchain = blockchains.find(
-            (blockchain) => blockchain.chainId === chain.id
-          );
-          console.log('matchingBlockchain', matchingBlockchain);
-          if (matchingBlockchain) {
-            setCurrentBlockchain(matchingBlockchain);
-            setCurrentBlockchainId(matchingBlockchain.id);
-          } else {
-            console.warn(
-              `No matching blockchain found for chainId: ${chain.id}`
+    setIsLoading(true);
+    setError(null);
+
+    // Determine which chain ID to use
+    const targetChainId = chain?.id || DEFAULT_CHAIN_ID;
+
+    service
+      .getBlockchains()
+      .then((blockchains) => {
+        const matchingBlockchain = blockchains.find(
+          (blockchain) => blockchain.chainId === targetChainId
+        );
+
+        if (matchingBlockchain) {
+          setCurrentBlockchain(matchingBlockchain);
+          setCurrentBlockchainId(matchingBlockchain.id);
+
+          if (!chain?.id) {
+            console.log(
+              `Using default blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
             );
+          }
+        } else {
+          // If target chain not found, try to fallback to the first available blockchain
+          const fallbackBlockchain = blockchains[0];
+          if (fallbackBlockchain) {
+            setCurrentBlockchain(fallbackBlockchain);
+            setCurrentBlockchainId(fallbackBlockchain.id);
+            console.warn(
+              `No matching blockchain found for chainId: ${targetChainId}. Using fallback: ${fallbackBlockchain.name}`
+            );
+          } else {
+            console.warn(`No blockchains available. chainId: ${targetChainId}`);
             setCurrentBlockchain(null);
             setCurrentBlockchainId(null);
           }
-          setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error('Error fetching blockchains:', err);
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setCurrentBlockchain(null);
-          setCurrentBlockchainId(null);
-          setIsLoading(false);
-        });
-    } else {
-      setCurrentBlockchain(null);
-      setCurrentBlockchainId(null);
-    }
-  }, [service, chain]);
+        }
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error fetching blockchains:', err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setCurrentBlockchain(null);
+        setCurrentBlockchainId(null);
+        setIsLoading(false);
+      });
+  }, [service, chain?.id]);
 
   return {
     service,
