@@ -1,4 +1,5 @@
 import { useAuthentication } from '@/context/AuthenticationProvider';
+import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
 import { BlockchainService } from '@/services/blockchainService';
 import { Blockchain } from '@/services/contractService';
 import { useMemo, useEffect, useState } from 'react';
@@ -25,14 +26,16 @@ const DEFAULT_CHAIN_ID = process.env.NEXT_PUBLIC_DEFAULT_CHAIN_ID; // Arbitrum S
  * Also provides the current blockchain based on connected chain
  *
  * **Default Blockchain Strategy:**
- * When no wallet is connected (chain is undefined), this hook will automatically
- * use Arbitrum Sepolia (chainId: 421614) as the default blockchain. This allows:
+ * When wallet is connected, uses the chain from the wallet.
+ * When wallet is not connected, uses the blockchain selected via BlockchainSelectionProvider.
+ * This allows:
  * - Non-authenticated routes to display blockchain data immediately
  * - Better UX for users who haven't connected their wallet yet
+ * - User-controlled blockchain selection when wallet is disconnected
  * - Seamless transition when wallet connects with a different chain
  *
  * **Fallback Strategy:**
- * If the default blockchain is not available, it will use the first available
+ * If no blockchain is available from either source, it will use the first available
  * blockchain from the API response.
  *
  * @param requireAuth If true, the service will only be created if the user is authenticated
@@ -42,6 +45,7 @@ export function useBlockchainService(
   requireAuth: boolean = true
 ): BlockchainServiceResult {
   const { accessToken, isAuthenticated } = useAuthentication();
+  const { selectedBlockchain } = useBlockchainSelection();
   const { chain } = useAccount();
   const [currentBlockchain, setCurrentBlockchain] = useState<Blockchain | null>(
     null
@@ -62,7 +66,7 @@ export function useBlockchainService(
     return new BlockchainService(accessToken);
   }, [accessToken, isAuthenticated, requireAuth]);
 
-  // Effect to fetch current blockchain based on chain ID or set default
+  // Effect to fetch current blockchain based on chain ID or use selected blockchain
   useEffect(() => {
     if (!service) {
       setCurrentBlockchain(null);
@@ -74,20 +78,31 @@ export function useBlockchainService(
     setError(null);
 
     // Determine which chain ID to use
-    const targetChainId = chain?.id || DEFAULT_CHAIN_ID;
+    // Priority: connected wallet chain > user selected blockchain > default
+    const targetChainId =
+      chain?.id || selectedBlockchain?.chainId || DEFAULT_CHAIN_ID;
 
     service
       .getBlockchains()
       .then((blockchains) => {
-        const matchingBlockchain = blockchains.find(
+        let matchingBlockchain = blockchains.find(
           (blockchain) => blockchain.chainId === targetChainId
         );
+
+        // If wallet is not connected and we have a selectedBlockchain, use it directly
+        if (!chain?.id && selectedBlockchain) {
+          matchingBlockchain = selectedBlockchain;
+        }
 
         if (matchingBlockchain) {
           setCurrentBlockchain(matchingBlockchain);
           setCurrentBlockchainId(matchingBlockchain.id);
 
-          if (!chain?.id) {
+          if (!chain?.id && selectedBlockchain) {
+            console.log(
+              `Using user-selected blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
+            );
+          } else if (!chain?.id) {
             console.log(
               `Using default blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
             );
@@ -116,7 +131,7 @@ export function useBlockchainService(
         setCurrentBlockchainId(null);
         setIsLoading(false);
       });
-  }, [service, chain?.id]);
+  }, [service, chain?.id, selectedBlockchain]);
 
   return {
     service,

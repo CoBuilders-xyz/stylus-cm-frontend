@@ -49,7 +49,7 @@ export default function ConnectionBanner() {
 
   return (
     <div
-      className={`w-full py-2 px-4 text-center font-medium text-sm transition-all duration-300 ease-in-out ${
+      className={`w-full mt-2 py-2 px-4 text-center font-medium text-sm transition-all duration-300 ease-in-out ${
         !isOnline
           ? 'bg-[#FFC470] text-black'
           : isConnecting
