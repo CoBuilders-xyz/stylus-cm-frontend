@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   FuelIcon as GasStation,
   ArrowUpCircle,
@@ -43,6 +44,7 @@ export function GasTankModal() {
   // Internal state
   const [open, setOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
+  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
@@ -192,6 +194,8 @@ export function GasTankModal() {
             isTransactionInProgress={isTransactionInProgress}
             refreshBalance={refetchBalance}
             isBalanceLoading={isLoading}
+            disclaimerChecked={disclaimerChecked}
+            setDisclaimerChecked={setDisclaimerChecked}
           />
         </DialogContent>
       </Dialog>
@@ -254,6 +258,8 @@ interface GasTankContentProps {
   isTransactionInProgress: boolean;
   refreshBalance: () => void;
   isBalanceLoading: boolean;
+  disclaimerChecked: boolean;
+  setDisclaimerChecked: (value: boolean) => void;
 }
 
 function GasTankContent({
@@ -265,6 +271,8 @@ function GasTankContent({
   isTransactionInProgress,
   refreshBalance,
   isBalanceLoading,
+  disclaimerChecked,
+  setDisclaimerChecked,
 }: GasTankContentProps) {
   return (
     <div className='py-4'>
@@ -335,6 +343,24 @@ function GasTankContent({
               />
             </div>
           </div>
+          <div className="flex items-start space-x-2 mt-6">
+            <Checkbox
+              id="disclaimer"
+              checked={disclaimerChecked}
+              onCheckedChange={(checked) =>
+                setDisclaimerChecked(checked === true)
+              }
+              className="mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white"
+            />
+            <Label
+              htmlFor="disclaimer"
+              className="text-sm font-medium leading-tight"
+            >
+              I'm aware this is an experimental feature and understand the risks
+              associated with automated bidding. Results may vary and I'm
+              responsible for monitoring my account.
+            </Label>
+          </div>
           <Button
             onClick={handleDeposit}
             className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
@@ -342,7 +368,8 @@ function GasTankContent({
               isTransactionInProgress ||
               !depositAmount ||
               Number(depositAmount) <= 0 ||
-              isBalanceLoading
+              isBalanceLoading ||
+              !disclaimerChecked
             }
           >
             {isTransactionInProgress ? (
