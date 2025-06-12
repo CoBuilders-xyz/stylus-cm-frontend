@@ -231,6 +231,8 @@ export function GasTankModal() {
             isTransactionInProgress={isTransactionInProgress}
             refreshBalance={refetchBalance}
             isBalanceLoading={isLoading}
+            disclaimerChecked={disclaimerChecked}
+            setDisclaimerChecked={setDisclaimerChecked}
           />
         </div>
         <DrawerFooter className='pt-2'>
@@ -356,9 +358,9 @@ function GasTankContent({
               htmlFor='disclaimer'
               className='text-sm font-medium leading-tight'
             >
-              I'm aware this is an experimental feature and understand the risks
-              associated with automated bidding. Results may vary and I'm
-              responsible for monitoring my account.
+              I&apos;m aware this is an experimental feature and understand the
+              risks associated with automated bidding. Results may vary and
+              I&apos;m responsible for monitoring my account.
             </Label>
           </div>
           <Button

@@ -617,9 +617,9 @@ export function AutomatedBiddingSection({
               htmlFor='disclaimer'
               className='text-sm font-medium leading-tight'
             >
-              I'm aware this is an experimental feature and understand the risks
-              associated with automated bidding. Results may vary and I'm
-              responsible for monitoring my account.
+              I&apos;m aware this is an experimental feature and understand the
+              risks associated with automated bidding. Results may vary and
+              I&apos;m responsible for monitoring my account.
             </Label>
           </div>
 
@@ -629,7 +629,9 @@ export function AutomatedBiddingSection({
               <Button
                 onClick={handleUpdateAutomation}
                 className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                disabled={isTransactionInProgress || isSuccess}
+                disabled={
+                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                }
               >
                 {isTransactionInProgress ? (
                   <div className='flex items-center'>
@@ -643,7 +645,9 @@ export function AutomatedBiddingSection({
               <Button
                 onClick={handleSetAutomation}
                 className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                disabled={isTransactionInProgress || isSuccess}
+                disabled={
+                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                }
               >
                 {isTransactionInProgress ? (
                   <div className='flex items-center'>
