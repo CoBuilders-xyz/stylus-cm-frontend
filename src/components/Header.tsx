@@ -6,7 +6,7 @@ import logo from 'public/logo.svg';
 import { Megaphone } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import { GasTankModal } from './GasTankModal';
-// import BlockchainSelector from './BlockchainSelector';
+import BlockchainSelector from './BlockchainSelector';
 import ConnectWallet from './ConnectWallet';
 import ConnectionBanner from './ConnectionBanner';
 
@@ -35,7 +35,7 @@ export default function Header() {
         >
           <Megaphone className='w-4 h-4' />
         </div>
-        {/* <BlockchainSelector /> */}
+        <BlockchainSelector />
         <ConnectWallet />
       </div>
       <ConnectionBanner />
