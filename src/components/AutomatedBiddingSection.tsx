@@ -9,8 +9,8 @@ import { Abi } from 'viem';
 import { AlertTriangle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   showSuccessToast,
   showErrorToast,
@@ -604,18 +604,18 @@ export function AutomatedBiddingSection({
             <div></div>
           </div>
 
-          <div className="flex items-start space-x-2 mt-6">
+          <div className='flex items-start space-x-2 mt-6'>
             <Checkbox
-              id="disclaimer"
+              id='disclaimer'
               checked={disclaimerChecked}
               onCheckedChange={(checked) =>
                 setDisclaimerChecked(checked === true)
               }
-              className="mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white"
+              className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
             />
             <Label
-              htmlFor="disclaimer"
-              className="text-sm font-medium leading-tight"
+              htmlFor='disclaimer'
+              className='text-sm font-medium leading-tight'
             >
               I'm aware this is an experimental feature and understand the risks
               associated with automated bidding. Results may vary and I'm
