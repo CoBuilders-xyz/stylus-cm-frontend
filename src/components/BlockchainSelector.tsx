@@ -1,7 +1,7 @@
 'use client';
 
-import { useAccount } from 'wagmi';
 import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
+import { useSwitchChain } from 'wagmi';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,6 @@ import {
 import { ChevronDown, Globe } from 'lucide-react';
 
 export default function BlockchainSelector() {
-  const { isConnected } = useAccount();
   const {
     selectedBlockchain,
     availableBlockchains,
@@ -20,15 +19,24 @@ export default function BlockchainSelector() {
     isLoading,
   } = useBlockchainSelection();
 
-  // Don't render if wallet is connected
-  if (isConnected) {
-    return null;
-  }
+  const { switchChain } = useSwitchChain();
 
   // Don't render if still loading or no blockchains available
   if (isLoading || availableBlockchains.length === 0) {
     return null;
   }
+
+  const handleBlockchainSelect = (
+    blockchain: (typeof availableBlockchains)[0]
+  ) => {
+    // Update the blockchain selection context
+    setSelectedBlockchain(blockchain);
+
+    // Switch to the corresponding wagmi chain
+    if (switchChain) {
+      switchChain({ chainId: blockchain.chainId });
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -53,7 +61,7 @@ export default function BlockchainSelector() {
           {availableBlockchains.map((blockchain) => (
             <DropdownMenuItem
               key={blockchain.id}
-              onClick={() => setSelectedBlockchain(blockchain)}
+              onClick={() => handleBlockchainSelect(blockchain)}
               className={`cursor-pointer hover:bg-gray-800 ${
                 selectedBlockchain?.id === blockchain.id ? 'bg-gray-700' : ''
               }`}
