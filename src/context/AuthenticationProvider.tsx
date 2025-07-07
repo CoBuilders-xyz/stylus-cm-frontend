@@ -4,12 +4,57 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { API_URL } from '../utils/env';
 
+// localStorage key for storing authentication data
+const AUTH_TOKEN_KEY = 'arb_cache_auth_token';
+
+// Interface for stored authentication data
+interface StoredAuthData {
+  accessToken: string;
+  walletAddress: string;
+}
+
 // Define the shape of the context data
 interface AuthenticationContextType {
   accessToken: string;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
+
+// localStorage utility functions
+const saveTokenToStorage = (token: string, walletAddress: string): void => {
+  try {
+    const authData: StoredAuthData = {
+      accessToken: token,
+      walletAddress: walletAddress.toLowerCase(),
+    };
+    localStorage.setItem(AUTH_TOKEN_KEY, JSON.stringify(authData));
+  } catch (error) {
+    console.warn('Failed to save token to localStorage:', error);
+  }
+};
+
+const loadTokenFromStorage = (): StoredAuthData | null => {
+  try {
+    const stored = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!stored) return null;
+
+    const authData: StoredAuthData = JSON.parse(stored);
+
+    return authData;
+  } catch (error) {
+    console.warn('Failed to load token from localStorage:', error);
+    clearTokenFromStorage();
+    return null;
+  }
+};
+
+const clearTokenFromStorage = (): void => {
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch (error) {
+    console.warn('Failed to clear token from localStorage:', error);
+  }
+};
 
 // Create the context
 const AuthenticationContext = createContext<
@@ -37,6 +82,16 @@ export const AuthenticationProvider: React.FC<{
 
     if (isConnected && address) {
       setIsLoading(true);
+
+      const savedAuthData = loadTokenFromStorage();
+
+      if (savedAuthData) {
+        setAccessToken(savedAuthData.accessToken);
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
+
       setIsAuthenticated(false);
 
       let nonce = '';
@@ -80,6 +135,7 @@ export const AuthenticationProvider: React.FC<{
           const result = await response.json();
           setAccessToken(result.accessToken);
           setIsAuthenticated(true);
+          saveTokenToStorage(result.accessToken, address);
           console.log('Authentication completed successfully');
         } catch (error) {
           console.error('Error authenticating:', error);
