@@ -20,6 +20,47 @@ interface AuthenticationContextType {
   isAuthenticated: boolean;
 }
 
+// JWT expiration check function
+const isJWTExpired = (token: string | undefined): boolean => {
+  if (!token) return true;
+
+  try {
+    // Split JWT into parts
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.warn('Invalid JWT format');
+      return true;
+    }
+
+    // Decode the payload (second part)
+    const payload = parts[1];
+    const decodedPayload = JSON.parse(atob(payload));
+
+    // Check if exp claim exists
+    if (!decodedPayload.exp) {
+      console.warn('JWT does not contain exp claim');
+      return true;
+    }
+
+    // Compare exp with current time (exp is in seconds, Date.now() is in milliseconds)
+    const currentTime = Math.floor(Date.now() / 1000);
+    const isExpired = decodedPayload.exp <= currentTime;
+
+    console.log(
+      'JWT exp:',
+      decodedPayload.exp,
+      'Current time:',
+      currentTime,
+      'Expired:',
+      isExpired
+    );
+    return isExpired;
+  } catch (error) {
+    console.warn('Failed to decode JWT:', error);
+    return true; // Treat as expired if we can't decode
+  }
+};
+
 // localStorage utility functions
 const saveTokenToStorage = (token: string, walletAddress: string): void => {
   try {
@@ -39,6 +80,13 @@ const loadTokenFromStorage = (): StoredAuthData | null => {
     if (!stored) return null;
 
     const authData: StoredAuthData = JSON.parse(stored);
+
+    // Check if the JWT token is expired
+    if (isJWTExpired(authData.accessToken)) {
+      console.log('Stored JWT token is expired, clearing storage');
+      clearTokenFromStorage();
+      return null;
+    }
 
     return authData;
   } catch (error) {
@@ -84,8 +132,9 @@ export const AuthenticationProvider: React.FC<{
       setIsLoading(true);
 
       const savedAuthData = loadTokenFromStorage();
+      const isTokenExpired = isJWTExpired(savedAuthData?.accessToken);
 
-      if (savedAuthData) {
+      if (savedAuthData && !isTokenExpired) {
         setAccessToken(savedAuthData.accessToken);
         setIsAuthenticated(true);
         setIsLoading(false);
