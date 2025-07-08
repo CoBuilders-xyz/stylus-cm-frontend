@@ -125,11 +125,13 @@ const ContractRow = React.memo(
     viewType,
     onContractSelect,
     onAddContract,
+    isAuthenticated,
   }: {
     contract: Contract;
     viewType: string;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
     onAddContract?: (contract: Contract) => void;
+    isAuthenticated: boolean;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
@@ -153,6 +155,13 @@ const ContractRow = React.memo(
           {viewType === 'my-contracts' && contract.name ? (
             <div className='flex flex-col'>
               <span className='text-lg font-medium'>{contract.name}</span>
+              <span className='text-sm text-gray-400'>{contract.address}</span>
+            </div>
+          ) : contract.isSavedByUser ? (
+            <div className='flex flex-col'>
+              <span className='text-lg font-medium'>
+                {contract.savedContractName}
+              </span>
               <span className='text-sm text-gray-400'>{contract.address}</span>
             </div>
           ) : (
@@ -236,16 +245,18 @@ const ContractRow = React.memo(
             </span>
           </div>
         </TableCell>
-        {viewType === 'explore-contracts' && !contract.isSavedByUser && (
-          <TableCell className='py-6'>
-            <Button
-              className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
-              onClick={handleAddContractClick}
-            >
-              +
-            </Button>
-          </TableCell>
-        )}
+        {viewType === 'explore-contracts' &&
+          !contract.isSavedByUser &&
+          isAuthenticated && (
+            <TableCell className='py-6'>
+              <Button
+                className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
+                onClick={handleAddContractClick}
+              >
+                +
+              </Button>
+            </TableCell>
+          )}
         {viewType === 'explore-contracts' && contract.isSavedByUser && (
           <TableCell className='py-6'>
             <Badge
@@ -577,6 +588,7 @@ function ContractsTable({
                         viewType={viewType}
                         onContractSelect={onContractSelect}
                         onAddContract={onAddContract}
+                        isAuthenticated={isAuthenticated}
                       />
                     ))
                   ) : (

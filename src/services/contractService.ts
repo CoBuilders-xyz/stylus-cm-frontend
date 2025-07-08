@@ -97,6 +97,7 @@ export interface Contract {
   alerts?: Alert[]; // Optional alerts for contract monitoring
   userContractId?: string; // Optional user contract ID
   isSavedByUser?: boolean; // Flag to indicate if the contract is already saved by the user
+  savedContractName?: string | null; // Name of the saved contract
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
