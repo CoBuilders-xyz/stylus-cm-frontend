@@ -429,7 +429,7 @@ function ContractsTable({
   );
 
   // Render placeholder when not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated && viewType === 'my-contracts') {
     return (
       <NoticeBanner
         image={authRequiredImage}
