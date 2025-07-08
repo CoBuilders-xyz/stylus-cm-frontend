@@ -51,14 +51,18 @@ export interface BidAverageResponse {
  */
 export interface BidTrendsPeriod {
   period: string;
-  count: number;
+  insertCount: number;
+  deleteCount: number;
+  netChange: number;
 }
 
 /**
  * Interface for global bid trends data
  */
 export interface BidTrendsGlobal {
-  count: number;
+  insertCount: number;
+  deleteCount: number;
+  netChange: number;
 }
 
 /**
