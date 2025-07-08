@@ -75,14 +75,10 @@ export function useContracts(
 
   const contractService = useContractService();
   const { currentBlockchainId, isLoading: isBlockchainLoading } =
-    useBlockchainService();
+    useBlockchainService(false);
 
   // Use useCallback to ensure the function reference is stable
   const fetchContracts = useCallback(async () => {
-    if (!contractService) {
-      return;
-    }
-
     // Don't fetch if we don't have a blockchain ID yet
     if (!currentBlockchainId) {
       return;

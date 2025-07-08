@@ -199,10 +199,13 @@ export class ContractService {
 
   /**
    * Create a new ContractService instance
-   * @param accessToken JWT token for authentication
+   * @param accessToken JWT token for authentication (optional for public endpoints)
    * @param defaultBlockchainId Optional default blockchain ID to use in requests
    */
-  constructor(accessToken: string, defaultBlockchainId: string | null = null) {
+  constructor(
+    accessToken: string | null = null,
+    defaultBlockchainId: string | null = null
+  ) {
     this.apiClient = new ApiClient(accessToken);
     this.currentBlockchainId = defaultBlockchainId;
   }
