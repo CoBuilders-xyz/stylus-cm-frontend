@@ -483,10 +483,11 @@ function ContractsTable({
               </Button>
             </div>
             <Button
-              className='p-2 h-10 w-10 bg-black text-white border border-white rounded-md flex items-center justify-center'
+              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
               onClick={onAddNewContract}
             >
-              +
+              <span>+</span>
+              <span>Add Contract</span>
             </Button>
           </div>
         )}
