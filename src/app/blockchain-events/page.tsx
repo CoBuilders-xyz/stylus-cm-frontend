@@ -7,6 +7,7 @@ import { BlockchainEvent } from '@/types/blockchainEvents';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import {
   formatTransactionHash,
   formatContractAddress,
@@ -17,6 +18,7 @@ import {
   formatBlockNumber,
   getBidAmountFromEventData,
   getSizeFromEventData,
+  getBytecodeHashFromEventData,
   copyToClipboard,
 } from '@/utils/blockchainEventFormatting';
 import { formatSize } from '@/utils/formatting';
@@ -98,275 +100,362 @@ export default function BlockchainEventsPage() {
         width={panelWidth}
       >
         {isPanelOpen && selectedEvent && (
-          <div className='p-6'>
-            {/* Header */}
-            <div className='flex items-center justify-between mb-6'>
-              <div className='flex items-center space-x-3'>
-                <Badge
-                  variant={getEventTypeBadgeVariant(selectedEvent.eventName)}
-                  className='px-3 py-1 text-sm font-semibold'
-                >
-                  {formatEventType(selectedEvent.eventName)}
-                </Badge>
-                <h2 className='text-xl font-bold text-white'>Event Details</h2>
-              </div>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={handleClosePanel}
-                className='p-2 hover:bg-gray-800'
-              >
-                <X className='w-5 h-5' />
-              </Button>
-            </div>
-
-            {/* Event Details */}
-            <ScrollArea className='h-[calc(100vh-200px)]'>
-              <div className='space-y-6'>
-                {/* Transaction Info */}
-                <div className='bg-gray-900 rounded-lg p-4'>
-                  <h3 className='text-lg font-semibold text-white mb-4'>
-                    Transaction Information
-                  </h3>
-
-                  <div className='space-y-3'>
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Transaction Hash
-                      </label>
-                      <div className='flex items-center space-x-2 mt-1'>
-                        <span className='font-mono text-sm text-white'>
-                          {formatTransactionHash(
-                            selectedEvent.transactionHash,
-                            10,
-                            10
-                          )}
-                        </span>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() =>
-                            handleCopy(selectedEvent.transactionHash, 'tx')
-                          }
-                          className='p-1 h-auto hover:bg-gray-800'
-                        >
-                          {copySuccess.tx ? (
-                            <span className='text-green-400 text-xs'>✓</span>
-                          ) : (
-                            <Copy className='w-3 h-3' />
-                          )}
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() =>
-                            handleExternalLink(
-                              `https://etherscan.io/tx/${selectedEvent.transactionHash}`
-                            )
-                          }
-                          className='p-1 h-auto hover:bg-gray-800'
-                        >
-                          <ExternalLink className='w-3 h-3' />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Block Number
-                      </label>
-                      <div className='text-white font-mono'>
-                        {formatBlockNumber(selectedEvent.blockNumber)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Block Timestamp
-                      </label>
-                      <div className='text-white'>
-                        <div>
-                          {formatEventTimestamp(selectedEvent.blockTimestamp)}
-                        </div>
-                        <div className='text-xs text-gray-400'>
-                          {formatRelativeTime(selectedEvent.blockTimestamp)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>Log Index</label>
-                      <div className='text-white font-mono'>
-                        {selectedEvent.logIndex}
-                      </div>
-                    </div>
+          <div className='text-white flex flex-col h-full bg-[#1A1919]'>
+            <ScrollArea className='flex-1'>
+              <div className='p-6'>
+                {/* Header */}
+                <div className='flex justify-between items-center mb-6'>
+                  <div className='flex items-center space-x-3'>
+                    <Badge
+                      variant={getEventTypeBadgeVariant(
+                        selectedEvent.eventName
+                      )}
+                      className='px-3 py-1 text-sm font-semibold'
+                    >
+                      {formatEventType(selectedEvent.eventName)}
+                    </Badge>
+                    <h2 className='text-xl font-bold'>Event Details</h2>
                   </div>
+                  <Button
+                    className='rounded-md border border-white hover:bg-gray-900'
+                    onClick={handleClosePanel}
+                  >
+                    <X className='h-5 w-5' />
+                  </Button>
                 </div>
 
-                {/* Contract Info */}
-                <div className='bg-gray-900 rounded-lg p-4'>
-                  <h3 className='text-lg font-semibold text-white mb-4'>
+                {/* Transaction Information */}
+                <div className='mb-6'>
+                  <h3 className='text-lg font-semibold mb-4'>
+                    Transaction Information
+                  </h3>
+                  <Table>
+                    <TableBody>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Transaction Hash
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <div className='flex items-center space-x-2'>
+                            <span className='font-mono text-sm'>
+                              {formatTransactionHash(
+                                selectedEvent.transactionHash,
+                                10,
+                                10
+                              )}
+                            </span>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleCopy(selectedEvent.transactionHash, 'tx')
+                              }
+                              className='p-1 h-auto hover:bg-gray-800'
+                            >
+                              {copySuccess.tx ? (
+                                <span className='text-green-400 text-xs'>
+                                  ✓
+                                </span>
+                              ) : (
+                                <Copy className='w-3 h-3' />
+                              )}
+                            </Button>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleExternalLink(
+                                  `https://etherscan.io/tx/${selectedEvent.transactionHash}`
+                                )
+                              }
+                              className='p-1 h-auto hover:bg-gray-800'
+                            >
+                              <ExternalLink className='w-3 h-3' />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Block Number
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <span className='font-mono'>
+                            {formatBlockNumber(selectedEvent.blockNumber)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Block Timestamp
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <div className='flex flex-col'>
+                            <span>
+                              {formatEventTimestamp(
+                                selectedEvent.blockTimestamp
+                              )}
+                            </span>
+                            <span className='text-xs text-gray-400'>
+                              {formatRelativeTime(selectedEvent.blockTimestamp)}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Log Index
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <span className='font-mono'>
+                            {selectedEvent.logIndex}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Contract Information */}
+                <div className='mb-6'>
+                  <h3 className='text-lg font-semibold mb-4'>
                     Contract Information
                   </h3>
-
-                  <div className='space-y-3'>
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Contract Address
-                      </label>
-                      <div className='flex items-center space-x-2 mt-1'>
-                        <span className='font-mono text-sm text-white'>
-                          {formatContractAddress(
-                            selectedEvent.contractAddress,
-                            10,
-                            10
-                          )}
-                        </span>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() =>
-                            handleCopy(selectedEvent.contractAddress, 'address')
-                          }
-                          className='p-1 h-auto hover:bg-gray-800'
-                        >
-                          {copySuccess.address ? (
-                            <span className='text-green-400 text-xs'>✓</span>
-                          ) : (
-                            <Copy className='w-3 h-3' />
-                          )}
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() =>
-                            handleExternalLink(
-                              `https://etherscan.io/address/${selectedEvent.contractAddress}`
-                            )
-                          }
-                          className='p-1 h-auto hover:bg-gray-800'
-                        >
-                          <ExternalLink className='w-3 h-3' />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Contract Name
-                      </label>
-                      <div className='text-white'>
-                        {selectedEvent.contractName}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Origin Address
-                      </label>
-                      <div className='flex items-center space-x-2 mt-1'>
-                        <span className='font-mono text-sm text-white'>
-                          {formatContractAddress(
-                            selectedEvent.originAddress,
-                            10,
-                            10
-                          )}
-                        </span>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() =>
-                            handleCopy(selectedEvent.originAddress, 'origin')
-                          }
-                          className='p-1 h-auto hover:bg-gray-800'
-                        >
-                          {copySuccess.origin ? (
-                            <span className='text-green-400 text-xs'>✓</span>
-                          ) : (
-                            <Copy className='w-3 h-3' />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                  <Table>
+                    <TableBody>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Contract Address
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <div className='flex items-center space-x-2'>
+                            <span className='font-mono text-sm'>
+                              {formatContractAddress(
+                                selectedEvent.contractAddress,
+                                10,
+                                10
+                              )}
+                            </span>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleCopy(
+                                  selectedEvent.contractAddress,
+                                  'address'
+                                )
+                              }
+                              className='p-1 h-auto hover:bg-gray-800'
+                            >
+                              {copySuccess.address ? (
+                                <span className='text-green-400 text-xs'>
+                                  ✓
+                                </span>
+                              ) : (
+                                <Copy className='w-3 h-3' />
+                              )}
+                            </Button>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleExternalLink(
+                                  `https://etherscan.io/address/${selectedEvent.contractAddress}`
+                                )
+                              }
+                              className='p-1 h-auto hover:bg-gray-800'
+                            >
+                              <ExternalLink className='w-3 h-3' />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Contract Name
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <span className='font-medium'>
+                            {selectedEvent.contractName}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Origin Address
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <div className='flex items-center space-x-2'>
+                            <span className='font-mono text-sm'>
+                              {formatContractAddress(
+                                selectedEvent.originAddress,
+                                10,
+                                10
+                              )}
+                            </span>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleCopy(
+                                  selectedEvent.originAddress,
+                                  'origin'
+                                )
+                              }
+                              className='p-1 h-auto hover:bg-gray-800'
+                            >
+                              {copySuccess.origin ? (
+                                <span className='text-green-400 text-xs'>
+                                  ✓
+                                </span>
+                              ) : (
+                                <Copy className='w-3 h-3' />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
 
                 {/* Event Data */}
-                <div className='bg-gray-900 rounded-lg p-4'>
-                  <h3 className='text-lg font-semibold text-white mb-4'>
-                    Event Data
-                  </h3>
-
-                  <div className='space-y-3'>
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Event Name
-                      </label>
-                      <div className='text-white'>
-                        {selectedEvent.eventName}
-                      </div>
-                    </div>
-
-                    {getBidAmountFromEventData(selectedEvent.eventData) && (
-                      <div>
-                        <label className='text-sm text-gray-400'>
-                          Bid Amount
-                        </label>
-                        <div className='text-white font-mono'>
-                          {getBidAmountFromEventData(selectedEvent.eventData)}
-                        </div>
-                      </div>
-                    )}
-
-                    {getSizeFromEventData(selectedEvent.eventData) && (
-                      <div>
-                        <label className='text-sm text-gray-400'>Size</label>
-                        <div className='text-white'>
-                          {formatSize(
-                            getSizeFromEventData(selectedEvent.eventData)
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Event Type
-                      </label>
-                      <div className='flex items-center space-x-2 mt-1'>
-                        <Badge
-                          variant={
-                            selectedEvent.isRealTime ? 'default' : 'secondary'
-                          }
-                          className='px-2 py-1 text-xs font-semibold'
-                        >
-                          {selectedEvent.isRealTime
-                            ? 'Real-time'
-                            : 'Historical'}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Blockchain
-                      </label>
-                      <div className='text-white'>
-                        {selectedEvent.blockchainName}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className='text-sm text-gray-400'>
-                        Raw Event Data
-                      </label>
-                      <div className='bg-black rounded p-3 mt-1'>
-                        <pre className='text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto'>
-                          {JSON.stringify(selectedEvent.eventData, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                  </div>
+                <div className='mb-6'>
+                  <h3 className='text-lg font-semibold mb-4'>Event Data</h3>
+                  <Table>
+                    <TableBody>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Event Name
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <span className='font-medium'>
+                            {selectedEvent.eventName}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      {getBidAmountFromEventData(
+                        selectedEvent.eventData,
+                        selectedEvent.eventName
+                      ) && (
+                        <TableRow className='hover:bg-transparent'>
+                          <TableCell className='font-medium text-gray-400 w-1/3'>
+                            Bid Amount
+                          </TableCell>
+                          <TableCell className='text-left w-2/3'>
+                            <span className='font-mono text-sm'>
+                              {getBidAmountFromEventData(
+                                selectedEvent.eventData,
+                                selectedEvent.eventName
+                              )}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {getSizeFromEventData(
+                        selectedEvent.eventData,
+                        selectedEvent.eventName
+                      ) && (
+                        <TableRow className='hover:bg-transparent'>
+                          <TableCell className='font-medium text-gray-400 w-1/3'>
+                            Size
+                          </TableCell>
+                          <TableCell className='text-left w-2/3'>
+                            <span className='font-medium'>
+                              {formatSize(
+                                getSizeFromEventData(
+                                  selectedEvent.eventData,
+                                  selectedEvent.eventName
+                                )
+                              )}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {getBytecodeHashFromEventData(
+                        selectedEvent.eventData
+                      ) && (
+                        <TableRow className='hover:bg-transparent'>
+                          <TableCell className='font-medium text-gray-400 w-1/3'>
+                            Bytecode Hash
+                          </TableCell>
+                          <TableCell className='text-left w-2/3'>
+                            <div className='flex items-center space-x-2'>
+                              <span className='font-mono text-sm'>
+                                {formatContractAddress(
+                                  getBytecodeHashFromEventData(
+                                    selectedEvent.eventData
+                                  ),
+                                  10,
+                                  10
+                                )}
+                              </span>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() =>
+                                  handleCopy(
+                                    getBytecodeHashFromEventData(
+                                      selectedEvent.eventData
+                                    ),
+                                    'bytecode'
+                                  )
+                                }
+                                className='p-1 h-auto hover:bg-gray-800'
+                              >
+                                {copySuccess.bytecode ? (
+                                  <span className='text-green-400 text-xs'>
+                                    ✓
+                                  </span>
+                                ) : (
+                                  <Copy className='w-3 h-3' />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Event Type
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <Badge
+                            variant={
+                              selectedEvent.isRealTime ? 'default' : 'secondary'
+                            }
+                            className='px-3 py-1 text-sm font-semibold w-fit'
+                          >
+                            {selectedEvent.isRealTime
+                              ? 'Real-time'
+                              : 'Historical'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Blockchain
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <span className='font-medium'>
+                            {selectedEvent.blockchainName}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                          Raw Event Data
+                        </TableCell>
+                        <TableCell className='text-left w-2/3'>
+                          <div className='bg-black rounded p-3 border border-gray-700'>
+                            <pre className='text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto'>
+                              {JSON.stringify(selectedEvent.eventData, null, 2)}
+                            </pre>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </ScrollArea>

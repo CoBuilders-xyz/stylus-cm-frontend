@@ -12,6 +12,12 @@ import {
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 import { useBlockchainEvents } from '../hooks/useBlockchainEvents';
 import {
   BlockchainEventSortField,
@@ -22,7 +28,6 @@ import {
 } from '../types/blockchainEvents';
 import {
   formatTransactionHash,
-  formatContractAddress,
   formatEventTimestamp,
   formatRelativeTime,
   getEventTypeBadgeVariant,
@@ -168,8 +173,11 @@ const EventRow = React.memo(
     };
 
     // Extract event data
-    const bidAmount = getBidAmountFromEventData(event.eventData);
-    const size = getSizeFromEventData(event.eventData);
+    const bidAmount = getBidAmountFromEventData(
+      event.eventData,
+      event.eventName
+    );
+    const size = getSizeFromEventData(event.eventData, event.eventName);
 
     return (
       <TableRow
@@ -183,25 +191,6 @@ const EventRow = React.memo(
           >
             {formatEventType(event.eventName)}
           </Badge>
-        </TableCell>
-        <TableCell className='py-6 text-lg'>
-          <div className='flex items-center space-x-2'>
-            <span className='font-mono text-sm'>
-              {formatContractAddress(event.contractAddress)}
-            </span>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={(e) => handleCopy(event.contractAddress, 'address', e)}
-              className='p-1 h-auto hover:bg-gray-800'
-            >
-              {copySuccess.address ? (
-                <span className='text-green-400 text-xs'>✓</span>
-              ) : (
-                <Copy className='w-3 h-3' />
-              )}
-            </Button>
-          </div>
         </TableCell>
         <TableCell className='py-6 text-lg'>
           <div className='flex items-center space-x-2'>
@@ -271,17 +260,6 @@ const EventRow = React.memo(
               N/A
             </Badge>
           )}
-        </TableCell>
-        <TableCell className='py-6 text-lg'>
-          <div className='flex flex-col'>
-            <span className='text-sm'>{event.contractName}</span>
-            <Badge
-              variant={event.isRealTime ? 'default' : 'secondary'}
-              className='px-2 py-1 text-xs font-semibold w-fit mt-1'
-            >
-              {event.isRealTime ? 'Real-time' : 'Historical'}
-            </Badge>
-          </div>
         </TableCell>
       </TableRow>
     );
@@ -529,70 +507,80 @@ function BlockchainEventsTable({
         <div className='w-full'>
           <ScrollArea orientation='both' className='h-[600px]'>
             <div className='min-w-full'>
-              <Table className='w-full'>
-                <TableHeader className='bg-black text-white sticky top-0 z-10'>
-                  <TableRow className='h-20 hover:bg-transparent'>
-                    <TableHead className='font-medium text-base py-6'>
-                      Event Type
-                    </TableHead>
-                    <TableHead className='font-medium text-base py-6'>
-                      Contract Address
-                    </TableHead>
-                    <TableHead className='font-medium text-base py-6'>
-                      Transaction Hash
-                    </TableHead>
-                    <SortableTableHead
-                      sortField={BlockchainEventSortField.BLOCK_NUMBER}
-                      currentSortBy={sortBy}
-                      currentSortOrder={sortOrder}
-                      onSort={setSorting}
-                    >
-                      Block Number
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortField={BlockchainEventSortField.BLOCK_TIMESTAMP}
-                      currentSortBy={sortBy}
-                      currentSortOrder={sortOrder}
-                      onSort={setSorting}
-                    >
-                      Timestamp
-                    </SortableTableHead>
-                    <TableHead className='font-medium text-base py-6'>
-                      Bid Amount
-                    </TableHead>
-                    <TableHead className='font-medium text-base py-6'>
-                      Size
-                    </TableHead>
-                    <TableHead className='font-medium text-base py-6'>
-                      Contract Info
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className='text-white [&>tr]:py-2'>
-                  {displayEvents.length > 0 ? (
-                    displayEvents.map((event) => (
-                      <EventRow
-                        key={`${event.transactionHash}-${event.logIndex}`}
-                        event={event}
-                        onEventSelect={onEventSelect}
-                      />
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className='text-center py-12 bg-black'
+              <TooltipProvider>
+                <Table className='w-full'>
+                  <TableHeader className='bg-black text-white sticky top-0 z-10'>
+                    <TableRow className='h-20 hover:bg-transparent'>
+                      <TableHead className='font-medium text-base py-6'>
+                        Event Type
+                      </TableHead>
+                      <TableHead className='font-medium text-base py-6'>
+                        Transaction Hash
+                      </TableHead>
+                      <SortableTableHead
+                        sortField={BlockchainEventSortField.BLOCK_NUMBER}
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={setSorting}
                       >
-                        <NoticeBanner
-                          image={noContractsFoundImage}
-                          title='No Events Found'
-                          description='No blockchain events found matching your criteria.'
-                        />
-                      </TableCell>
+                        Block Number
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortField={BlockchainEventSortField.BLOCK_TIMESTAMP}
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={setSorting}
+                      >
+                        Timestamp
+                      </SortableTableHead>
+                      <TableHead className='font-medium text-base py-6'>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className='cursor-help underline decoration-dotted underline-offset-2'>
+                              Bid Amount
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className='bg-gray-800 text-white border border-gray-600 max-w-xs'>
+                            <p>
+                              Event Bid Amount includes
+                              decayRate*biddingTimestamp, for that reason will
+                              differ to the price paid for bidding, for more
+                              accurate values check contract tables
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className='font-medium text-base py-6'>
+                        Size
+                      </TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody className='text-white [&>tr]:py-2'>
+                    {displayEvents.length > 0 ? (
+                      displayEvents.map((event) => (
+                        <EventRow
+                          key={`${event.transactionHash}-${event.logIndex}`}
+                          event={event}
+                          onEventSelect={onEventSelect}
+                        />
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className='text-center py-12 bg-black'
+                        >
+                          <NoticeBanner
+                            image={noContractsFoundImage}
+                            title='No Events Found'
+                            description='No blockchain events found matching your criteria.'
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TooltipProvider>
             </div>
           </ScrollArea>
         </div>

@@ -1,4 +1,6 @@
 import { BlockchainEventType } from '../types/blockchainEvents';
+import { formatEther } from 'viem';
+import { formatRoundedEth } from './formatting';
 
 /**
  * Truncate transaction hash for display
@@ -103,9 +105,9 @@ export const getEventTypeBadgeVariant = (eventType: string) => {
 export const formatEventType = (eventType: string): string => {
   switch (eventType) {
     case BlockchainEventType.INSERT:
-      return 'Insert';
+      return 'InsertBid';
     case BlockchainEventType.DELETE:
-      return 'Delete';
+      return 'DeleteBid';
     default:
       return eventType;
   }
@@ -122,50 +124,101 @@ export const formatBlockNumber = (blockNumber: number): string => {
 
 /**
  * Extract contract address from event data
- * Assumes the second element (index 1) of eventData array contains the contract address
+ * For InsertBid: eventData[1] = ContractAddress
+ * For DeleteBid: No contract address available
  * @param eventData Event data array
+ * @param eventType Event type to determine data structure
  * @returns Contract address or empty string
  */
 export const getContractAddressFromEventData = (
-  eventData: Record<string, unknown>
+  eventData: Record<string, unknown>,
+  eventType: string
 ): string => {
-  // Event data is typically an array, contract address is usually at index 1
-  if (Array.isArray(eventData) && eventData.length > 1) {
-    return eventData[1] || '';
+  if (!Array.isArray(eventData)) return '';
+
+  // For InsertBid events, contract address is at index 1
+  if (eventType === BlockchainEventType.INSERT && eventData.length > 1) {
+    return String(eventData[1] || '');
   }
+
+  // For DeleteBid events, no contract address is available
   return '';
 };
 
 /**
- * Extract bid amount from event data
- * Assumes the third element (index 2) of eventData array contains the bid amount
+ * Extract bid amount from event data and format it in ETH
+ * For InsertBid: eventData[2] = BidAmount + decayValue
+ * For DeleteBid: eventData[1] = BidAmount + decayValue
  * @param eventData Event data array
- * @returns Bid amount or empty string
+ * @param eventType Event type to determine data structure
+ * @returns Formatted bid amount in ETH or empty string
  */
 export const getBidAmountFromEventData = (
-  eventData: Record<string, unknown>
+  eventData: Record<string, unknown>,
+  eventType: string
 ): string => {
-  // Bid amount is typically at index 2
-  if (Array.isArray(eventData) && eventData.length > 2) {
-    return eventData[2] || '';
+  if (!Array.isArray(eventData)) return '';
+
+  let bidAmountWei: string = '';
+
+  // For InsertBid events, bid amount is at index 2
+  if (eventType === BlockchainEventType.INSERT && eventData.length > 2) {
+    bidAmountWei = String(eventData[2] || '');
   }
-  return '';
+  // For DeleteBid events, bid amount is at index 1
+  else if (eventType === BlockchainEventType.DELETE && eventData.length > 1) {
+    bidAmountWei = String(eventData[1] || '');
+  }
+
+  if (!bidAmountWei) return '';
+
+  try {
+    // Convert wei to ETH using viem's formatEther
+    const ethValue = formatEther(BigInt(bidAmountWei));
+    // Format with 3 significant figures and add ETH suffix
+    return formatRoundedEth(ethValue, 3) + ' ETH';
+  } catch {
+    return bidAmountWei; // Return raw value if conversion fails
+  }
 };
 
 /**
  * Extract bytecode size from event data
- * Assumes the fourth element (index 3) of eventData array contains the size
+ * For InsertBid: eventData[3] = Size
+ * For DeleteBid: eventData[2] = Size
  * @param eventData Event data array
+ * @param eventType Event type to determine data structure
  * @returns Size or empty string
  */
 export const getSizeFromEventData = (
+  eventData: Record<string, unknown>,
+  eventType: string
+): string => {
+  if (!Array.isArray(eventData)) return '';
+
+  // For InsertBid events, size is at index 3
+  if (eventType === BlockchainEventType.INSERT && eventData.length > 3) {
+    return String(eventData[3] || '');
+  }
+  // For DeleteBid events, size is at index 2
+  else if (eventType === BlockchainEventType.DELETE && eventData.length > 2) {
+    return String(eventData[2] || '');
+  }
+
+  return '';
+};
+
+/**
+ * Extract bytecode hash from event data
+ * For both InsertBid and DeleteBid: eventData[0] = bytecodeHash
+ * @param eventData Event data array
+ * @returns Bytecode hash or empty string
+ */
+export const getBytecodeHashFromEventData = (
   eventData: Record<string, unknown>
 ): string => {
-  // Size is typically at index 3
-  if (Array.isArray(eventData) && eventData.length > 3) {
-    return eventData[3] || '';
-  }
-  return '';
+  if (!Array.isArray(eventData) || eventData.length === 0) return '';
+  return String(eventData[0] || '');
 };
 
 /**

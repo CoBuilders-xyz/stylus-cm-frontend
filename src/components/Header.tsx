@@ -22,8 +22,8 @@ export default function Header() {
           </Link>
         </span>
         <Link href='/cache-status'>Cache Status</Link>
+        <Link href='/blockchain-events'>Cache Events</Link>
         <Link href='/explore-contracts'>Explore Contracts</Link>
-        <Link href='/blockchain-events'>Blockchain Events</Link>
         <Link href='/my-contracts'>My Contracts</Link>
       </div>
       <div className='space-x-4 text-xs flex items-center'>
