@@ -22,7 +22,7 @@ import {
   copyToClipboard,
 } from '@/utils/blockchainEventFormatting';
 import { formatSize } from '@/utils/formatting';
-import { Copy, ExternalLink, X } from 'lucide-react';
+import { Copy, X } from 'lucide-react';
 
 export default function BlockchainEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<BlockchainEvent | null>(
@@ -77,10 +77,6 @@ export default function BlockchainEventsPage() {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-  };
-
-  const handleExternalLink = (url: string) => {
-    window.open(url, '_blank');
   };
 
   return (
@@ -160,18 +156,6 @@ export default function BlockchainEventsPage() {
                                 <Copy className='w-3 h-3' />
                               )}
                             </Button>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() =>
-                                handleExternalLink(
-                                  `https://etherscan.io/tx/${selectedEvent.transactionHash}`
-                                )
-                              }
-                              className='p-1 h-auto hover:bg-gray-800'
-                            >
-                              <ExternalLink className='w-3 h-3' />
-                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -225,7 +209,7 @@ export default function BlockchainEventsPage() {
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
                         <TableCell className='font-medium text-gray-400 w-1/3'>
-                          Contract Address
+                          Cache Manager Address
                         </TableCell>
                         <TableCell className='text-left w-2/3'>
                           <div className='flex items-center space-x-2'>
@@ -255,34 +239,13 @@ export default function BlockchainEventsPage() {
                                 <Copy className='w-3 h-3' />
                               )}
                             </Button>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() =>
-                                handleExternalLink(
-                                  `https://etherscan.io/address/${selectedEvent.contractAddress}`
-                                )
-                              }
-                              className='p-1 h-auto hover:bg-gray-800'
-                            >
-                              <ExternalLink className='w-3 h-3' />
-                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
+
                       <TableRow className='hover:bg-transparent'>
                         <TableCell className='font-medium text-gray-400 w-1/3'>
-                          Contract Name
-                        </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <span className='font-medium'>
-                            {selectedEvent.contractName}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
-                          Origin Address
+                          Bidder Address
                         </TableCell>
                         <TableCell className='text-left w-2/3'>
                           <div className='flex items-center space-x-2'>
@@ -415,23 +378,6 @@ export default function BlockchainEventsPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                      <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
-                          Event Type
-                        </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <Badge
-                            variant={
-                              selectedEvent.isRealTime ? 'default' : 'secondary'
-                            }
-                            className='px-3 py-1 text-sm font-semibold w-fit'
-                          >
-                            {selectedEvent.isRealTime
-                              ? 'Real-time'
-                              : 'Historical'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
                       <TableRow className='hover:bg-transparent'>
                         <TableCell className='font-medium text-gray-400 w-1/3'>
                           Blockchain

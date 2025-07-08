@@ -39,14 +39,7 @@ import {
 } from '../utils/blockchainEventFormatting';
 import { formatSize } from '../utils/formatting';
 import NoticeBanner from './NoticeBanner';
-import {
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Copy,
-  ExternalLink,
-} from 'lucide-react';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
 
@@ -167,11 +160,6 @@ const EventRow = React.memo(
       }
     };
 
-    const handleExternalLink = (url: string, e: React.MouseEvent) => {
-      e.stopPropagation(); // Prevent row click event
-      window.open(url, '_blank');
-    };
-
     // Extract event data
     const bidAmount = getBidAmountFromEventData(
       event.eventData,
@@ -208,19 +196,6 @@ const EventRow = React.memo(
               ) : (
                 <Copy className='w-3 h-3' />
               )}
-            </Button>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={(e) =>
-                handleExternalLink(
-                  `https://etherscan.io/tx/${event.transactionHash}`,
-                  e
-                )
-              }
-              className='p-1 h-auto hover:bg-gray-800'
-            >
-              <ExternalLink className='w-3 h-3' />
             </Button>
           </div>
         </TableCell>
@@ -464,7 +439,7 @@ function BlockchainEventsTable({
   return (
     <div className='overflow-hidden'>
       <div className='flex justify-between items-center mb-8'>
-        <h1 className='text-xl font-bold text-white'>Blockchain Events</h1>
+        <h1 className='text-xl font-bold text-white'>Cache Events</h1>
         <div className='flex items-center gap-4'>
           <EventTypeFilter
             currentFilter={eventTypeFilter}
