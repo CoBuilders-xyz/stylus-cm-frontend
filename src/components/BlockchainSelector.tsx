@@ -1,7 +1,8 @@
 'use client';
 
 import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
-import { useSwitchChain } from 'wagmi';
+import { useSwitchChain, useAccount } from 'wagmi';
+import { useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,33 @@ export default function BlockchainSelector() {
   } = useBlockchainSelection();
 
   const { switchChain } = useSwitchChain();
+  const { isConnected, chain } = useAccount();
+
+  // Auto-switch to selected blockchain on load
+  useEffect(() => {
+    console.log('BlockchainSelector effect running:', {
+      selectedBlockchain: selectedBlockchain?.name,
+      chainId: selectedBlockchain?.chainId,
+      hasSwitchChain: !!switchChain,
+      isLoading,
+      isWalletConnected: isConnected,
+      currentWalletChain: chain?.id,
+      currentWalletChainName: chain?.name,
+    });
+
+    if (selectedBlockchain && switchChain && !isLoading && isConnected) {
+      try {
+        switchChain({ chainId: selectedBlockchain.chainId });
+      } catch (error) {
+        console.warn(
+          `Failed to switch to chain ${selectedBlockchain.name}:`,
+          error
+        );
+      }
+    } else if (selectedBlockchain && !isConnected) {
+      console.log('Cannot switch chain: wallet not connected');
+    }
+  }, [selectedBlockchain, switchChain, isLoading, isConnected, chain]);
 
   // Don't render if still loading or no blockchains available
   if (isLoading || availableBlockchains.length === 0) {
@@ -29,13 +57,7 @@ export default function BlockchainSelector() {
   const handleBlockchainSelect = (
     blockchain: (typeof availableBlockchains)[0]
   ) => {
-    // Update the blockchain selection context
     setSelectedBlockchain(blockchain);
-
-    // Switch to the corresponding wagmi chain
-    if (switchChain) {
-      switchChain({ chainId: blockchain.chainId });
-    }
   };
 
   return (
