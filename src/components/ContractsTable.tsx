@@ -28,10 +28,15 @@ import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
 import { formatEther } from 'viem';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -535,7 +540,27 @@ function ContractsTable({
                       currentSortOrder={sortOrder}
                       onSort={setSorting}
                     >
-                      Effective Bid
+                      <div className='flex items-center gap-2'>
+                        Effective Bid
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className='w-4 h-4 cursor-help' />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className='max-w-xs'>
+                              <strong>Bids decay over time.</strong>
+                              <br />
+                              The effective bid is reduced by a{' '}
+                              <em>decay penalty</em>, calculated as:
+                              <br />
+                              <code>decayPenalty = decayRate × timeCached</code>
+                              <br />
+                              The longer a contract stays cached, the lower its
+                              effective bid becomes.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </SortableTableHead>
                     <SortableTableHead
                       sortField={ContractSortField.BYTECODE_SIZE}

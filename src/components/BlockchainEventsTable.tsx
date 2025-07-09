@@ -39,7 +39,14 @@ import {
 } from '../utils/blockchainEventFormatting';
 import { formatSize } from '../utils/formatting';
 import NoticeBanner from './NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import {
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  Info,
+} from 'lucide-react';
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
 
@@ -509,21 +516,32 @@ function BlockchainEventsTable({
                         Timestamp
                       </SortableTableHead>
                       <TableHead className='font-medium text-base py-6'>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className='cursor-help underline decoration-dotted underline-offset-2'>
-                              Bid Amount
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className='bg-gray-800 text-white border border-gray-600 max-w-xs'>
-                            <p>
-                              Event Bid Amount includes
-                              decayRate*biddingTimestamp, for that reason will
-                              differ to the price paid for bidding, for more
-                              accurate values check contract tables
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <div className='flex items-center gap-2'>
+                          Bid Amount
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className='w-4 h-4 cursor-help' />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className='max-w-xs'>
+                                <strong>
+                                  Event Bid Amount includes time decay.
+                                </strong>
+                                <br />
+                                It’s calculated as:
+                                <br />
+                                <code>
+                                  bidAmount + (decayRate × biddingTimestamp)
+                                </code>
+                                <br />
+                                This may differ from the actual amount paid.
+                                <br />
+                                For accurate values, refer to the contract
+                                tables.
+                              </p>{' '}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </TableHead>
                       <TableHead className='font-medium text-base py-6'>
                         Size
