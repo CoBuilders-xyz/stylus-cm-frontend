@@ -1,16 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import * as SwitchPrimitive from '@radix-ui/react-switch';
-import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { Abi } from 'viem';
-import { AlertTriangle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Info,
+} from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   showSuccessToast,
   showErrorToast,
@@ -46,6 +55,7 @@ export function AutomatedBiddingSection({
   // Separate state for controlling panel visibility
   const [showAutomationPanel, setShowAutomationPanel] = useState(false);
   const [contractExists, setContractExists] = useState(false);
+  const [originalMaxBid, setOriginalMaxBid] = useState('0');
 
   // Local state for the automated bidding toggle within the form - enabled by default
   const [automatedBidding, setAutomatedBidding] = useState(true);
@@ -117,12 +127,14 @@ export function AutomatedBiddingSection({
         // Format the max bid to ETH for display
         const maxBidEth = formatEther(existingContract.maxBid.toString());
         setMaxBidAmount(maxBidEth);
+        setOriginalMaxBid(maxBidEth);
         setContractExists(true);
       } else {
         console.log('Contract is not automated:', contract.address);
         // If not found, reset to default values
         setAutomatedBidding(true);
         setMaxBidAmount('');
+        setOriginalMaxBid('0');
         setContractExists(false);
       }
     }
@@ -449,6 +461,58 @@ export function AutomatedBiddingSection({
     }
   };
 
+  const handleToggleAutomation = () => {
+    if (!currentBlockchain) {
+      console.error(
+        'No blockchain connected. Please connect your wallet to the correct network.'
+      );
+      showSomethingWentWrongToast();
+      return;
+    }
+
+    if (!contract || !contract.address) {
+      console.error('No contract address provided');
+      showSomethingWentWrongToast();
+      return;
+    }
+
+    try {
+      const newAutomatedBidding = !automatedBidding;
+      console.log('Toggling automation with values:', {
+        contractAddress: contract.address,
+        maxBidAmount: originalMaxBid,
+        automatedBidding: newAutomatedBidding,
+      });
+
+      // Create transaction parameters for updateContract with funding = 0
+      const txParams = {
+        address:
+          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
+        abi: cacheManagerAutomationAbi.abi as Abi,
+        functionName: 'updateContract',
+        args: [
+          contract.address,
+          parseEther(originalMaxBid),
+          newAutomatedBidding,
+        ] as [string, bigint, boolean],
+      };
+
+      // Store the parameters for retry functionality
+      setLastTxParams({
+        ...txParams,
+        value: '0', // updateContract is nonpayable, so no ETH value needed
+      });
+
+      // Send the transaction
+      writeContract(txParams, (hash) => {
+        console.log(`Toggle transaction submitted with hash: ${hash}`);
+      });
+    } catch (err) {
+      console.error('Error submitting toggle transaction:', err);
+      showSomethingWentWrongToast();
+    }
+  };
+
   return (
     <div
       className='relative rounded-md p-4 overflow-hidden'
@@ -501,77 +565,148 @@ export function AutomatedBiddingSection({
 
       {/* Display user balance */}
       <div className='mt-2 text-sm text-white relative z-10'>
-        <span>Your automation balance: </span>
-        <span className='font-semibold'>{formattedUserBalance} ETH</span>
+        <div className='flex items-center justify-between'>
+          <div>
+            <span>Automation balance: </span>
+            <span className='font-semibold'>{formattedUserBalance} ETH</span>
+          </div>
+        </div>
+
+        {/* Show automation status for existing contracts */}
+        {contractExists && (
+          <div className='flex items-center justify-left mt-1'>
+            <div>
+              <span>Automation is currently: </span>
+              <span className='font-semibold'>
+                {automatedBidding ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+            <div className='flex items-center px-2'>
+              <Button
+                onClick={handleToggleAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
+                disabled={isTransactionInProgress || isSuccess}
+              >
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-3 w-3 animate-spin' />
+                  </div>
+                ) : automatedBidding ? (
+                  'Disable'
+                ) : (
+                  'Enable'
+                )}
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className='w-4 h-4 cursor-help' />
+                </TooltipTrigger>
+                <TooltipContent>
+                  {automatedBidding ? (
+                    <p className='max-w-xs'>
+                      <strong>Disable automation for this contract.</strong>
+                      <br />
+                      It will no longer be considered in upcoming automated
+                      bidding rounds.
+                    </p>
+                  ) : (
+                    <p className='max-w-xs'>
+                      <strong>Enable automation for this contract.</strong>
+                      <br />
+                      It will be included in the next automated bidding round.
+                    </p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Form with all inputs including the toggle - shown only when panel is open */}
       {showAutomationPanel && (
         <div className='mt-4 relative z-10'>
           <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
-            {/* Row 1: Enable Automated Bidding Toggle */}
-            <div className='self-center'>
-              <p className='font-bold'>Enable Automated Bidding</p>
-            </div>
-            <div className='flex justify-end'>
-              <SwitchPrimitive.Root
-                checked={automatedBidding}
-                onCheckedChange={setAutomatedBidding}
-                className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]',
-                  isTransactionInProgress ? 'opacity-60 cursor-not-allowed' : ''
-                )}
-                disabled={isTransactionInProgress}
-              >
-                <SwitchPrimitive.Thumb
-                  className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-                  )}
-                />
-              </SwitchPrimitive.Root>
-            </div>
-            <div></div>
-
-            {/* Row 2: Automation Funding */}
-            <div className='self-center'>
-              <p className='font-bold'>Automation Funding</p>
-            </div>
-            <div className='flex justify-end'>
-              <div className='flex flex-col w-full max-w-[200px]'>
-                <div className='relative'>
-                  <Input
-                    type='text'
-                    placeholder='Enter amount'
-                    value={fundingValue}
-                    onChange={handleFundingChange}
-                    className={`pr-12 bg-white border-none text-gray-500 ${
-                      fundingError ? 'border-red-500' : ''
-                    } ${
-                      isTransactionInProgress
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                        : ''
-                    }`}
-                    disabled={isTransactionInProgress || contractExists}
-                  />
-                  <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
-                    ETH
+            {/* Row 1: Automation Funding - only show for new contracts */}
+            {!contractExists && (
+              <>
+                <div className='self-center'>
+                  <div className='flex items-center space-x-2'>
+                    <p className='font-bold'>Automation Funding</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className='w-4 h-4 cursor-help' />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='max-w-xs'>
+                          <strong>Fund the automation gas tank.</strong>
+                          <br />
+                          This is the balance your automation contract will use
+                          to place bids on your behalf.
+                          <br />
+                          You can fund it now or later using the &quot;Gas
+                          Tank&quot; section in the navbar.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
-                {fundingError && (
-                  <div className='text-white text-xs italic text-left mt-1'>
-                    {fundingError}
+                <div className='flex justify-end'>
+                  <div className='flex flex-col w-full max-w-[200px]'>
+                    <div className='relative'>
+                      <Input
+                        type='text'
+                        placeholder='Enter amount'
+                        value={fundingValue}
+                        onChange={handleFundingChange}
+                        className={`pr-12 bg-white border-none text-gray-500 ${
+                          fundingError ? 'border-red-500' : ''
+                        } ${
+                          isTransactionInProgress
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                            : ''
+                        }`}
+                        disabled={isTransactionInProgress}
+                      />
+                      <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                        ETH
+                      </div>
+                    </div>
+                    {fundingError && (
+                      <div className='text-white text-xs italic text-left mt-1'>
+                        {fundingError}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-            <div></div>
+                </div>
+                <div></div>
+              </>
+            )}
 
-            {/* Row 3: Maximum Bid Amount */}
+            {/* Row 2: Maximum Bid Amount */}
             <div className='self-center'>
-              <p className='font-bold'>Maximum Bid Amount</p>
+              <div className='flex items-center space-x-2'>
+                <p className='font-bold'>Maximum Bid Amount</p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='w-4 h-4 cursor-help' />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className='max-w-xs'>
+                      <strong>Defines your bidding limit.</strong>
+                      <br />
+                      The system will bid the lower of:
+                      <br />
+                      - The amount that decays to the current minBid in ~1 month
+                      <br />
+                      - Your defined max bid
+                      <br />
+                      It only bids when the Cache Manager is 98% or more full;
+                      otherwise, it bids 0.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
             <div className='flex justify-end'>
               <div className='flex flex-col w-full max-w-[200px]'>
@@ -604,47 +739,30 @@ export function AutomatedBiddingSection({
             <div></div>
           </div>
 
-          <div className='flex items-start space-x-2 mt-6'>
-            <Checkbox
-              id='disclaimer'
-              checked={disclaimerChecked}
-              onCheckedChange={(checked) =>
-                setDisclaimerChecked(checked === true)
-              }
-              className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
-            />
-            <Label
-              htmlFor='disclaimer'
-              className='text-sm font-medium leading-tight'
-            >
-              I&apos;m aware this is an experimental feature and understand the
-              risks associated with automated bidding. Results may vary and
-              I&apos;m responsible for monitoring my account.
-            </Label>
-          </div>
-
-          {/* Button positioned to the right below the inputs */}
-          <div className='flex justify-end mt-4'>
-            {contractExists ? (
-              <Button
-                onClick={handleUpdateAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
-                }
-              >
-                {isTransactionInProgress ? (
-                  <div className='flex items-center'>
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                  </div>
-                ) : (
-                  'Update Automation'
-                )}
-              </Button>
-            ) : (
+          {/* Disclaimer and Set Automation button for new contracts */}
+          {!contractExists && (
+            <div className='flex items-start justify-between space-x-4 mt-6'>
+              <div className='flex items-start space-x-2'>
+                <Checkbox
+                  id='disclaimer'
+                  checked={disclaimerChecked}
+                  onCheckedChange={(checked) =>
+                    setDisclaimerChecked(checked === true)
+                  }
+                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                />
+                <Label
+                  htmlFor='disclaimer'
+                  className='text-sm font-medium leading-tight'
+                >
+                  I&apos;m aware this is an experimental feature and understand
+                  the risks associated with automated bidding. Results may vary
+                  and I&apos;m responsible for monitoring my account.
+                </Label>
+              </div>
               <Button
                 onClick={handleSetAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
                 disabled={
                   isTransactionInProgress || isSuccess || !disclaimerChecked
                 }
@@ -657,8 +775,47 @@ export function AutomatedBiddingSection({
                   'Set Automation'
                 )}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Update button for existing contracts */}
+          {contractExists && (
+            <div className='flex items-start justify-between space-x-4 mt-6'>
+              <div className='flex items-start space-x-2'>
+                <Checkbox
+                  id='disclaimer'
+                  checked={disclaimerChecked}
+                  onCheckedChange={(checked) =>
+                    setDisclaimerChecked(checked === true)
+                  }
+                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                />
+                <Label
+                  htmlFor='disclaimer'
+                  className='text-sm font-medium leading-tight'
+                >
+                  I&apos;m aware this is an experimental feature and understand
+                  the risks associated with automated bidding. Results may vary
+                  and I&apos;m responsible for monitoring my account.
+                </Label>
+              </div>
+              <Button
+                onClick={handleUpdateAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                disabled={
+                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                }
+              >
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  </div>
+                ) : (
+                  'Update Automation'
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
