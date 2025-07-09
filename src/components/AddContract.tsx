@@ -7,21 +7,25 @@ import { useSidePanel } from './SidePanel';
 import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
+import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 
 interface AddContractProps {
   onSuccess?: () => void;
   initialAddress?: string; // New prop for pre-filled address
+  shouldRedirect?: boolean;
 }
 
 export default function AddContract({
   onSuccess,
   initialAddress,
+  shouldRedirect = false,
 }: AddContractProps) {
   const { onClose } = useSidePanel();
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
   const { currentBlockchainId } = useBlockchainService();
+  const router = useRouter();
 
   // State for the form - initialize with initialAddress if provided
   const [step, setStep] = useState<1 | 2>(initialAddress ? 2 : 1);
@@ -95,6 +99,11 @@ export default function AddContract({
 
       // Close the panel
       onClose();
+
+      // Redirect to my-contracts if shouldRedirect is true
+      if (shouldRedirect) {
+        router.push('/my-contracts');
+      }
     } catch (err) {
       console.error('Failed to add contract:', err);
       setError('Failed to add the contract. Please try again.');

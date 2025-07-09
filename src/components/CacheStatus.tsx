@@ -66,7 +66,7 @@ export default function CacheStatus() {
               onClick={handleAddNewContract}
             >
               <span>+</span>
-              <span>Add your stylus contract to cache</span>
+              <span>Add Your Stylus Contract to the Cache</span>
             </Button>
           </div>
 
@@ -138,6 +138,7 @@ export default function CacheStatus() {
       >
         {isPanelOpen && (
           <AddContract
+            shouldRedirect={true}
             onSuccess={() => {
               setIsPanelOpen(false);
             }}
