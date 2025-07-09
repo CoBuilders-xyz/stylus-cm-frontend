@@ -17,7 +17,10 @@ export default function Header() {
     <div className='w-full bg-black text-white z-10 flex flex-wrap items-center justify-between p-4 px-10 fixed'>
       <div className='space-x-4 text-xs flex items-center'>
         <span className='flex items-center'>
-          <Link href='/'>
+          <Link
+            href='https://docs.arbitrum.io/stylus/how-tos/caching-contracts'
+            target='_blank'
+          >
             <Image src={logo} alt='logo' className='mr-2' />
           </Link>
         </span>
