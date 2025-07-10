@@ -18,6 +18,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { useBlockchainEvents } from '../hooks/useBlockchainEvents';
 import {
   BlockchainEventSortField,
@@ -39,7 +46,14 @@ import {
 } from '../utils/blockchainEventFormatting';
 import { formatSize } from '../utils/formatting';
 import NoticeBanner from './NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import {
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  Info,
+} from 'lucide-react';
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
 
@@ -255,17 +269,27 @@ const EventTypeFilter = React.memo(
     return (
       <div className='flex items-center space-x-2'>
         <span className='text-sm text-gray-300'>Filter:</span>
-        <select
-          className='bg-black text-white rounded-md px-3 py-2 border border-gray-500 focus:outline-none focus:border-white'
-          value={currentFilter || ''}
-          onChange={(e) =>
-            onFilterChange((e.target.value as BlockchainEventType) || null)
+        <Select
+          value={currentFilter || 'all'}
+          onValueChange={(value) =>
+            onFilterChange(
+              value === 'all' ? null : (value as BlockchainEventType)
+            )
           }
         >
-          <option value=''>All Events</option>
-          <option value={BlockchainEventType.INSERT}>Insert Events</option>
-          <option value={BlockchainEventType.DELETE}>Delete Events</option>
-        </select>
+          <SelectTrigger className='w-[180px] bg-black text-white border-gray-500 focus:border-white'>
+            <SelectValue placeholder='All Events' />
+          </SelectTrigger>
+          <SelectContent className='bg-black text-white border-gray-500'>
+            <SelectItem value='all'>All Events</SelectItem>
+            <SelectItem value={BlockchainEventType.INSERT}>
+              Insert Events
+            </SelectItem>
+            <SelectItem value={BlockchainEventType.DELETE}>
+              Delete Events
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     );
   }
@@ -509,21 +533,32 @@ function BlockchainEventsTable({
                         Timestamp
                       </SortableTableHead>
                       <TableHead className='font-medium text-base py-6'>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className='cursor-help underline decoration-dotted underline-offset-2'>
-                              Bid Amount
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className='bg-gray-800 text-white border border-gray-600 max-w-xs'>
-                            <p>
-                              Event Bid Amount includes
-                              decayRate*biddingTimestamp, for that reason will
-                              differ to the price paid for bidding, for more
-                              accurate values check contract tables
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <div className='flex items-center gap-2'>
+                          Bid Amount
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className='w-4 h-4 cursor-help' />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className='max-w-xs'>
+                                <strong>
+                                  Event Bid Amount includes time decay.
+                                </strong>
+                                <br />
+                                It’s calculated as:
+                                <br />
+                                <code>
+                                  bidAmount + (decayRate × biddingTimestamp)
+                                </code>
+                                <br />
+                                This may differ from the actual amount paid.
+                                <br />
+                                For accurate values, refer to the contract
+                                tables.
+                              </p>{' '}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </TableHead>
                       <TableHead className='font-medium text-base py-6'>
                         Size

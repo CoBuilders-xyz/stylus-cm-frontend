@@ -62,6 +62,13 @@ export default function ExploreContractsPage() {
 
   // Handler for adding an existing contract (from table row or details)
   const handleAddExistingContract = (contract: Contract) => {
+    if (!isAuthenticated) {
+      // Add a small delay to allow any dropdown overlays to close properly
+      setTimeout(() => {
+        setIsAuthModalOpen(true);
+      }, 100);
+      return;
+    }
     setContractAddressToAdd(contract.address);
     setActivePanelContent('add');
     setIsPanelOpen(true);
@@ -135,11 +142,10 @@ export default function ExploreContractsPage() {
               description='Please connect to your wallet and sign the transaction to add contracts.'
             />
             <div className='flex justify-center'>
-              <div
-                className='px-4 py-2 bg-black text-white border border-white rounded-md inline-flex items-center gap-2 cursor-pointer'
-                onClick={() => setIsAuthModalOpen(false)}
-              >
-                <ConnectWallet />
+              <div className='px-4 py-2 bg-black text-white border border-white rounded-md inline-flex items-center gap-2'>
+                <ConnectWallet
+                  customCallback={() => setIsAuthModalOpen(false)}
+                />
               </div>
             </div>
           </div>

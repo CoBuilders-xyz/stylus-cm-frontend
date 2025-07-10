@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSidePanel } from './SidePanel';
-import { X } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   UserAlertPreferences,
@@ -13,6 +13,12 @@ import { useAlertService } from '@/hooks/useAlertService';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
 import { showSuccessToast, showErrorToast } from '@/components/Toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface UserAlertSettingsProps {
   onSuccess?: () => void;
@@ -487,12 +493,38 @@ export default function UserAlertSettings({
           {telegramEnabled && (
             <div className='mt-4'>
               <label className='block text-sm text-gray-300 mb-1'>
-                Telegram Chat ID
+                <div className='flex items-center gap-2'>
+                  Telegram Chat ID{' '}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className='w-4 h-4 cursor-help' />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='max-w-xs'>
+                          <strong>Your unique Telegram chat ID.</strong>
+                          <br />
+                          Used to send you automation alerts via Telegram.
+                          <br />
+                          You can get it by messaging{' '}
+                          <a
+                            href='https://t.me/userinfobot'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                          >
+                            @userinfobot
+                          </a>{' '}
+                          — it will reply with your chat ID.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </label>
               <div className='flex gap-2'>
                 <Input
                   type='text'
-                  placeholder='@tg-user'
+                  placeholder='0123456789'
                   value={telegramDestination}
                   onChange={handleTelegramDestinationChange}
                   className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
@@ -537,12 +569,38 @@ export default function UserAlertSettings({
           {slackEnabled && (
             <div className='mt-4'>
               <label className='block text-sm text-gray-300 mb-1'>
-                Slack Username
+                <div className='flex items-center gap-2'>
+                  Slack Webhook URL
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className='w-4 h-4 cursor-help' />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className='max-w-xs'>
+                        <strong>
+                          Used to send automation alerts to your Slack channel.
+                        </strong>
+                        <br />
+                        You can create a webhook URL by adding an{' '}
+                        <em>Incoming Webhook</em> to your Slack workspace.
+                        <br />
+                        Visit:{' '}
+                        <a
+                          href='https://api.slack.com/messaging/webhooks'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                        >
+                          Slack Webhooks Setup
+                        </a>
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </label>
               <div className='flex gap-2'>
                 <Input
                   type='text'
-                  placeholder='Username'
+                  placeholder='https://slack-webhook.co/'
                   value={slackDestination}
                   onChange={handleSlackDestinationChange}
                   className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
@@ -584,12 +642,32 @@ export default function UserAlertSettings({
           {webhookEnabled && (
             <div className='mt-4'>
               <label className='block text-sm text-gray-300 mb-1'>
-                Webhook URL
+                <div className='flex items-center gap-2'>
+                  Webhook URL
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className='w-4 h-4 cursor-help' />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='max-w-xs'>
+                          <strong>
+                            Send automation alerts to your own backend.
+                          </strong>
+                          <br />
+                          Provide a URL that accepts POST requests — your server
+                          will receive real-time updates about automated bidding
+                          actions.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </label>
               <div className='flex gap-2'>
                 <Input
                   type='url'
-                  placeholder='https://url.co/'
+                  placeholder='https://webhook.co/your-endpoint'
                   value={webhookDestination}
                   onChange={handleWebhookDestinationChange}
                   className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
