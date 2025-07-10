@@ -10,7 +10,9 @@ import {
  */
 export interface CacheManagerActivityPeriod {
   period: string;
-  count: number;
+  insertCount: number;
+  deleteCount: number;
+  netChange: number;
 }
 
 /**
@@ -23,7 +25,9 @@ export type CacheManagerActivityTimespan = BidAverageTimespan;
  */
 export interface CacheManagerActivityResult {
   activityData: CacheManagerActivityPeriod[];
-  totalActivity: number;
+  totalInserts: number;
+  totalDeletes: number;
+  totalNetChange: number;
   isLoading: boolean;
   error: Error | null;
   currentBlockchainId: string | null;
@@ -43,7 +47,9 @@ export function useCacheManagerActivity(
   const [activityData, setActivityData] = useState<
     CacheManagerActivityPeriod[]
   >([]);
-  const [totalActivity, setTotalActivity] = useState<number>(0);
+  const [totalInserts, setTotalInserts] = useState<number>(0);
+  const [totalDeletes, setTotalDeletes] = useState<number>(0);
+  const [totalNetChange, setTotalNetChange] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [timespan, setTimespan] =
@@ -75,7 +81,9 @@ export function useCacheManagerActivity(
       .getBidTrends(currentBlockchainId, timespan)
       .then((data) => {
         setActivityData(data.periods);
-        setTotalActivity(data.global.count);
+        setTotalInserts(data.global.insertCount);
+        setTotalDeletes(data.global.deleteCount);
+        setTotalNetChange(data.global.netChange);
       })
       .catch((err) => {
         console.error('Error fetching bid trends data:', err);
@@ -95,7 +103,9 @@ export function useCacheManagerActivity(
 
   return {
     activityData,
-    totalActivity,
+    totalInserts,
+    totalDeletes,
+    totalNetChange,
     isLoading: isLoading || isLoadingBlockchain,
     error,
     currentBlockchainId,
