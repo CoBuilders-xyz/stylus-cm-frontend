@@ -22,7 +22,13 @@ import {
   copyToClipboard,
 } from '@/utils/blockchainEventFormatting';
 import { formatSize } from '@/utils/formatting';
-import { Copy, X } from 'lucide-react';
+import { Copy, Info, X } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function BlockchainEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<BlockchainEvent | null>(
@@ -303,7 +309,36 @@ export default function BlockchainEventsPage() {
                       ) && (
                         <TableRow className='hover:bg-transparent'>
                           <TableCell className='font-medium text-gray-400 w-1/3'>
-                            Bid Amount
+                            <div className='flex items-center gap-2'>
+                              Bid Amount
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className='w-4 h-4 cursor-help' />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className='max-w-xs'>
+                                      <strong>
+                                        Event Bid Amount includes time decay.
+                                      </strong>
+                                      <br />
+                                      It’s calculated as:
+                                      <br />
+                                      <code>
+                                        bidAmount + (decayRate ×
+                                        biddingTimestamp)
+                                      </code>
+                                      <br />
+                                      This may differ from the actual amount
+                                      paid.
+                                      <br />
+                                      For accurate values, refer to the contract
+                                      tables.
+                                    </p>{' '}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
                           </TableCell>
                           <TableCell className='text-left w-2/3'>
                             <span className='font-mono text-sm'>
