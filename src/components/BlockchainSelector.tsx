@@ -1,7 +1,8 @@
 'use client';
 
-import { useAccount } from 'wagmi';
 import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
+import { useSwitchChain, useAccount } from 'wagmi';
+import { useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +13,6 @@ import {
 import { ChevronDown, Globe } from 'lucide-react';
 
 export default function BlockchainSelector() {
-  const { isConnected } = useAccount();
   const {
     selectedBlockchain,
     availableBlockchains,
@@ -20,15 +20,45 @@ export default function BlockchainSelector() {
     isLoading,
   } = useBlockchainSelection();
 
-  // Don't render if wallet is connected
-  if (isConnected) {
-    return null;
-  }
+  const { switchChain } = useSwitchChain();
+  const { isConnected, chain } = useAccount();
+
+  // Auto-switch to selected blockchain on load
+  useEffect(() => {
+    console.log('BlockchainSelector effect running:', {
+      selectedBlockchain: selectedBlockchain?.name,
+      chainId: selectedBlockchain?.chainId,
+      hasSwitchChain: !!switchChain,
+      isLoading,
+      isWalletConnected: isConnected,
+      currentWalletChain: chain?.id,
+      currentWalletChainName: chain?.name,
+    });
+
+    if (selectedBlockchain && switchChain && !isLoading && isConnected) {
+      try {
+        switchChain({ chainId: selectedBlockchain.chainId });
+      } catch (error) {
+        console.warn(
+          `Failed to switch to chain ${selectedBlockchain.name}:`,
+          error
+        );
+      }
+    } else if (selectedBlockchain && !isConnected) {
+      console.log('Cannot switch chain: wallet not connected');
+    }
+  }, [selectedBlockchain, switchChain, isLoading, isConnected, chain]);
 
   // Don't render if still loading or no blockchains available
   if (isLoading || availableBlockchains.length === 0) {
     return null;
   }
+
+  const handleBlockchainSelect = (
+    blockchain: (typeof availableBlockchains)[0]
+  ) => {
+    setSelectedBlockchain(blockchain);
+  };
 
   return (
     <DropdownMenu>
@@ -53,7 +83,7 @@ export default function BlockchainSelector() {
           {availableBlockchains.map((blockchain) => (
             <DropdownMenuItem
               key={blockchain.id}
-              onClick={() => setSelectedBlockchain(blockchain)}
+              onClick={() => handleBlockchainSelect(blockchain)}
               className={`cursor-pointer hover:bg-gray-800 ${
                 selectedBlockchain?.id === blockchain.id ? 'bg-gray-700' : ''
               }`}

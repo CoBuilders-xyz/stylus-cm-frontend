@@ -25,14 +25,11 @@ const DEFAULT_CHAIN_ID = process.env.NEXT_PUBLIC_DEFAULT_CHAIN_ID; // Arbitrum S
  * Automatically uses the authentication token from context
  * Also provides the current blockchain based on connected chain
  *
- * **Default Blockchain Strategy:**
- * When wallet is connected, uses the chain from the wallet.
- * When wallet is not connected, uses the blockchain selected via BlockchainSelectionProvider.
- * This allows:
- * - Non-authenticated routes to display blockchain data immediately
- * - Better UX for users who haven't connected their wallet yet
- * - User-controlled blockchain selection when wallet is disconnected
- * - Seamless transition when wallet connects with a different chain
+ * **Updated Blockchain Strategy:**
+ * 1. If user has explicitly selected a blockchain via UI, use that selection
+ * 2. Otherwise, when wallet is connected, uses the chain from the wallet
+ * 3. When wallet is not connected, uses the blockchain selected via BlockchainSelectionProvider
+ * 4. Falls back to default chain if none available
  *
  * **Fallback Strategy:**
  * If no blockchain is available from either source, it will use the first available
@@ -45,7 +42,7 @@ export function useBlockchainService(
   requireAuth: boolean = true
 ): BlockchainServiceResult {
   const { accessToken, isAuthenticated } = useAuthentication();
-  const { selectedBlockchain } = useBlockchainSelection();
+  const { selectedBlockchain, isUserSelected } = useBlockchainSelection();
   const { chain } = useAccount();
   const [currentBlockchain, setCurrentBlockchain] = useState<Blockchain | null>(
     null
@@ -77,10 +74,13 @@ export function useBlockchainService(
     setIsLoading(true);
     setError(null);
 
-    // Determine which chain ID to use
-    // Priority: connected wallet chain > user selected blockchain > default
+    // Updated priority logic:
+    // 1. If user explicitly selected a blockchain via UI, prioritize that
+    // 2. Otherwise use: connected wallet chain > user selected blockchain > default
     const targetChainId =
-      chain?.id || selectedBlockchain?.chainId || DEFAULT_CHAIN_ID;
+      isUserSelected && selectedBlockchain
+        ? selectedBlockchain.chainId
+        : chain?.id || selectedBlockchain?.chainId || DEFAULT_CHAIN_ID;
 
     service
       .getBlockchains()
@@ -89,8 +89,12 @@ export function useBlockchainService(
           (blockchain) => blockchain.chainId === targetChainId
         );
 
+        // If user explicitly selected a blockchain, use it directly
+        if (isUserSelected && selectedBlockchain) {
+          matchingBlockchain = selectedBlockchain;
+        }
         // If wallet is not connected and we have a selectedBlockchain, use it directly
-        if (!chain?.id && selectedBlockchain) {
+        else if (!chain?.id && selectedBlockchain) {
           matchingBlockchain = selectedBlockchain;
         }
 
@@ -98,9 +102,13 @@ export function useBlockchainService(
           setCurrentBlockchain(matchingBlockchain);
           setCurrentBlockchainId(matchingBlockchain.id);
 
-          if (!chain?.id && selectedBlockchain) {
+          if (isUserSelected && selectedBlockchain) {
             console.log(
               `Using user-selected blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
+            );
+          } else if (!chain?.id && selectedBlockchain) {
+            console.log(
+              `Using context-selected blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
             );
           } else if (!chain?.id) {
             console.log(
@@ -131,7 +139,7 @@ export function useBlockchainService(
         setCurrentBlockchainId(null);
         setIsLoading(false);
       });
-  }, [service, chain?.id, selectedBlockchain]);
+  }, [service, chain?.id, selectedBlockchain, isUserSelected]);
 
   return {
     service,

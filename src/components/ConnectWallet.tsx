@@ -8,7 +8,7 @@ export default function ConnectWallet() {
       <ConnectButton
         label='Connect Wallet'
         accountStatus={'full'}
-        chainStatus={'name'}
+        chainStatus={'none'}
       />
     </div>
   );
