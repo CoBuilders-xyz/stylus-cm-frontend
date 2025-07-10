@@ -1,14 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import * as SwitchPrimitive from '@radix-ui/react-switch';
-import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { Abi } from 'viem';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Info,
+} from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   showSuccessToast,
   showErrorToast,
@@ -18,8 +29,6 @@ import {
 import { useReadContract, useAccount } from 'wagmi';
 
 interface AutomatedBiddingSectionProps {
-  automatedBidding: boolean;
-  setAutomatedBidding: (value: boolean) => void;
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
@@ -29,8 +38,6 @@ interface AutomatedBiddingSectionProps {
 }
 
 export function AutomatedBiddingSection({
-  automatedBidding,
-  setAutomatedBidding,
   maxBidAmount = '',
   setMaxBidAmount = () => {},
   automationFunding = '0', // Default to 0 for automation funding - initial amount to deposit when setting up automated bidding
@@ -40,14 +47,18 @@ export function AutomatedBiddingSection({
 }: AutomatedBiddingSectionProps) {
   // Local state for input values to ensure they update immediately
   const [inputValue, setInputValue] = useState(maxBidAmount);
-  /* Temporarily commented out while funding input is hidden
   const [fundingValue, setFundingValue] = useState(automationFunding);
-  */
   const [inputError, setInputError] = useState<string | null>(null);
-  /* Temporarily commented out while funding input is hidden
   const [fundingError, setFundingError] = useState<string | null>(null);
-  */
-  // Track the last checked contract address to detect changes
+  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
+
+  // Separate state for controlling panel visibility
+  const [showAutomationPanel, setShowAutomationPanel] = useState(false);
+  const [contractExists, setContractExists] = useState(false);
+  const [originalMaxBid, setOriginalMaxBid] = useState('0');
+
+  // Local state for the automated bidding toggle within the form - enabled by default
+  const [automatedBidding, setAutomatedBidding] = useState(true);
 
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
@@ -85,25 +96,6 @@ export function AutomatedBiddingSection({
       },
     });
 
-  // Log user contracts when available for debugging
-  useEffect(() => {
-    if (
-      userContracts &&
-      Array.isArray(userContracts) &&
-      userContracts.length > 0
-    ) {
-      console.log('User automated contracts found:', userContracts);
-      userContracts.forEach((contract, index) => {
-        console.log(`Contract ${index + 1}:`, {
-          address: contract.contractAddress,
-          maxBid: formatEther(contract.maxBid) + ' ETH',
-          lastBid: formatEther(contract.lastBid) + ' ETH',
-          enabled: contract.enabled ? 'Active' : 'Inactive',
-        });
-      });
-    }
-  }, [userContracts]);
-
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
@@ -123,32 +115,27 @@ export function AutomatedBiddingSection({
       // Remember this contract address to detect future changes
 
       // Look for the contract in user's automated contracts
-      const automatedContract = userContracts.find(
+      const existingContract = userContracts.find(
         (c) =>
           c.contractAddress.toLowerCase() === contract.address.toLowerCase()
       );
 
-      if (automatedContract) {
-        console.log(
-          'Contract found in automated contracts:',
-          automatedContract
-        );
-
+      if (existingContract) {
         // Update UI with the automated contract's values
-        setAutomatedBidding(automatedContract.enabled);
+        setAutomatedBidding(existingContract.enabled);
 
         // Format the max bid to ETH for display
-        const maxBidEth = formatEther(automatedContract.maxBid.toString());
+        const maxBidEth = formatEther(existingContract.maxBid.toString());
         setMaxBidAmount(maxBidEth);
-
-        console.log(
-          `Automation status: ${automatedContract.enabled}, Max bid: ${maxBidEth} ETH`
-        );
+        setOriginalMaxBid(maxBidEth);
+        setContractExists(true);
       } else {
         console.log('Contract is not automated:', contract.address);
         // If not found, reset to default values
-        setAutomatedBidding(false);
+        setAutomatedBidding(true);
         setMaxBidAmount('');
+        setOriginalMaxBid('0');
+        setContractExists(false);
       }
     }
   }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
@@ -317,17 +304,26 @@ export function AutomatedBiddingSection({
     setMaxBidAmount(value);
   };
 
-  /* Temporarily commented out while funding input is hidden
   // Handle automation funding input change
   const handleFundingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
+    // Update local state immediately to show typing in real-time
+    setFundingValue(value);
+
+    // Clear the error if input is emptied
+    if (!value) {
+      setFundingError(null);
+    } else {
+      // Only validate the format for non-empty values
+      validateNumericInput(value, setFundingError);
+    }
+
     setAutomationFunding(value);
   };
-  */
 
   // Handle set bid button click
-  const handleSetBid = () => {
+  const handleSetAutomation = () => {
     let hasError = false;
 
     // When button is clicked, check for empty values and show error if needed
@@ -336,23 +332,17 @@ export function AutomatedBiddingSection({
       hasError = true;
     }
 
-    // No longer checking for automationFunding since the input is hidden
-    // if (!automationFunding) {
-    //   setInputError('Enter a valid Amount');
-    //   hasError = true;
-    // }
+    if (!fundingValue) {
+      setFundingError('Enter a valid Amount');
+      hasError = true;
+    }
 
     if (hasError) return;
 
     const isMaxBidValid = validateNumericInput(inputValue, setInputError);
-    // We're not validating automationFunding anymore since we're using a fixed value
-    // const isFundingValid = validateNumericInput(
-    //   automationFunding,
-    //   setInputError
-    // );
+    const isFundingValid = validateNumericInput(fundingValue, setFundingError);
 
-    // if (!isMaxBidValid || !isFundingValid) {
-    if (!isMaxBidValid) {
+    if (!isMaxBidValid || !isFundingValid) {
       return;
     }
 
@@ -382,13 +372,13 @@ export function AutomatedBiddingSection({
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'insertOrUpdateContract',
+        functionName: 'insertContract',
         args: [contract.address, parseEther(inputValue), automatedBidding] as [
           string,
           bigint,
           boolean
         ],
-        value: '0', // Using fixed value of '0' for automation funding
+        value: fundingValue,
       };
 
       // Store the parameters for retry functionality
@@ -404,24 +394,23 @@ export function AutomatedBiddingSection({
     }
   };
 
-  // Add new state for add funds and withdraw funds inputs
-  const [addFundsValue, setAddFundsValue] = useState('');
-  const [addFundsError, setAddFundsError] = useState<string | null>(null);
-  const [isAddingFunds, setIsAddingFunds] = useState(false);
-  const [isWithdrawingFunds, setIsWithdrawingFunds] = useState(false);
+  const handleUpdateAutomation = () => {
+    let hasError = false;
 
-  // Function to handle adding funds to automation
-  const handleAddFunds = () => {
-    // Validate input
-    if (
-      !addFundsValue ||
-      !validateNumericInput(addFundsValue, setAddFundsError)
-    ) {
-      setAddFundsError('Please enter a valid amount');
+    // When button is clicked, check for empty values and show error if needed
+    if (!inputValue) {
+      setInputError('Enter a valid Bid Amount');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    const isMaxBidValid = validateNumericInput(inputValue, setInputError);
+
+    if (!isMaxBidValid) {
       return;
     }
 
-    // Check if blockchain is available
     if (!currentBlockchain) {
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
@@ -430,37 +419,49 @@ export function AutomatedBiddingSection({
       return;
     }
 
-    try {
-      setIsAddingFunds(true);
+    if (!contract || !contract.address) {
+      console.error('No contract address provided');
+      showSomethingWentWrongToast();
+      return;
+    }
 
-      // Create transaction parameters
+    try {
+      console.log('Updating automation with values:', {
+        contractAddress: contract.address,
+        maxBidAmount: inputValue,
+        automatedBidding: automatedBidding,
+      });
+
+      // Create transaction parameters for updateContract
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'fundBalance',
-        args: [] as const, // Even though this function doesn't take args, wagmi requires this property
-        value: addFundsValue, // Amount to add in ETH
+        functionName: 'updateContract',
+        args: [contract.address, parseEther(inputValue), automatedBidding] as [
+          string,
+          bigint,
+          boolean
+        ],
       };
+
+      // Store the parameters for retry functionality
+      setLastTxParams({
+        ...txParams,
+        value: '0', // updateContract is nonpayable, so no ETH value needed
+      });
 
       // Send the transaction
       writeContract(txParams, (hash) => {
-        console.log(`Add funds transaction submitted with hash: ${hash}`);
-      });
-
-      console.log('Adding funds:', {
-        amount: addFundsValue,
+        console.log(`Update transaction submitted with hash: ${hash}`);
       });
     } catch (err) {
-      console.error('Error adding funds:', err);
-      setIsAddingFunds(false);
+      console.error('Error submitting update transaction:', err);
       showSomethingWentWrongToast();
     }
   };
 
-  // Function to handle withdrawing funds from automation
-  const handleWithdrawFunds = () => {
-    // Check if blockchain is available
+  const handleToggleAutomation = () => {
     if (!currentBlockchain) {
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
@@ -469,51 +470,46 @@ export function AutomatedBiddingSection({
       return;
     }
 
-    try {
-      setIsWithdrawingFunds(true);
+    if (!contract || !contract.address) {
+      console.error('No contract address provided');
+      showSomethingWentWrongToast();
+      return;
+    }
 
-      // Create transaction parameters
+    try {
+      const newAutomatedBidding = !automatedBidding;
+      console.log('Toggling automation with values:', {
+        contractAddress: contract.address,
+        maxBidAmount: originalMaxBid,
+        automatedBidding: newAutomatedBidding,
+      });
+
+      // Create transaction parameters for updateContract with funding = 0
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'withdrawBalance',
-        args: [] as const, // Even though this function doesn't take args, wagmi requires this property
+        functionName: 'updateContract',
+        args: [
+          contract.address,
+          parseEther(originalMaxBid),
+          newAutomatedBidding,
+        ] as [string, bigint, boolean],
       };
+
+      // Store the parameters for retry functionality
+      setLastTxParams({
+        ...txParams,
+        value: '0', // updateContract is nonpayable, so no ETH value needed
+      });
 
       // Send the transaction
       writeContract(txParams, (hash) => {
-        console.log(`Withdraw funds transaction submitted with hash: ${hash}`);
+        console.log(`Toggle transaction submitted with hash: ${hash}`);
       });
-
-      console.log('Withdrawing funds from automation');
     } catch (err) {
-      console.error('Error withdrawing funds:', err);
-      setIsWithdrawingFunds(false);
+      console.error('Error submitting toggle transaction:', err);
       showSomethingWentWrongToast();
-    }
-  };
-
-  // Reset status after transaction completes
-  useEffect(() => {
-    if (isSuccess) {
-      setIsAddingFunds(false);
-      setIsWithdrawingFunds(false);
-      setAddFundsValue('');
-    }
-  }, [isSuccess]);
-
-  // Handle add funds input change
-  const handleAddFundsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setAddFundsValue(value);
-
-    // Clear the error if input is emptied
-    if (!value) {
-      setAddFundsError(null);
-    } else {
-      // Only validate the format for non-empty values
-      validateNumericInput(value, setAddFundsError);
     }
   };
 
@@ -548,78 +544,169 @@ export function AutomatedBiddingSection({
 
       <div className='flex justify-between items-start relative z-10'>
         <div>
-          <p className='font-bold'>Enable Automated Bidding</p>
+          <p className='font-bold'>Automated Bidding Configuration</p>
           <p className='text-sm text-blue-200'>
-            Set a maximum bid value to maintain your position in the cache
+            Configure automated bidding to maintain your position in the cache
             without manual intervention.
           </p>
         </div>
-        <SwitchPrimitive.Root
-          checked={automatedBidding}
-          onCheckedChange={setAutomatedBidding}
-          className={cn(
-            'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-            'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-            'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-          )}
+        <button
+          onClick={() => setShowAutomationPanel(!showAutomationPanel)}
+          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
+          disabled={isTransactionInProgress}
         >
-          <SwitchPrimitive.Thumb
-            className={cn(
-              'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-              'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-            )}
-          />
-        </SwitchPrimitive.Root>
+          {showAutomationPanel ? (
+            <ChevronUp className='w-5 h-5 text-white' />
+          ) : (
+            <ChevronDown className='w-5 h-5 text-white' />
+          )}
+        </button>
       </div>
 
       {/* Display user balance */}
       <div className='mt-2 text-sm text-white relative z-10'>
-        <span>Your automation balance: </span>
-        <span className='font-semibold'>{formattedUserBalance} ETH</span>
+        <div className='flex items-center justify-between'>
+          <div>
+            <span>Automation balance: </span>
+            <span className='font-semibold'>{formattedUserBalance} ETH</span>
+          </div>
+        </div>
+
+        {/* Show automation status for existing contracts */}
+        {contractExists && (
+          <div className='flex items-center justify-left mt-1'>
+            <div>
+              <span>Automation is currently: </span>
+              <span className='font-semibold'>
+                {automatedBidding ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+            <div className='flex items-center px-2'>
+              <Button
+                onClick={handleToggleAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
+                disabled={isTransactionInProgress || isSuccess}
+              >
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-3 w-3 animate-spin' />
+                  </div>
+                ) : automatedBidding ? (
+                  'Disable'
+                ) : (
+                  'Enable'
+                )}
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className='w-4 h-4 cursor-help' />
+                </TooltipTrigger>
+                <TooltipContent>
+                  {automatedBidding ? (
+                    <p className='max-w-xs'>
+                      <strong>Disable automation for this contract.</strong>
+                      <br />
+                      It will no longer be considered in upcoming automated
+                      bidding rounds.
+                    </p>
+                  ) : (
+                    <p className='max-w-xs'>
+                      <strong>Enable automation for this contract.</strong>
+                      <br />
+                      It will be included in the next automated bidding round.
+                    </p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Input fields - shown only when automated bidding is enabled */}
-      {automatedBidding && (
+      {/* Form with all inputs including the toggle - shown only when panel is open */}
+      {showAutomationPanel && (
         <div className='mt-4 relative z-10'>
           <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
-            {/* Row 1: Automation Funding - Temporarily hidden
-            <div className='self-center'>
-              <p className='font-bold'>Automation Funding</p>
-            </div>
-            <div className='flex justify-end'>
-              <div className='flex flex-col w-full max-w-[200px]'>
-                <div className='relative'>
-                  <Input
-                    type='text'
-                    placeholder='Enter amount'
-                    value={fundingValue}
-                    onChange={handleFundingChange}
-                    className={`pr-12 bg-white border-none text-gray-500 ${
-                      fundingError ? 'border-red-500' : ''
-                    } ${
-                      isTransactionInProgress
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                        : ''
-                    }`}
-                    disabled={isTransactionInProgress}
-                  />
-                  <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
-                    ETH
+            {/* Row 1: Automation Funding - only show for new contracts */}
+            {!contractExists && (
+              <>
+                <div className='self-center'>
+                  <div className='flex items-center space-x-2'>
+                    <p className='font-bold'>Automation Funding</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className='w-4 h-4 cursor-help' />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='max-w-xs'>
+                          <strong>Fund the automation gas tank.</strong>
+                          <br />
+                          This is the balance your automation contract will use
+                          to place bids on your behalf.
+                          <br />
+                          You can fund it now or later using the &quot;Gas
+                          Tank&quot; section in the navbar.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
-                {fundingError && (
-                  <div className='text-white text-xs italic text-left mt-1'>
-                    {fundingError}
+                <div className='flex justify-end'>
+                  <div className='flex flex-col w-full max-w-[200px]'>
+                    <div className='relative'>
+                      <Input
+                        type='text'
+                        placeholder='Enter amount'
+                        value={fundingValue}
+                        onChange={handleFundingChange}
+                        className={`pr-12 bg-white border-none text-gray-500 ${
+                          fundingError ? 'border-red-500' : ''
+                        } ${
+                          isTransactionInProgress
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                            : ''
+                        }`}
+                        disabled={isTransactionInProgress}
+                      />
+                      <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                        ETH
+                      </div>
+                    </div>
+                    {fundingError && (
+                      <div className='text-white text-xs italic text-left mt-1'>
+                        {fundingError}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-            <div></div>
-            */}
+                </div>
+                <div></div>
+              </>
+            )}
 
             {/* Row 2: Maximum Bid Amount */}
             <div className='self-center'>
-              <p className='font-bold'>Maximum Bid Amount</p>
+              <div className='flex items-center space-x-2'>
+                <p className='font-bold'>Maximum Bid Amount</p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='w-4 h-4 cursor-help' />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className='max-w-xs'>
+                      <strong>Defines your bidding limit.</strong>
+                      <br />
+                      The system will bid the lower of:
+                      <br />
+                      - The amount that decays to the current minBid in ~1 month
+                      <br />
+                      - Your defined max bid
+                      <br />
+                      It only bids when the Cache Manager is 98% or more full;
+                      otherwise, it bids 0.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
             <div className='flex justify-end'>
               <div className='flex flex-col w-full max-w-[200px]'>
@@ -649,144 +736,86 @@ export function AutomatedBiddingSection({
                 )}
               </div>
             </div>
-            <div className='self-start pl-2'>
+            <div></div>
+          </div>
+
+          {/* Disclaimer and Set Automation button for new contracts */}
+          {!contractExists && (
+            <div className='flex items-start justify-between space-x-4 mt-6'>
+              <div className='flex items-start space-x-2'>
+                <Checkbox
+                  id='disclaimer'
+                  checked={disclaimerChecked}
+                  onCheckedChange={(checked) =>
+                    setDisclaimerChecked(checked === true)
+                  }
+                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                />
+                <Label
+                  htmlFor='disclaimer'
+                  className='text-sm font-medium leading-tight'
+                >
+                  I&apos;m aware this is an experimental feature and understand
+                  the risks associated with automated bidding. Results may vary
+                  and I&apos;m responsible for monitoring my account.
+                </Label>
+              </div>
               <Button
-                onClick={handleSetBid}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                disabled={isTransactionInProgress || isSuccess}
+                onClick={handleSetAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                disabled={
+                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                }
               >
                 {isTransactionInProgress ? (
                   <div className='flex items-center'>
                     <Loader2 className='h-4 w-4 animate-spin' />
                   </div>
                 ) : (
-                  'Set Bid'
+                  'Set Automation'
                 )}
               </Button>
             </div>
-          </div>
+          )}
 
-          {/* Divider inside the toggle */}
-          <div className='my-10 border-t border-blue-300/30 relative z-10'></div>
-
-          {/* Add Funds Section - Now inside the toggle */}
-          <div className='relative z-10'>
-            <h3 className='font-bold text-white mb-2'>
-              Add Funds to Automation
-            </h3>
-            <p className='text-sm text-blue-200 mb-4'>
-              Increase your automation balance to ensure your automated bids can
-              continue.
-            </p>
-
-            <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
-              {/* Left column: Title */}
-              <div className='self-center'>
-                <p className='font-bold'>Automation Funds</p>
+          {/* Update button for existing contracts */}
+          {contractExists && (
+            <div className='flex items-start justify-between space-x-4 mt-6'>
+              <div className='flex items-start space-x-2'>
+                <Checkbox
+                  id='disclaimer'
+                  checked={disclaimerChecked}
+                  onCheckedChange={(checked) =>
+                    setDisclaimerChecked(checked === true)
+                  }
+                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                />
+                <Label
+                  htmlFor='disclaimer'
+                  className='text-sm font-medium leading-tight'
+                >
+                  I&apos;m aware this is an experimental feature and understand
+                  the risks associated with automated bidding. Results may vary
+                  and I&apos;m responsible for monitoring my account.
+                </Label>
               </div>
-              {/* Middle column: Input */}
-              <div className='flex justify-end'>
-                <div className='flex flex-col w-full max-w-[200px]'>
-                  <div className='relative'>
-                    <Input
-                      type='text'
-                      placeholder='Amount to add'
-                      value={addFundsValue}
-                      onChange={handleAddFundsChange}
-                      className={`pr-12 bg-white border-none text-gray-500 ${
-                        addFundsError ? 'border-red-500' : ''
-                      } ${
-                        isTransactionInProgress || isAddingFunds
-                          ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                          : ''
-                      }`}
-                      disabled={isTransactionInProgress || isAddingFunds}
-                    />
-                    <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
-                      ETH
-                    </div>
+              <Button
+                onClick={handleUpdateAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                disabled={
+                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                }
+              >
+                {isTransactionInProgress ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
                   </div>
-                  {addFundsError && (
-                    <div className='text-white text-xs italic mt-1'>
-                      {addFundsError}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Right column: Button */}
-              <div className='self-start pl-2'>
-                <Button
-                  onClick={handleAddFunds}
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                  disabled={
-                    isTransactionInProgress ||
-                    isAddingFunds ||
-                    isWithdrawingFunds
-                  }
-                >
-                  {isAddingFunds ? (
-                    <div className='flex items-center'>
-                      <Loader2 className='h-4 w-4 animate-spin mr-1' />
-                      Adding...
-                    </div>
-                  ) : (
-                    <>Add Funds</>
-                  )}
-                </Button>
-              </div>
+                ) : (
+                  'Update Automation'
+                )}
+              </Button>
             </div>
-          </div>
-
-          {/* Divider inside the toggle */}
-          <div className='my-10 border-t border-blue-300/30 relative z-10'></div>
-
-          {/* Withdraw Funds Section - Now inside the toggle */}
-          <div className='relative z-10'>
-            <h3 className='font-bold text-white mb-2'>
-              Withdraw Funds from Automation
-            </h3>
-            <p className='text-sm text-blue-200 mb-4'>
-              Withdraw your entire automation balance back to your wallet.
-            </p>
-
-            <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
-              {/* Left column: Title */}
-              <div className='self-center'>
-                <p className='font-bold'>Withdraw Funds</p>
-              </div>
-              {/* Middle column: Balance info */}
-              <div className='flex justify-end'>
-                <div className='self-center text-white text-right'>
-                  Available:{' '}
-                  <span className='font-semibold'>
-                    {formattedUserBalance} ETH
-                  </span>
-                </div>
-              </div>
-              {/* Right column: Button */}
-              <div className='self-start pl-2'>
-                <Button
-                  onClick={handleWithdrawFunds}
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                  disabled={
-                    isTransactionInProgress ||
-                    isWithdrawingFunds ||
-                    isAddingFunds ||
-                    parseFloat(formattedUserBalance) <= 0
-                  }
-                >
-                  {isWithdrawingFunds ? (
-                    <div className='flex items-center'>
-                      <Loader2 className='h-4 w-4 animate-spin mr-1' />
-                      Withdrawing...
-                    </div>
-                  ) : (
-                    <>Withdraw All</>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

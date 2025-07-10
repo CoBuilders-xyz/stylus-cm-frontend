@@ -383,20 +383,24 @@ export default function AlertsSettings({
 
           {evictionAlertEnabled && (
             <div className='mt-4 grid grid-cols-2 gap-4'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='evictionEmail'
-                  checked={evictionEmailEnabled}
-                  onCheckedChange={handleCheckedChange(setEvictionEmailEnabled)}
-                  className='data-[state=checked]:bg-[#335CD7]'
-                />
-                <label
-                  htmlFor='evictionEmail'
-                  className='text-sm cursor-pointer'
-                >
-                  Email
-                </label>
-              </div>
+              {/* // Uncomment this if email notifications are required
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='evictionEmail'
+                    checked={evictionEmailEnabled}
+                    onCheckedChange={handleCheckedChange(
+                      setEvictionEmailEnabled
+                    )}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='evictionEmail'
+                    className='text-sm cursor-pointer'
+                  >
+                    Email
+                  </label>
+                </div>
+              */}
               <div className='flex items-center space-x-2'>
                 <Checkbox
                   id='evictionTelegram'
@@ -476,17 +480,22 @@ export default function AlertsSettings({
 
           {noGasAlertEnabled && (
             <div className='mt-4 grid grid-cols-2 gap-4'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='noGasEmail'
-                  checked={noGasEmailEnabled}
-                  onCheckedChange={handleCheckedChange(setNoGasEmailEnabled)}
-                  className='data-[state=checked]:bg-[#335CD7]'
-                />
-                <label htmlFor='noGasEmail' className='text-sm cursor-pointer'>
-                  Email
-                </label>
-              </div>
+              {/* // Uncomment this if email notifications are required
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='noGasEmail'
+                    checked={noGasEmailEnabled}
+                    onCheckedChange={handleCheckedChange(setNoGasEmailEnabled)}
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor='noGasEmail'
+                    className='text-sm cursor-pointer'
+                  >
+                    Email
+                  </label>
+                </div>
+              */}
               <div className='flex items-center space-x-2'>
                 <Checkbox
                   id='noGasTelegram'
@@ -573,20 +582,24 @@ export default function AlertsSettings({
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='lowGasEmail'
-                    checked={lowGasEmailEnabled}
-                    onCheckedChange={handleCheckedChange(setLowGasEmailEnabled)}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='lowGasEmail'
-                    className='text-sm cursor-pointer'
-                  >
-                    Email
-                  </label>
-                </div>
+                {/* // TODO: Uncomment this if email notifications are required
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      id='lowGasEmail'
+                      checked={lowGasEmailEnabled}
+                      onCheckedChange={handleCheckedChange(
+                        setLowGasEmailEnabled
+                      )}
+                      className='data-[state=checked]:bg-[#335CD7]'
+                    />
+                    <label
+                      htmlFor='lowGasEmail'
+                      className='text-sm cursor-pointer'
+                    >
+                      Email
+                    </label>
+                  </div>
+                */}
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='lowGasTelegram'
@@ -700,22 +713,24 @@ export default function AlertsSettings({
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='bidSafetyEmail'
-                    checked={bidSafetyEmailEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setBidSafetyEmailEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='bidSafetyEmail'
-                    className='text-sm cursor-pointer'
-                  >
-                    Email
-                  </label>
-                </div>
+                {/* // Uncomment this if email notifications are required
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      id='bidSafetyEmail'
+                      checked={bidSafetyEmailEnabled}
+                      onCheckedChange={handleCheckedChange(
+                        setBidSafetyEmailEnabled
+                      )}
+                      className='data-[state=checked]:bg-[#335CD7]'
+                    />
+                    <label
+                      htmlFor='bidSafetyEmail'
+                      className='text-sm cursor-pointer'
+                    >
+                      Email
+                    </label>
+                  </div>
+                */}
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='bidSafetyTelegram'

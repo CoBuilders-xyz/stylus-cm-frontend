@@ -36,9 +36,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 // Chart configuration
 const chartConfig = {
-  activityCount: {
-    label: 'Activity Count',
-    color: '#4267B2', // Using a blue color similar to the bid chart
+  insertCount: {
+    label: 'Insert Count',
+    color: '#4267B2', // Green for inserts
+  },
+  deleteCount: {
+    label: 'Delete Count',
+    color: '#B24942', // Red for deletes
   },
 } satisfies ChartConfig;
 
@@ -78,7 +82,8 @@ export default function CacheManagerActivity() {
   // Use the cache manager activity hook
   const {
     activityData,
-    totalActivity,
+    totalInserts,
+    totalDeletes,
     isLoading,
     error,
     timespan,
@@ -216,6 +221,7 @@ export default function CacheManagerActivity() {
     }
 
     const formattedLabel = formatTooltipHeader(label);
+    const data = payload[0]?.payload;
 
     return (
       <div
@@ -227,20 +233,33 @@ export default function CacheManagerActivity() {
         }}
       >
         <p
-          style={{ color: '#FFFFFF', marginBottom: '4px', fontWeight: 'bold' }}
+          style={{ color: '#FFFFFF', marginBottom: '8px', fontWeight: 'bold' }}
         >
           {formattedLabel}
         </p>
-        <div
-          style={{
-            color: '#B1B1B1',
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '3px',
-          }}
-        >
-          <span style={{ marginRight: '8px' }}>Activity Count:</span>
-          <span style={{ fontWeight: 'bold' }}>{payload[0]?.value}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            style={{
+              color: '#4267B2',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ marginRight: '12px' }}>Insert Count:</span>
+            <span style={{ fontWeight: 'bold' }}>{data?.insertCount || 0}</span>
+          </div>
+          <div
+            style={{
+              color: '#B24942',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ marginRight: '12px' }}>Delete Count:</span>
+            <span style={{ fontWeight: 'bold' }}>{data?.deleteCount || 0}</span>
+          </div>
         </div>
       </div>
     );
@@ -261,20 +280,32 @@ export default function CacheManagerActivity() {
       <CardHeader className='relative'>
         <div className='flex flex-col gap-1'>
           <CardTitle className='text-2xl font-bold' style={customStyles.title}>
-            Cache Manager Activity
+            Bid Placement Activity
           </CardTitle>
-          <div className='text-4xl font-bold' style={customStyles.globalValue}>
-            {isLoading || !currentBlockchainId ? (
-              <Skeleton className='h-10 w-32 bg-slate-700' />
-            ) : (
-              totalActivity
-            )}
+          <div className='flex flex-col gap-1'>
+            <div
+              className='text-2xl font-bold'
+              style={customStyles.globalValue}
+            >
+              {isLoading || !currentBlockchainId ? (
+                <Skeleton className='h-8 w-32 bg-slate-700' />
+              ) : (
+                <div className='flex flex-row gap-4 text-sm'>
+                  <div style={{ color: '#4267B2' }}>
+                    Inserts: {totalInserts}
+                  </div>
+                  <div style={{ color: '#B24942' }}>
+                    Deletes: {totalDeletes}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <CardDescription
             className='text-base'
             style={customStyles.description}
           >
-            Total transactions recorded for the selected period
+            Bid placement and deletion activity for the selected period
           </CardDescription>
         </div>
         <div className='absolute right-4 top-4'>
@@ -393,10 +424,19 @@ export default function CacheManagerActivity() {
                   content={<CustomTooltip />}
                 />
                 <Bar
-                  dataKey='count'
-                  name='activityCount'
+                  dataKey='insertCount'
+                  name='Insert Count'
+                  stackId='a'
                   fill='#4267B2'
-                  radius={[4, 4, 0, 0]}
+                  radius={[0, 0, 0, 0]}
+                  barSize={30}
+                />
+                <Bar
+                  dataKey='deleteCount'
+                  name='Eviction Count'
+                  stackId='a'
+                  fill='#B24942'
+                  radius={[0, 0, 0, 0]}
                   barSize={30}
                 />
               </BarChart>

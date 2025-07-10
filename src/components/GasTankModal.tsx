@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   FuelIcon as GasStation,
   ArrowUpCircle,
@@ -37,11 +38,13 @@ import { useReadContract, useAccount } from 'wagmi';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from './ui/skeleton';
+import { formatRoundedEth } from '@/utils/formatting';
 
 export function GasTankModal() {
   // Internal state
   const [open, setOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
+  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
@@ -171,7 +174,7 @@ export function GasTankModal() {
             {isLoading ? (
               <Skeleton className='h-4 w-[72px]' />
             ) : (
-              <span>{balanceInEth.toFixed(3)} ETH</span>
+              <span>{formatRoundedEth(balanceInEth, 3)} ETH</span>
             )}
           </Button>
         </DialogTrigger>
@@ -191,6 +194,8 @@ export function GasTankModal() {
             isTransactionInProgress={isTransactionInProgress}
             refreshBalance={refetchBalance}
             isBalanceLoading={isLoading}
+            disclaimerChecked={disclaimerChecked}
+            setDisclaimerChecked={setDisclaimerChecked}
           />
         </DialogContent>
       </Dialog>
@@ -205,7 +210,7 @@ export function GasTankModal() {
           {isLoading ? (
             <Skeleton className='h-4 w-[72px]' />
           ) : (
-            <span>{balanceInEth.toFixed(3)} ETH</span>
+            <span>{formatRoundedEth(balanceInEth, 3)} ETH</span>
           )}
         </Button>
       </DrawerTrigger>
@@ -226,6 +231,8 @@ export function GasTankModal() {
             isTransactionInProgress={isTransactionInProgress}
             refreshBalance={refetchBalance}
             isBalanceLoading={isLoading}
+            disclaimerChecked={disclaimerChecked}
+            setDisclaimerChecked={setDisclaimerChecked}
           />
         </div>
         <DrawerFooter className='pt-2'>
@@ -253,6 +260,8 @@ interface GasTankContentProps {
   isTransactionInProgress: boolean;
   refreshBalance: () => void;
   isBalanceLoading: boolean;
+  disclaimerChecked: boolean;
+  setDisclaimerChecked: (value: boolean) => void;
 }
 
 function GasTankContent({
@@ -264,17 +273,26 @@ function GasTankContent({
   isTransactionInProgress,
   refreshBalance,
   isBalanceLoading,
+  disclaimerChecked,
+  setDisclaimerChecked,
 }: GasTankContentProps) {
   return (
     <div className='py-4'>
       <div className='mb-6 flex flex-col items-center justify-center'>
         <div className='text-sm text-gray-400'>Current Balance</div>
-        <div className='flex items-center gap-2 text-3xl font-bold'>
-          <GasStation className='h-8 w-8' />
-          {isBalanceLoading ? (
-            <Skeleton className='h-7 w-[157px] mt-2' />
-          ) : (
-            <span>{balance.toFixed(3)} ETH</span>
+        <div className='flex flex-col items-center'>
+          <div className='flex items-center gap-2 text-3xl font-bold'>
+            <GasStation className='h-8 w-8' />
+            {isBalanceLoading ? (
+              <Skeleton className='h-7 w-[157px] mt-2' />
+            ) : (
+              <span>{formatRoundedEth(balance, 8)} ETH</span>
+            )}
+          </div>
+          {!isBalanceLoading && (
+            <div className='text-xs text-gray-500 mt-1 self-end'>
+              {balance} ETH
+            </div>
           )}
         </div>
         <Button
@@ -327,6 +345,24 @@ function GasTankContent({
               />
             </div>
           </div>
+          <div className='flex items-start space-x-2 mt-6'>
+            <Checkbox
+              id='disclaimer'
+              checked={disclaimerChecked}
+              onCheckedChange={(checked) =>
+                setDisclaimerChecked(checked === true)
+              }
+              className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+            />
+            <Label
+              htmlFor='disclaimer'
+              className='text-sm font-medium leading-tight'
+            >
+              I&apos;m aware this is an experimental feature and understand the
+              risks associated with automated bidding. Results may vary and
+              I&apos;m responsible for monitoring my account.
+            </Label>
+          </div>
           <Button
             onClick={handleDeposit}
             className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
@@ -334,7 +370,8 @@ function GasTankContent({
               isTransactionInProgress ||
               !depositAmount ||
               Number(depositAmount) <= 0 ||
-              isBalanceLoading
+              isBalanceLoading ||
+              !disclaimerChecked
             }
           >
             {isTransactionInProgress ? (
@@ -351,8 +388,7 @@ function GasTankContent({
           <Alert className='bg-[#252a33] border-[#2a2d34] mb-4'>
             <AlertCircle className='h-4 w-4 text-yellow-500' />
             <AlertDescription className='text-sm text-gray-300 ml-2'>
-              Withdrawing will remove your entire balance of{' '}
-              {balance.toFixed(6)} ETH.
+              Withdrawing will remove your entire balance of {balance} ETH.
             </AlertDescription>
           </Alert>
 

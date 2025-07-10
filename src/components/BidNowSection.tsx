@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Contract, SuggestedBidsResponse } from '@/services/contractService';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Info, Loader2 } from 'lucide-react';
 import cacheManagerAbi from '@/config/abis/cacheManager/cacheManager.json';
 import { Abi } from 'viem';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
@@ -16,6 +16,12 @@ import {
   showErrorToast,
   showSomethingWentWrongToast,
 } from '@/components/Toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@radix-ui/react-tooltip';
 
 interface BidNowSectionProps {
   contract: Contract;
@@ -391,6 +397,28 @@ export function BidNowSection({
       return;
     }
 
+    // Validate that bid is greater than rounded high risk bid to be coherent with the suggested bid amounts.
+    if (suggestedBids) {
+      const highRiskBidEth = parseFloat(
+        formatRoundedEth(
+          formatEther(BigInt(suggestedBids.suggestedBids.highRisk)),
+          8
+        )
+      );
+
+      const currentBidEth = parseFloat(bidAmount);
+      if (currentBidEth < highRiskBidEth) {
+        setInputError(
+          `Bid must be greater or equal to ${formatRoundedEth(
+            highRiskBidEth.toString(),
+            8
+          )} ETH`
+        );
+        showSomethingWentWrongToast();
+        return;
+      }
+    }
+
     try {
       // Reset the reloaded state before starting a new transaction
       setHasReloaded(false);
@@ -535,50 +563,92 @@ export function BidNowSection({
             >
               Clear
             </Button>
-            <div className='flex gap-2'>
-              <Button
-                size='sm'
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectBid(suggestedBids.suggestedBids.lowRisk);
-                }}
-                disabled={isDisabled}
-              >
-                Low Risk:{' '}
-                {formatRoundedEth(
-                  formatEther(BigInt(suggestedBids.suggestedBids.lowRisk))
-                )}
-              </Button>
-              <Button
-                size='sm'
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectBid(suggestedBids.suggestedBids.midRisk);
-                }}
-                disabled={isDisabled}
-              >
-                Mid Risk:{' '}
-                {formatRoundedEth(
-                  formatEther(BigInt(suggestedBids.suggestedBids.midRisk))
-                )}
-              </Button>
-              <Button
-                size='sm'
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectBid(suggestedBids.suggestedBids.highRisk);
-                }}
-                disabled={isDisabled}
-              >
-                High Risk:{' '}
-                {formatRoundedEth(
-                  formatEther(BigInt(suggestedBids.suggestedBids.highRisk))
-                )}
-              </Button>
-            </div>
+
+            {/* Check if all suggested bids are 0 for free caching */}
+            {suggestedBids.suggestedBids.lowRisk === '0' &&
+            suggestedBids.suggestedBids.midRisk === '0' &&
+            suggestedBids.suggestedBids.highRisk === '0' ? (
+              <div className='flex items-center gap-3'>
+                <div className='text-white text-sm font-medium flex items-center gap-2'>
+                  This contract can be cached for free!
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className='w-4 h-4 cursor-help' />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='max-w-xs bg-gray-900 text-white p-3 rounded-md shadow-lg border border-gray-700 text-sm'>
+                          <strong>
+                            Minimum bid is 0 for your contract size.
+                          </strong>
+                          <br />
+                          You can place a bid of 0 and still get cached.
+                          <br />
+                          However, your contract will be at risk of eviction
+                          along with others that also bid 0.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Button
+                  size='sm'
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setBidAmount('0');
+                  }}
+                  disabled={isDisabled}
+                >
+                  Cache for Free
+                </Button>
+              </div>
+            ) : (
+              <div className='flex gap-2'>
+                <Button
+                  size='sm'
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectBid(suggestedBids.suggestedBids.lowRisk);
+                  }}
+                  disabled={isDisabled}
+                >
+                  Low Risk:{' '}
+                  {formatRoundedEth(
+                    formatEther(BigInt(suggestedBids.suggestedBids.lowRisk))
+                  )}
+                </Button>
+                <Button
+                  size='sm'
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectBid(suggestedBids.suggestedBids.midRisk);
+                  }}
+                  disabled={isDisabled}
+                >
+                  Mid Risk:{' '}
+                  {formatRoundedEth(
+                    formatEther(BigInt(suggestedBids.suggestedBids.midRisk))
+                  )}
+                </Button>
+                <Button
+                  size='sm'
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectBid(suggestedBids.suggestedBids.highRisk);
+                  }}
+                  disabled={isDisabled}
+                >
+                  High Risk:{' '}
+                  {formatRoundedEth(
+                    formatEther(BigInt(suggestedBids.suggestedBids.highRisk))
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

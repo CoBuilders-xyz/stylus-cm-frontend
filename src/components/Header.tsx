@@ -6,7 +6,7 @@ import logo from 'public/logo.svg';
 import { Megaphone } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import { GasTankModal } from './GasTankModal';
-// import BlockchainSelector from './BlockchainSelector';
+import BlockchainSelector from './BlockchainSelector';
 import ConnectWallet from './ConnectWallet';
 import ConnectionBanner from './ConnectionBanner';
 
@@ -17,13 +17,20 @@ export default function Header() {
     <div className='w-full bg-black text-white z-10 flex flex-wrap items-center justify-between p-4 px-10 fixed'>
       <div className='space-x-4 text-xs flex items-center'>
         <span className='flex items-center'>
-          <Link href='/'>
+          <Link href='/cache-status'>
             <Image src={logo} alt='logo' className='mr-2' />
           </Link>
         </span>
         <Link href='/cache-status'>Cache Status</Link>
+        <Link href='/blockchain-events'>Cache Events</Link>
         <Link href='/explore-contracts'>Explore Contracts</Link>
         <Link href='/my-contracts'>My Contracts</Link>
+        <Link
+          href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
+          target='_blank'
+        >
+          Docs
+        </Link>
       </div>
       <div className='space-x-4 text-xs flex items-center'>
         <GasTankModal />
@@ -35,7 +42,7 @@ export default function Header() {
         >
           <Megaphone className='w-4 h-4' />
         </div>
-        {/* <BlockchainSelector /> */}
+        <BlockchainSelector />
         <ConnectWallet />
       </div>
       <ConnectionBanner />

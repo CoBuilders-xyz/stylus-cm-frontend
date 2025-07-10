@@ -6,13 +6,14 @@ import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
 import { AuthenticationProvider } from '../context/AuthenticationProvider';
 import { AlertSettingsProvider } from '../context/AlertSettingsProvider';
+import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvider';
 import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Arbitrum Cache Manager UI',
-  description: 'For Managing Arbitrum Cache',
+  title: 'Stylus Cache Manager',
+  description: 'For Managing Arbitrum Stylus Cache',
 };
 
 export default function RootLayout({
@@ -24,12 +25,14 @@ export default function RootLayout({
     <html lang='en'>
       <body className={inter.className}>
         <RainbowKitProvider>
-          <AuthenticationProvider>
-            <AlertSettingsProvider>
-              <Header />
-              {children}
-            </AlertSettingsProvider>
-          </AuthenticationProvider>
+          <BlockchainSelectionProvider>
+            <AuthenticationProvider>
+              <AlertSettingsProvider>
+                <Header />
+                {children}
+              </AlertSettingsProvider>
+            </AuthenticationProvider>
+          </BlockchainSelectionProvider>
         </RainbowKitProvider>
         <Toaster />
       </body>

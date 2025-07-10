@@ -49,7 +49,7 @@ export default function ConnectionBanner() {
 
   return (
     <div
-      className={`w-full py-2 px-4 text-center font-medium text-sm transition-all duration-300 ease-in-out ${
+      className={`w-full mt-2 py-2 px-4 text-center font-medium text-sm transition-all duration-300 ease-in-out ${
         !isOnline
           ? 'bg-[#FFC470] text-black'
           : isConnecting
@@ -76,7 +76,7 @@ export default function ConnectionBanner() {
       {isOnline && isConnected && isAuthLoading && (
         <span className='flex items-center justify-center'>
           <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
-          Please sign transaction to authenticate
+          Please sign message to authenticate
         </span>
       )}
 
