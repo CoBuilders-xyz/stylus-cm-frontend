@@ -212,7 +212,7 @@ export default function AddContract({
               <label className='block text-sm mb-1'>Contract Name</label>
               <Input
                 type='text'
-                placeholder='E.g: House Rental'
+                placeholder='Protocol v1.5'
                 value={contractName}
                 onChange={handleNameChange}
                 className='bg-black text-white border border-gray-700 rounded-md p-2 w-full'
