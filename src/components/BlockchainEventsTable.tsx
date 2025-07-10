@@ -18,6 +18,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { useBlockchainEvents } from '../hooks/useBlockchainEvents';
 import {
   BlockchainEventSortField,
@@ -262,17 +269,27 @@ const EventTypeFilter = React.memo(
     return (
       <div className='flex items-center space-x-2'>
         <span className='text-sm text-gray-300'>Filter:</span>
-        <select
-          className='bg-black text-white rounded-md px-3 py-2 border border-gray-500 focus:outline-none focus:border-white'
-          value={currentFilter || ''}
-          onChange={(e) =>
-            onFilterChange((e.target.value as BlockchainEventType) || null)
+        <Select
+          value={currentFilter || 'all'}
+          onValueChange={(value) =>
+            onFilterChange(
+              value === 'all' ? null : (value as BlockchainEventType)
+            )
           }
         >
-          <option value=''>All Events</option>
-          <option value={BlockchainEventType.INSERT}>Insert Events</option>
-          <option value={BlockchainEventType.DELETE}>Delete Events</option>
-        </select>
+          <SelectTrigger className='w-[180px] bg-black text-white border-gray-500 focus:border-white'>
+            <SelectValue placeholder='All Events' />
+          </SelectTrigger>
+          <SelectContent className='bg-black text-white border-gray-500'>
+            <SelectItem value='all'>All Events</SelectItem>
+            <SelectItem value={BlockchainEventType.INSERT}>
+              Insert Events
+            </SelectItem>
+            <SelectItem value={BlockchainEventType.DELETE}>
+              Delete Events
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     );
   }
