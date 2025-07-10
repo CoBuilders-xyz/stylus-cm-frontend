@@ -2,9 +2,13 @@
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-export default function ConnectWallet() {
+interface ConnectWalletProps {
+  customCallback?: () => void;
+}
+
+export default function ConnectWallet({ customCallback }: ConnectWalletProps) {
   return (
-    <div className=''>
+    <div className='' onClick={() => customCallback?.()}>
       <ConnectButton
         label='Connect Wallet'
         accountStatus={'full'}
