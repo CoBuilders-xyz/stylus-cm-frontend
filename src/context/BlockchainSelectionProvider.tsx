@@ -11,6 +11,8 @@ interface BlockchainSelectionContextType {
   setSelectedBlockchain: (blockchain: Blockchain) => void;
   isLoading: boolean;
   error: Error | null;
+  isUserSelected: boolean; // Track if user explicitly selected a blockchain
+  setIsUserSelected: (isSelected: boolean) => void;
 }
 
 // Create the context
@@ -29,6 +31,13 @@ export const BlockchainSelectionProvider: React.FC<{
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isUserSelected, setIsUserSelected] = useState(false);
+
+  // Enhanced setSelectedBlockchain to track user selection
+  const handleSetSelectedBlockchain = (blockchain: Blockchain) => {
+    setSelectedBlockchain(blockchain);
+    setIsUserSelected(true);
+  };
 
   // Fetch available blockchains on mount
   useEffect(() => {
@@ -53,6 +62,7 @@ export const BlockchainSelectionProvider: React.FC<{
         } else if (blockchains.length > 0) {
           setSelectedBlockchain(blockchains[0]);
         }
+        // Don't set isUserSelected to true here - this is automatic selection
       } catch (err) {
         console.error('Error fetching blockchains:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -69,9 +79,11 @@ export const BlockchainSelectionProvider: React.FC<{
       value={{
         selectedBlockchain,
         availableBlockchains,
-        setSelectedBlockchain,
+        setSelectedBlockchain: handleSetSelectedBlockchain,
         isLoading,
         error,
+        isUserSelected,
+        setIsUserSelected,
       }}
     >
       {children}

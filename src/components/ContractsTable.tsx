@@ -28,10 +28,15 @@ import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
 import { formatEther } from 'viem';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -125,11 +130,13 @@ const ContractRow = React.memo(
     viewType,
     onContractSelect,
     onAddContract,
+    isAuthenticated,
   }: {
     contract: Contract;
     viewType: string;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
     onAddContract?: (contract: Contract) => void;
+    isAuthenticated: boolean;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
@@ -153,6 +160,13 @@ const ContractRow = React.memo(
           {viewType === 'my-contracts' && contract.name ? (
             <div className='flex flex-col'>
               <span className='text-lg font-medium'>{contract.name}</span>
+              <span className='text-sm text-gray-400'>{contract.address}</span>
+            </div>
+          ) : contract.isSavedByUser ? (
+            <div className='flex flex-col'>
+              <span className='text-lg font-medium'>
+                {contract.savedContractName}
+              </span>
               <span className='text-sm text-gray-400'>{contract.address}</span>
             </div>
           ) : (
@@ -236,16 +250,18 @@ const ContractRow = React.memo(
             </span>
           </div>
         </TableCell>
-        {viewType === 'explore-contracts' && !contract.isSavedByUser && (
-          <TableCell className='py-6'>
-            <Button
-              className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
-              onClick={handleAddContractClick}
-            >
-              +
-            </Button>
-          </TableCell>
-        )}
+        {viewType === 'explore-contracts' &&
+          !contract.isSavedByUser &&
+          isAuthenticated && (
+            <TableCell className='py-6'>
+              <Button
+                className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
+                onClick={handleAddContractClick}
+              >
+                +
+              </Button>
+            </TableCell>
+          )}
         {viewType === 'explore-contracts' && contract.isSavedByUser && (
           <TableCell className='py-6'>
             <Badge
@@ -429,7 +445,7 @@ function ContractsTable({
   );
 
   // Render placeholder when not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated && viewType === 'my-contracts') {
     return (
       <NoticeBanner
         image={authRequiredImage}
@@ -472,10 +488,11 @@ function ContractsTable({
               </Button>
             </div>
             <Button
-              className='p-2 h-10 w-10 bg-black text-white border border-white rounded-md flex items-center justify-center'
+              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
               onClick={onAddNewContract}
             >
-              +
+              <span>+</span>
+              <span>Add Contract</span>
             </Button>
           </div>
         )}
@@ -523,7 +540,27 @@ function ContractsTable({
                       currentSortOrder={sortOrder}
                       onSort={setSorting}
                     >
-                      Effective Bid
+                      <div className='flex items-center gap-2'>
+                        Effective Bid
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className='w-4 h-4 cursor-help' />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className='max-w-xs'>
+                              <strong>Bids decay over time.</strong>
+                              <br />
+                              The effective bid is reduced by a{' '}
+                              <em>decay penalty</em>, calculated as:
+                              <br />
+                              <code>decayPenalty = decayRate × timeCached</code>
+                              <br />
+                              The longer a contract stays cached, the lower its
+                              effective bid becomes.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </SortableTableHead>
                     <SortableTableHead
                       sortField={ContractSortField.BYTECODE_SIZE}
@@ -577,6 +614,7 @@ function ContractsTable({
                         viewType={viewType}
                         onContractSelect={onContractSelect}
                         onAddContract={onAddContract}
+                        isAuthenticated={isAuthenticated}
                       />
                     ))
                   ) : (

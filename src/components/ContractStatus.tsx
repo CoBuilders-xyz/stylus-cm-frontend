@@ -1,6 +1,12 @@
 import React from 'react';
 import { formatDate, formatRoundedEth } from '@/utils/formatting';
 import { formatEther } from 'viem';
+import { Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ContractStatusProps {
   isLoading: boolean;
@@ -56,7 +62,27 @@ export function ContractStatus({
 
       {/* Effective Bid */}
       <div className='border border-[#2C2E30] rounded-md p-4'>
-        <div className='text-gray-400 text-sm'>Effective Bid</div>
+        <div className='text-gray-400 text-sm flex items-center gap-2'>
+          Effective Bid
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className='w-4 h-4 cursor-help' />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className='max-w-xs'>
+                <strong>Bids decay over time.</strong>
+                <br />
+                The effective bid is reduced by a <em>decay penalty</em>,
+                calculated as:
+                <br />
+                <code>decayPenalty = decayRate × timeCached</code>
+                <br />
+                The longer a contract stays cached, the lower its effective bid
+                becomes.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <div className='text-xl font-bold'>
           {displayEffectiveBid
             ? formatRoundedEth(formatEther(BigInt(displayEffectiveBid))) +

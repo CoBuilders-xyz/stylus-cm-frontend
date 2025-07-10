@@ -5,7 +5,12 @@ import ContractsTable from '@/components/ContractsTable';
 import SidePanel from '@/components/SidePanel';
 import ContractDetails from '@/components/ContractDetails';
 import AddContract from '@/components/AddContract';
+import NoticeBanner from '@/components/NoticeBanner';
+import { useAuthentication } from '@/context/AuthenticationProvider';
 import { Contract } from '@/services/contractService';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import ConnectWallet from '@/components/ConnectWallet';
+import authRequiredImage from 'public/auth-required.svg';
 
 export default function ExploreContractsPage() {
   const [selectedContractId, setSelectedContractId] = useState<string | null>(
@@ -20,7 +25,10 @@ export default function ExploreContractsPage() {
   const [contractAddressToAdd, setContractAddressToAdd] = useState<
     string | undefined
   >(undefined);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const panelWidth = '53%'; // Changed to 53% of screen width
+
+  const { isAuthenticated } = useAuthentication();
 
   // Set CSS variable for header height
   useEffect(() => {
@@ -54,6 +62,13 @@ export default function ExploreContractsPage() {
 
   // Handler for adding an existing contract (from table row or details)
   const handleAddExistingContract = (contract: Contract) => {
+    if (!isAuthenticated) {
+      // Add a small delay to allow any dropdown overlays to close properly
+      setTimeout(() => {
+        setIsAuthModalOpen(true);
+      }, 100);
+      return;
+    }
     setContractAddressToAdd(contract.address);
     setActivePanelContent('add');
     setIsPanelOpen(true);
@@ -61,6 +76,11 @@ export default function ExploreContractsPage() {
 
   // Handler for adding a new contract
   const handleAddNewContract = () => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     setContractAddressToAdd(undefined);
     setActivePanelContent('add');
     setIsPanelOpen(true);
@@ -111,6 +131,26 @@ export default function ExploreContractsPage() {
           />
         )}
       </SidePanel>
+
+      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+        <DialogContent className='bg-black border-gray-700 max-w-md'>
+          <DialogTitle className='sr-only'>Authentication Required</DialogTitle>
+          <div className='p-4'>
+            <NoticeBanner
+              image={authRequiredImage}
+              title='Authentication Required'
+              description='Please connect to your wallet and sign the transaction to add contracts.'
+            />
+            <div className='flex justify-center'>
+              <div className='px-4 py-2 bg-black text-white border border-white rounded-md inline-flex items-center gap-2'>
+                <ConnectWallet
+                  customCallback={() => setIsAuthModalOpen(false)}
+                />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

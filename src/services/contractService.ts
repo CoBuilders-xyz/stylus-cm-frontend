@@ -97,6 +97,7 @@ export interface Contract {
   alerts?: Alert[]; // Optional alerts for contract monitoring
   userContractId?: string; // Optional user contract ID
   isSavedByUser?: boolean; // Flag to indicate if the contract is already saved by the user
+  savedContractName?: string | null; // Name of the saved contract
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
@@ -199,10 +200,13 @@ export class ContractService {
 
   /**
    * Create a new ContractService instance
-   * @param accessToken JWT token for authentication
+   * @param accessToken JWT token for authentication (optional for public endpoints)
    * @param defaultBlockchainId Optional default blockchain ID to use in requests
    */
-  constructor(accessToken: string, defaultBlockchainId: string | null = null) {
+  constructor(
+    accessToken: string | null = null,
+    defaultBlockchainId: string | null = null
+  ) {
     this.apiClient = new ApiClient(accessToken);
     this.currentBlockchainId = defaultBlockchainId;
   }
