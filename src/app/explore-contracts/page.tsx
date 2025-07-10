@@ -62,6 +62,13 @@ export default function ExploreContractsPage() {
 
   // Handler for adding an existing contract (from table row or details)
   const handleAddExistingContract = (contract: Contract) => {
+    if (!isAuthenticated) {
+      // Add a small delay to allow any dropdown overlays to close properly
+      setTimeout(() => {
+        setIsAuthModalOpen(true);
+      }, 100);
+      return;
+    }
     setContractAddressToAdd(contract.address);
     setActivePanelContent('add');
     setIsPanelOpen(true);

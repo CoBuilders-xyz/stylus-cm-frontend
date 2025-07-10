@@ -341,8 +341,11 @@ export default function ContractDetails({
   const handleManageContract = () => {
     // If we have the onAddContract prop, use it (this allows the parent to control the flow)
     if (onAddContract && contractData) {
+      console.log('HOLA THIS IS ON ADD CONTRACT');
+
       onAddContract(contractData);
     } else {
+      console.log('HOLA THIS IS ELSE');
       // Otherwise, fall back to the direct API call
       handleAddToMyContracts();
     }
