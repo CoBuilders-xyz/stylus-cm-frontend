@@ -409,6 +409,15 @@ export default function ContractDetails({
                     ref={contractNameRef}
                   />
                 </>
+              ) : contractData.isSavedByUser ? (
+                <>
+                  <div className='text-sm font-mono text-gray-300'>
+                    {contractData.address}
+                  </div>
+                  <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
+                    {contractData.savedContractName}
+                  </div>
+                </>
               ) : (
                 <div className='text-2xl font-mono mb-1'>
                   {contractData.address}

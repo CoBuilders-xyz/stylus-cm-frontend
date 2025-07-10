@@ -4,9 +4,9 @@ import { API_URL } from '@/utils/env';
  * Base API client for handling HTTP requests with authentication
  */
 export class ApiClient {
-  private accessToken: string;
+  private accessToken: string | null;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string | null = null) {
     this.accessToken = accessToken;
   }
 
