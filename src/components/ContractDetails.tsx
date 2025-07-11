@@ -11,6 +11,7 @@ import {
   BellRing,
   Edit2,
   Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { useSidePanel } from './SidePanel';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,65 @@ import AutomatedBiddingSection from './AutomatedBiddingSection';
 import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
 import { Badge } from '@/components/ui/badge';
+
+// Auxiliary function to get explorer URL and enabled state
+const getExplorerLinkInfo = (
+  chainId: string | null,
+  contractAddress: string
+) => {
+  let explorerUrl = '';
+  let isEnabled = false;
+  console.log('chainId', chainId);
+  if (chainId === '42161') {
+    explorerUrl = `https://arbiscan.io/address/${contractAddress}`;
+    isEnabled = true;
+  } else if (chainId === '421614') {
+    explorerUrl = `https://sepolia.arbiscan.io/address/${contractAddress}`;
+    isEnabled = true;
+  }
+
+  return { explorerUrl, isEnabled };
+};
+
+// Explorer Link Button Component
+interface ExplorerLinkButtonProps {
+  chainId: string | null;
+  contractAddress: string;
+}
+
+const ExplorerLinkButton: React.FC<ExplorerLinkButtonProps> = ({
+  chainId,
+  contractAddress,
+}) => {
+  const { explorerUrl, isEnabled } = getExplorerLinkInfo(
+    chainId,
+    contractAddress
+  );
+
+  return (
+    <button
+      className={`${
+        isEnabled
+          ? 'hover:text-white cursor-pointer'
+          : 'opacity-50 cursor-not-allowed'
+      }`}
+      onClick={() => {
+        if (isEnabled) {
+          window.open(explorerUrl, '_blank');
+        }
+      }}
+      disabled={!isEnabled}
+      title={
+        isEnabled
+          ? 'View on block explorer'
+          : 'Explorer not available for this network'
+      }
+    >
+      <ExternalLink className='h-4 w-4' />
+    </button>
+  );
+};
+
 interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
@@ -67,7 +127,7 @@ export default function ContractDetails({
   const { signalContractUpdated } = useContractsUpdater();
 
   // Get the blockchain service
-  const { currentBlockchainId } = useBlockchainService();
+  const { currentBlockchainId, currentBlockchain } = useBlockchainService();
 
   // Reference to the EditableContractName component
   const contractNameRef = useRef<EditableContractNameRef>(null);
@@ -399,8 +459,12 @@ export default function ContractDetails({
             <div>
               {viewType === 'my-contracts' ? (
                 <>
-                  <div className='text-sm font-mono text-gray-300'>
+                  <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
                     {contractData.address}
+                    <ExplorerLinkButton
+                      chainId={currentBlockchain?.chainId.toString() || null}
+                      contractAddress={contractData.address}
+                    />
                   </div>
                   <EditableContractName
                     name={contractName}
