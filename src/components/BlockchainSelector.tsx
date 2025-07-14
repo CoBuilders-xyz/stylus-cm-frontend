@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, Globe } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 export default function BlockchainSelector() {
   const {
@@ -68,7 +68,6 @@ export default function BlockchainSelector() {
           style={{ borderWidth: '1px' }}
           title='Select Blockchain'
         >
-          <Globe className='w-4 h-4' />
           <span className='text-xs'>
             {selectedBlockchain?.name || 'Select Chain'}
           </span>
