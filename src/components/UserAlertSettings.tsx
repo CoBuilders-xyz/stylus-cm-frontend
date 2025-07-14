@@ -537,6 +537,18 @@ export default function UserAlertSettings({
                   {hasChangedTelegram ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
+              <p className='text-gray-400 text-xs mt-2'>
+                Start a conversation with{' '}
+                <a
+                  href='http://t.me/stylusCmNotifications_bot'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='text-blue-400 hover:text-blue-300 underline'
+                >
+                  @stylusCmNotifications_bot
+                </a>{' '}
+                to receive your Telegram notifications
+              </p>
               {telegramError && (
                 <p className='text-red-500 text-xs mt-1'>{telegramError}</p>
               )}
