@@ -358,10 +358,10 @@ function GasTankContent({
               htmlFor='disclaimer'
               className='text-sm font-medium leading-tight'
             >
-              I&apos;m aware this is an experimental feature until audit
-              compeltion and understand the risks associated with automated
-              bidding. Results may vary and I&apos;m responsible for monitoring
-              my account.
+              I understand this is an experimental feature pending audit
+              completion, and I accept the associated risks of using automated
+              bidding. Performance may vary, and I acknowledge that I am solely
+              responsible for monitoring my account.
             </Label>
           </div>
           <Button
