@@ -13,6 +13,15 @@ const productionChains: Chain[] = [
   //     default: { http: ['https://arb1.arbitrum.io/rpc'] },
   //   },
   // } as const satisfies Chain,
+  {
+    id: 55244,
+    name: 'Superposition',
+    iconBackground: '#fff',
+    nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+    rpcUrls: {
+      default: { http: ['https://rpc.superposition.so'] },
+    },
+  } as const satisfies Chain,
 ];
 
 // Local development chain
