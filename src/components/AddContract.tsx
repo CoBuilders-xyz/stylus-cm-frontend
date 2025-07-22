@@ -8,7 +8,12 @@ import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AddContractProps {
   onSuccess?: () => void;
@@ -158,7 +163,24 @@ export default function AddContract({
             </p>
 
             <div className='mb-4'>
-              <label className='block text-sm mb-1'>Contract Address</label>
+              <div className='flex items-center gap-2'>
+                <label className='block text-sm mb-1'>Contract Address</label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='w-4 h-4 cursor-help' />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className='max-w-xs'>
+                      <strong>
+                        Arbitrum cache only supports Stylus Contracts.
+                      </strong>
+                      <br />
+                      Only WASM contracts (Stylus) are supported, not
+                      traditional EVM contracts.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type='text'
                 placeholder='0x...'
@@ -198,7 +220,24 @@ export default function AddContract({
 
             {initialAddress && (
               <div className='mb-4'>
-                <label className='block text-sm mb-1'>Contract Address</label>
+                <div className='flex items-center gap-2'>
+                  <label className='block text-sm mb-1'>Contract Address</label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className='w-4 h-4 cursor-help' />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className='max-w-xs'>
+                        <strong>
+                          Arbitrum cache only supports Stylus Contracts.
+                        </strong>
+                        <br />
+                        Only WASM contracts (Stylus) are supported, not
+                        traditional EVM contracts.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type='text'
                   value={contractAddress}
