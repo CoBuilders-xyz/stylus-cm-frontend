@@ -196,7 +196,7 @@ export default function AddContract({
           const timeInSeconds = Number(timeLeftSeconds);
           const daysLeft = Math.floor(timeInSeconds / 86400); // Convert seconds to days
           setValidationState({
-            message: `Valid WASM contract (Stylus compatible, ${daysLeft} days left)`,
+            message: `Valid WASM contract. Program expires in ${daysLeft} days`,
             type: 'success',
           });
           // Clear any previous address error
