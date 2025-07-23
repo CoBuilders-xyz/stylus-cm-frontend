@@ -2,7 +2,7 @@ import { useAuthentication } from '@/context/AuthenticationProvider';
 import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
 import { BlockchainService } from '@/services/blockchainService';
 import { Blockchain } from '@/services/contractService';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useRef } from 'react';
 import { useAccount } from 'wagmi';
 
 /**
@@ -53,6 +53,9 @@ export function useBlockchainService(
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Track the last resolved chain ID to prevent unnecessary re-executions
+  const lastResolvedChainId = useRef<number | null>(null);
+
   // Use memoization to ensure we don't create a new service instance on every render
   const service = useMemo(() => {
     if (requireAuth && (!isAuthenticated || !accessToken)) {
@@ -68,11 +71,9 @@ export function useBlockchainService(
     if (!service) {
       setCurrentBlockchain(null);
       setCurrentBlockchainId(null);
+      lastResolvedChainId.current = null;
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
 
     // Updated priority logic:
     // 1. If user explicitly selected a blockchain via UI, prioritize that
@@ -80,7 +81,18 @@ export function useBlockchainService(
     const targetChainId =
       isUserSelected && selectedBlockchain
         ? selectedBlockchain.chainId
-        : chain?.id || selectedBlockchain?.chainId || DEFAULT_CHAIN_ID;
+        : chain?.id ||
+          selectedBlockchain?.chainId ||
+          (DEFAULT_CHAIN_ID ? parseInt(DEFAULT_CHAIN_ID) : null);
+
+    // Skip if no valid chain ID or if we already resolved this chain
+    if (!targetChainId || lastResolvedChainId.current === targetChainId) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    lastResolvedChainId.current = targetChainId;
 
     service
       .getBlockchains()
@@ -99,35 +111,23 @@ export function useBlockchainService(
         }
 
         if (matchingBlockchain) {
-          setCurrentBlockchain(matchingBlockchain);
-          setCurrentBlockchainId(matchingBlockchain.id);
-
-          if (isUserSelected && selectedBlockchain) {
-            console.log(
-              `Using user-selected blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
-            );
-          } else if (!chain?.id && selectedBlockchain) {
-            console.log(
-              `Using context-selected blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
-            );
-          } else if (!chain?.id) {
-            console.log(
-              `Using default blockchain: ${matchingBlockchain.name} (chainId: ${matchingBlockchain.chainId})`
-            );
+          // Only update if actually different
+          if (currentBlockchain?.id !== matchingBlockchain.id) {
+            setCurrentBlockchain(matchingBlockchain);
+            setCurrentBlockchainId(matchingBlockchain.id);
           }
         } else {
           // If target chain not found, try to fallback to the first available blockchain
           const fallbackBlockchain = blockchains[0];
-          if (fallbackBlockchain) {
+          if (
+            fallbackBlockchain &&
+            currentBlockchain?.id !== fallbackBlockchain.id
+          ) {
             setCurrentBlockchain(fallbackBlockchain);
             setCurrentBlockchainId(fallbackBlockchain.id);
             console.warn(
               `No matching blockchain found for chainId: ${targetChainId}. Using fallback: ${fallbackBlockchain.name}`
             );
-          } else {
-            console.warn(`No blockchains available. chainId: ${targetChainId}`);
-            setCurrentBlockchain(null);
-            setCurrentBlockchainId(null);
           }
         }
         setIsLoading(false);
@@ -138,8 +138,15 @@ export function useBlockchainService(
         setCurrentBlockchain(null);
         setCurrentBlockchainId(null);
         setIsLoading(false);
+        lastResolvedChainId.current = null;
       });
-  }, [service, chain?.id, selectedBlockchain, isUserSelected]);
+  }, [
+    service,
+    chain?.id,
+    selectedBlockchain,
+    isUserSelected,
+    currentBlockchain?.id,
+  ]);
 
   return {
     service,
