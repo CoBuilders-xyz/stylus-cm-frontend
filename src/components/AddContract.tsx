@@ -15,21 +15,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-// ArbWasm precompile ABI - using the real interface for checking program activation
-const ARB_WASM_ABI = [
-  {
-    type: 'function',
-    name: 'programTimeLeft',
-    stateMutability: 'view',
-    inputs: [{ name: 'program', type: 'address' }],
-    outputs: [{ type: 'uint64' }],
-  },
-] as const;
-
-// ArbWasm precompile address
-const ARB_WASM_PRECOMPILE =
-  '0x0000000000000000000000000000000000000071' as const;
+import {
+  ARB_WASM_ABI,
+  ARB_WASM_PRECOMPILE,
+} from '@/config/abis/arbWasm/arbWasm';
 
 interface AddContractProps {
   onSuccess?: () => void;
