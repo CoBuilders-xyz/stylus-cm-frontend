@@ -211,6 +211,14 @@ export default function AddContract({
 
   // Function to validate Ethereum address
   const validateAddress = (address: string): boolean => {
+    // Check if address is too long
+    if (address.length > 42) {
+      setAddressError(
+        'Address is too long. Ethereum addresses must be exactly 42 characters (0x + 40 hex chars)'
+      );
+      return false;
+    }
+
     // Basic Ethereum address validation - must be exactly 42 characters (0x + 40 hex chars)
     const addressRegex = /^0x[a-fA-F0-9]{40}$/;
     if (!addressRegex.test(address) || address.length !== 42) {
@@ -223,11 +231,20 @@ export default function AddContract({
 
   // Handle address input change
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setContractAddress(e.target.value);
-    // Clear all validation states when user types
-    setAddressError(null);
+    const newAddress = e.target.value;
+    setContractAddress(newAddress);
+
+    // Clear validation states when user types
     setValidationState(null);
     setIsWasmContract(false); // Reset WASM status on address change
+
+    // Validate address on every change for immediate feedback
+    if (newAddress.trim()) {
+      validateAddress(newAddress);
+    } else {
+      // Clear error if field is empty
+      setAddressError(null);
+    }
   };
 
   // Handle name input change
