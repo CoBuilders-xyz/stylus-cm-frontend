@@ -355,7 +355,7 @@ export default function AddContract({
                 <label className='block text-sm mb-1'>Contract Address</label>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className='w-4 h-4 cursor-help' />
+                    <Info className='w-4 h-4 cursor-help mb-1' />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className='max-w-xs'>
@@ -421,7 +421,7 @@ export default function AddContract({
             {initialAddress && (
               <div className='mb-4'>
                 <div className='flex items-center gap-2'>
-                  <label className='block text-sm mb-1'>Contract Address</label>
+                  <label className='block text-sm'>Contract Address</label>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className='w-4 h-4 cursor-help' />
