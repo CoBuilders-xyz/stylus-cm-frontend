@@ -10,6 +10,7 @@ import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
 import { X, Info } from 'lucide-react';
 import { useBytecode, useReadContract } from 'wagmi';
+import { isAddress } from 'viem';
 import {
   Tooltip,
   TooltipContent,
@@ -219,9 +220,8 @@ export default function AddContract({
       return false;
     }
 
-    // Basic Ethereum address validation - must be exactly 42 characters (0x + 40 hex chars)
-    const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!addressRegex.test(address) || address.length !== 42) {
+    // Use viem's isAddress function for proper Ethereum address validation
+    if (!isAddress(address)) {
       setAddressError('Please enter a valid Ethereum address (42 characters)');
       return false;
     }
@@ -363,8 +363,8 @@ export default function AddContract({
                         Arbitrum cache only supports Stylus Contracts.
                       </strong>
                       <br />
-                      Only WASM contracts (Stylus) are supported, not
-                      traditional EVM contracts.
+                      Only WASM contracts (Stylus) are supported, not EVM
+                      contracts.
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -432,8 +432,8 @@ export default function AddContract({
                           Arbitrum cache only supports Stylus Contracts.
                         </strong>
                         <br />
-                        Only WASM contracts (Stylus) are supported, not
-                        traditional EVM contracts.
+                        Only WASM contracts (Stylus) are supported, not EVM
+                        contracts.
                       </p>
                     </TooltipContent>
                   </Tooltip>
