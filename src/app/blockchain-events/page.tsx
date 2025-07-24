@@ -103,29 +103,30 @@ export default function BlockchainEventsPage() {
       >
         {isPanelOpen && selectedEvent && (
           <div className='text-white flex flex-col h-full bg-[#1A1919]'>
+            {/* Sticky Header */}
+            <div className='flex-shrink-0 bg-[#1A1919] p-6'>
+              <div className='flex justify-between items-center'>
+                <div className='flex items-center space-x-3'>
+                  <Badge
+                    variant={getEventTypeBadgeVariant(selectedEvent.eventName)}
+                    className='px-3 py-1 text-sm font-semibold'
+                  >
+                    {formatEventType(selectedEvent.eventName)}
+                  </Badge>
+                  <h2 className='text-xl font-bold'>Event Details</h2>
+                </div>
+                <Button
+                  className='rounded-md border border-white hover:bg-gray-900'
+                  onClick={handleClosePanel}
+                >
+                  <X className='h-5 w-5' />
+                </Button>
+              </div>
+            </div>
+
+            {/* Scrollable Content */}
             <ScrollArea className='flex-1'>
               <div className='p-6'>
-                {/* Header */}
-                <div className='flex justify-between items-center mb-6'>
-                  <div className='flex items-center space-x-3'>
-                    <Badge
-                      variant={getEventTypeBadgeVariant(
-                        selectedEvent.eventName
-                      )}
-                      className='px-3 py-1 text-sm font-semibold'
-                    >
-                      {formatEventType(selectedEvent.eventName)}
-                    </Badge>
-                    <h2 className='text-xl font-bold'>Event Details</h2>
-                  </div>
-                  <Button
-                    className='rounded-md border border-white hover:bg-gray-900'
-                    onClick={handleClosePanel}
-                  >
-                    <X className='h-5 w-5' />
-                  </Button>
-                </div>
-
                 {/* Transaction Information */}
                 <div className='mb-6'>
                   <h3 className='text-lg font-semibold mb-4'>
@@ -322,7 +323,7 @@ export default function BlockchainEventsPage() {
                                         Event Bid Amount includes time decay.
                                       </strong>
                                       <br />
-                                      It’s calculated as:
+                                      It&apos;s calculated as:
                                       <br />
                                       <code>
                                         bidAmount + (decayRate ×
