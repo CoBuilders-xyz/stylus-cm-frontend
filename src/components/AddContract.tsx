@@ -254,7 +254,11 @@ export default function AddContract({
 
   // Move to the next step
   const handleNextStep = () => {
-    if (validateAddress(contractAddress) && !addressError) {
+    if (
+      validateAddress(contractAddress) &&
+      !addressError &&
+      validationState?.type === 'success'
+    ) {
       setStep(2);
     }
   };
