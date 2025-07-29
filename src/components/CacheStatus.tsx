@@ -105,9 +105,13 @@ export default function CacheStatus() {
                 Available Cache Space
               </h2>
               {isLoadingCacheStats || !currentBlockchainId ? (
-                <div className='mt-2 space-y-2'>
+                <div className='mt-2 space-y-3'>
                   <Skeleton className='h-10 w-32 bg-slate-700' />
-                  <Skeleton className='h-4 w-24 bg-slate-700' />
+                  <div className='space-y-2'>
+                    <Skeleton className='h-4 w-full bg-slate-700' />
+                    <Skeleton className='h-4 w-full bg-slate-700' />
+                  </div>
+                  <Skeleton className='h-3 w-full bg-slate-700 rounded-full' />
                 </div>
               ) : errorCacheStats ? (
                 <p className='text-red-500 mt-2'>Error loading data</p>
