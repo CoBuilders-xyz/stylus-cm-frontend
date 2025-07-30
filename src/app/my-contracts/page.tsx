@@ -106,12 +106,12 @@ export default function MyContractsPage() {
   };
 
   return (
-    <div className='min-h-screen pt-18'>
+    <div className='h-[calc(100vh-72px)] pt-18 flex flex-col'>
       <div
-        className={`transition-all duration-300 ease-in-out`}
+        className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
         style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
       >
-        <div className='p-10'>
+        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='my-contracts'

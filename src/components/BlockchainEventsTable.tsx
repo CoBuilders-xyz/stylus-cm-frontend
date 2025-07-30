@@ -319,8 +319,6 @@ const Pagination = React.memo(
           >
             <option value='5'>5</option>
             <option value='10'>10</option>
-            <option value='25'>25</option>
-            <option value='50'>50</option>
           </select>
           <span>entries</span>
         </div>
@@ -461,8 +459,8 @@ function BlockchainEventsTable({
   );
 
   return (
-    <div className='overflow-hidden'>
-      <div className='flex justify-between items-center mb-8'>
+    <div className='overflow-hidden flex flex-col h-full'>
+      <div className='flex justify-between items-center mb-8 flex-shrink-0'>
         <h1 className='text-xl font-bold text-white'>Cache Events</h1>
         <div className='flex items-center gap-4'>
           <EventTypeFilter
@@ -503,8 +501,11 @@ function BlockchainEventsTable({
       )}
 
       {!isLoading && !error && (
-        <div className='w-full'>
-          <ScrollArea orientation='both' className='h-[600px]'>
+        <div className='w-full flex-1 flex flex-col min-h-0'>
+          <ScrollArea
+            orientation='both'
+            className='h-[calc(100vh-350px)] min-h-[400px]'
+          >
             <div className='min-w-full'>
               <TooltipProvider>
                 <Table className='w-full'>
@@ -598,11 +599,13 @@ function BlockchainEventsTable({
 
       {/* Only show pagination controls if we have pagination data and more than 0 items */}
       {!isLoading && !error && pagination.totalItems > 0 && (
-        <Pagination
-          pagination={pagination}
-          handlePageChange={handlePageChange}
-          handleItemsPerPageChange={handleItemsPerPageChange}
-        />
+        <div className='flex-shrink-0'>
+          <Pagination
+            pagination={pagination}
+            handlePageChange={handlePageChange}
+            handleItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
       )}
     </div>
   );
