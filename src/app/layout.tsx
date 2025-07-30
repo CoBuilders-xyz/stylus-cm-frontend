@@ -4,6 +4,7 @@ import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { AuthenticationProvider } from '../context/AuthenticationProvider';
 import { AlertSettingsProvider } from '../context/AlertSettingsProvider';
 import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvider';
@@ -30,6 +31,7 @@ export default function RootLayout({
               <AlertSettingsProvider>
                 <Header />
                 {children}
+                <Footer />
               </AlertSettingsProvider>
             </AuthenticationProvider>
           </BlockchainSelectionProvider>
