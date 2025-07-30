@@ -56,7 +56,7 @@ export default function ConnectionBanner() {
           ? 'bg-[#335CD7] text-white'
           : isAuthLoading
           ? 'bg-[#335CD7] text-white'
-          : 'bg-[#33D75C] text-black'
+          : 'bg-[#10B981] text-black'
       }`}
     >
       {!isOnline && (
