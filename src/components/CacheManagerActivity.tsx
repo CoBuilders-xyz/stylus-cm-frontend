@@ -37,11 +37,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Chart configuration
 const chartConfig = {
   insertCount: {
-    label: 'Insert Count',
+    label: 'Insertions Count',
     color: '#4267B2', // Green for inserts
   },
   deleteCount: {
-    label: 'Delete Count',
+    label: 'Deletions Count',
     color: '#B24942', // Red for deletes
   },
 } satisfies ChartConfig;
@@ -246,7 +246,7 @@ export default function CacheManagerActivity() {
               alignItems: 'center',
             }}
           >
-            <span style={{ marginRight: '12px' }}>Insert Count:</span>
+            <span style={{ marginRight: '12px' }}>Insertions:</span>
             <span style={{ fontWeight: 'bold' }}>{data?.insertCount || 0}</span>
           </div>
           <div
@@ -257,7 +257,7 @@ export default function CacheManagerActivity() {
               alignItems: 'center',
             }}
           >
-            <span style={{ marginRight: '12px' }}>Delete Count:</span>
+            <span style={{ marginRight: '12px' }}>Deletions:</span>
             <span style={{ fontWeight: 'bold' }}>{data?.deleteCount || 0}</span>
           </div>
         </div>
@@ -297,10 +297,34 @@ export default function CacheManagerActivity() {
                 <Skeleton className='h-8 w-32 bg-slate-700' />
               ) : (
                 <div className='flex flex-row gap-4 text-sm'>
-                  <div style={{ color: '#4267B2' }}>
-                    Placements: {totalInserts}
+                  <div className='flex items-center'>
+                    <span
+                      className='mr-1 pb-1'
+                      style={{
+                        color: '#4267B2',
+                        fontSize: '24px',
+                        lineHeight: '1',
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      ●
+                    </span>
+                    Insertions: {totalInserts}
                   </div>
-                  <div style={{ color: '#B24942' }}>
+                  <div className='flex items-center'>
+                    <span
+                      className='mr-1 pb-1'
+                      style={{
+                        color: '#B24942',
+                        fontSize: '24px',
+                        lineHeight: '1',
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      ●
+                    </span>
                     Deletions: {totalDeletes}
                   </div>
                 </div>
