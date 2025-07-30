@@ -125,7 +125,10 @@ export default function CacheStatus() {
                   <div className='space-y-1 text-sm'>
                     <div className='flex justify-between items-center'>
                       <span className='text-gray-400'>Used</span>
-                      <span className='text-green-400 font-medium'>
+                      <span
+                        className='font-medium'
+                        style={{ color: '#10B981' }}
+                      >
                         {cacheStats.cacheFilledPercentage.toFixed(0)}%
                       </span>
                     </div>
@@ -142,9 +145,10 @@ export default function CacheStatus() {
                     <div className='relative h-3 w-full overflow-hidden rounded-full bg-gray-700'>
                       {/* Used portion (filled from left) */}
                       <div
-                        className='h-full bg-green-500 transition-all duration-300'
+                        className='h-full transition-all duration-300'
                         style={{
                           width: `${cacheStats.cacheFilledPercentage}%`,
+                          background: '#10B981',
                         }}
                       />
                     </div>
