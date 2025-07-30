@@ -306,12 +306,16 @@ export default function CacheAverageBid() {
 
     switch (timespan) {
       case 'D':
+        // For day, show the day part (e.g., "06" from "2025-05-06")
         return value.split('-')[2] || value;
       case 'W':
+        // For week, show the week part (e.g., "17" from "2025-17")
         return value.split('-')[1] || value;
       case 'M':
+        // For month, show the month part (e.g., "04" from "2025-04")
         return value.split('-')[1] || value;
       case 'Y':
+        // For year, show the year (e.g., "2025")
         return value.split('-')[0] || value;
       default:
         return value;
@@ -324,18 +328,21 @@ export default function CacheAverageBid() {
 
     switch (timespan) {
       case 'D':
+        // For day, show the full date (e.g., "May 6, 2025")
         const parts = label.split('-');
         if (parts.length === 3) {
           return `${parts[0]}-${parts[1]}-${parts[2]}`;
         }
         return label;
       case 'W':
+        // For week, show "Week X, Year"
         const weekParts = label.split('-');
         if (weekParts.length === 2) {
           return `Week ${weekParts[1]}, ${weekParts[0]}`;
         }
         return label;
       case 'M':
+        // For month, show "Month, Year"
         const monthParts = label.split('-');
         if (monthParts.length === 2) {
           const monthNames = [
@@ -358,6 +365,7 @@ export default function CacheAverageBid() {
         }
         return label;
       case 'Y':
+        // For year, show the year
         return label;
       default:
         return label;
