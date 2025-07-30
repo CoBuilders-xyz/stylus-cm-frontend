@@ -478,6 +478,8 @@ export default function CacheAverageBid() {
   const isLoading =
     smallData.isLoading || mediumData.isLoading || largeData.isLoading;
 
+  const hasError = smallData.error || mediumData.error || largeData.error;
+
   return (
     <Card
       className='@container/card'
@@ -615,6 +617,10 @@ export default function CacheAverageBid() {
         {isLoading || !currentBlockchainId ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
             <Skeleton className='h-[200px] w-full bg-slate-700' />
+          </div>
+        ) : hasError ? (
+          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-red-500'>
+            Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-gray-400'>
