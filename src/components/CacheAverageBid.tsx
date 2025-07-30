@@ -278,7 +278,6 @@ export default function CacheAverageBid() {
               3
             )
           : '0.000',
-        percentage: '+12%', // Mock data - implement actual calculation
       },
       medium: {
         value: mediumData.bidAverageData?.global
@@ -287,7 +286,6 @@ export default function CacheAverageBid() {
               3
             )
           : '0.000',
-        percentage: '+18%', // Mock data - implement actual calculation
       },
       large: {
         value: largeData.bidAverageData?.global
@@ -296,7 +294,6 @@ export default function CacheAverageBid() {
               3
             )
           : '0.000',
-        percentage: '+15%', // Mock data - implement actual calculation
       },
     };
   };
@@ -575,35 +572,37 @@ export default function CacheAverageBid() {
             const isHovered = hoveredSize === sizeKey;
             const isAnyHovered = hoveredSize !== null;
 
+            // Get the color for this size from chartConfig
+            const lineColor = chartConfig[sizeKey].color;
+
             return (
               <div
                 key={option.value}
                 style={{
                   ...customStyles.sizeCard,
-                  cursor: 'pointer',
                   opacity: isAnyHovered && !isHovered ? 0.5 : 1,
                   transform: isHovered ? 'scale(1.02)' : 'scale(1)',
                   transition: 'all 0.2s ease-in-out',
                 }}
-                className='p-3'
+                className='p-3 text-center cursor-pointer'
                 onMouseEnter={() => setHoveredSize(sizeKey)}
                 onMouseLeave={() => setHoveredSize(null)}
               >
-                <div style={customStyles.sizeLabel} className='mb-1'>
+                <div
+                  style={{
+                    ...customStyles.sizeLabel,
+                    color: lineColor,
+                    fontWeight: '600',
+                  }}
+                  className='mb-2'
+                >
                   {option.label}
                 </div>
                 <div style={customStyles.bidValue} className='mb-1'>
                   {isLoading || !currentBlockchainId ? (
-                    <Skeleton className='h-5 w-20 bg-slate-700' />
+                    <Skeleton className='h-5 w-20 bg-slate-700 mx-auto' />
                   ) : (
                     `${stats.value} ETH`
-                  )}
-                </div>
-                <div style={customStyles.percentageChange}>
-                  {isLoading || !currentBlockchainId ? (
-                    <Skeleton className='h-3 w-12 bg-slate-700' />
-                  ) : (
-                    stats.percentage
                   )}
                 </div>
               </div>
