@@ -456,8 +456,8 @@ function ContractsTable({
   }
 
   return (
-    <div className='overflow-hidden'>
-      <div className='flex justify-between mb-8'>
+    <div className='overflow-hidden flex flex-col h-full'>
+      <div className='flex justify-between mb-8 flex-shrink-0'>
         <h1 className='text-xl font-bold text-white'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
@@ -513,8 +513,8 @@ function ContractsTable({
       )}
 
       {!isLoading && !error && (
-        <div className='w-full'>
-          <ScrollArea className='h-[600px]'>
+        <div className='w-full flex-1 flex flex-col min-h-0'>
+          <ScrollArea className='h-[calc(100vh-350px)] min-h-[400px]'>
             <Table className='w-full'>
               <TableHeader className='bg-black text-white sticky top-0 z-10'>
                 <TableRow className='h-20 hover:bg-transparent'>
@@ -638,11 +638,13 @@ function ContractsTable({
 
       {/* Only show pagination controls if we have pagination data and more than 0 items */}
       {!isLoading && !error && pagination.totalItems > 0 && (
-        <Pagination
-          pagination={pagination}
-          handlePageChange={handlePageChange}
-          handleItemsPerPageChange={handleItemsPerPageChange}
-        />
+        <div className='flex-shrink-0'>
+          <Pagination
+            pagination={pagination}
+            handlePageChange={handlePageChange}
+            handleItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
       )}
     </div>
   );
