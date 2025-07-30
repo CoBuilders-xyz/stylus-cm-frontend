@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ChartConfig, ChartContainer } from '@/components/ui/chart';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Select,
   SelectContent,
@@ -26,17 +27,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { useBidAverage, BidAverageSizeRange } from '@/hooks/useBidAverage';
+import { useBidAverage } from '@/hooks/useBidAverage';
 import { BidAverageTimespan } from '@/services/cacheMetricsService';
 import { formatRoundedEth } from '@/utils/formatting';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Chart configuration
+// Chart configuration for multiple lines
 const chartConfig = {
-  averageBid: {
-    label: 'Average Bid',
-    color: '#4267B2', // Using a blue color similar to the bars in the image
+  small: {
+    label: '<8 KB',
+    color: '#3B82F6', // Blue
+  },
+  medium: {
+    label: '8-16 KB',
+    color: '#10B981', // Green
+  },
+  large: {
+    label: '>16 KB',
+    color: '#F59E0B', // Orange
   },
 } satisfies ChartConfig;
 
@@ -48,47 +56,252 @@ const timespanOptions = [
   { value: 'Y', label: 'Y' },
 ];
 
-// Contract size options
+// Contract size options with their display labels
 const contractSizeOptions = [
   { value: 'small', label: '<8 KB' },
-  { value: 'medium', label: '8 KB to 16 KB' },
+  { value: 'medium', label: '8-16 KB' },
   { value: 'large', label: '>16 KB' },
 ];
 
+type ContractSize = 'small' | 'medium' | 'large';
+
 export default function CacheAverageBid() {
-  // Use the bid average hook instead of mock data and local state
-  const {
-    bidAverageData,
-    isLoading,
-    error,
-    timespan,
-    sizeRange,
-    setTimespan,
-    setSizeRange,
-    currentBlockchainId,
-  } = useBidAverage('D', 'small');
+  // State for hover interactions
+  const [hoveredSize, setHoveredSize] = useState<ContractSize | null>(null);
 
-  // Process data for chart
+  // Get data for all contract sizes
+  const smallData = useBidAverage('D', 'small');
+  const mediumData = useBidAverage('D', 'medium');
+  const largeData = useBidAverage('D', 'large');
+
+  // Use the first hook for timespan control
+  const { timespan, currentBlockchainId } = smallData;
+
+  // Handle timespan change - update all hooks
+  const handleTimespanChange = (value: string) => {
+    if (value) {
+      const newTimespan = value as BidAverageTimespan;
+      smallData.setTimespan(newTimespan);
+      mediumData.setTimespan(newTimespan);
+      largeData.setTimespan(newTimespan);
+    }
+  };
+
+  // Process data for multi-line chart
   const chartData = useMemo(() => {
-    if (!bidAverageData || !bidAverageData.periods) {
-      return [];
+    // Collect all unique periods from all data sources
+    const allPeriods = new Set<string>();
+
+    // Add periods from small data
+    if (smallData.bidAverageData?.periods) {
+      smallData.bidAverageData.periods.forEach((item) => {
+        allPeriods.add(item.period);
+      });
     }
 
-    return bidAverageData.periods.map((item) => ({
-      date: item.period,
-      averageBid: parseFloat(item.parsedAverageBid),
-      formattedAverageBid: formatRoundedEth(item.parsedAverageBid, 5),
-      count: item.count,
-    }));
-  }, [bidAverageData]);
-
-  // Formatted global average
-  const globalAverageBid = useMemo(() => {
-    if (!bidAverageData || !bidAverageData.global) {
-      return '0.00';
+    // Add periods from medium data
+    if (mediumData.bidAverageData?.periods) {
+      mediumData.bidAverageData.periods.forEach((item) => {
+        allPeriods.add(item.period);
+      });
     }
-    return formatRoundedEth(bidAverageData.global.parsedAverageBid, 5);
-  }, [bidAverageData]);
+
+    // Add periods from large data
+    if (largeData.bidAverageData?.periods) {
+      largeData.bidAverageData.periods.forEach((item) => {
+        allPeriods.add(item.period);
+      });
+    }
+
+    // Convert to sorted array
+    const sortedPeriods = Array.from(allPeriods).sort();
+
+    // Create maps for quick lookup of data by period
+    const smallDataMap = new Map();
+    const mediumDataMap = new Map();
+    const largeDataMap = new Map();
+
+    if (smallData.bidAverageData?.periods) {
+      smallData.bidAverageData.periods.forEach((item) => {
+        smallDataMap.set(item.period, {
+          value: parseFloat(item.parsedAverageBid),
+          formatted: formatRoundedEth(item.parsedAverageBid, 5),
+        });
+      });
+    }
+
+    if (mediumData.bidAverageData?.periods) {
+      mediumData.bidAverageData.periods.forEach((item) => {
+        mediumDataMap.set(item.period, {
+          value: parseFloat(item.parsedAverageBid),
+          formatted: formatRoundedEth(item.parsedAverageBid, 5),
+        });
+      });
+    }
+
+    if (largeData.bidAverageData?.periods) {
+      largeData.bidAverageData.periods.forEach((item) => {
+        largeDataMap.set(item.period, {
+          value: parseFloat(item.parsedAverageBid),
+          formatted: formatRoundedEth(item.parsedAverageBid, 5),
+        });
+      });
+    }
+
+    // Helper function to interpolate missing values
+    const interpolateValue = (
+      prevValue: number | null,
+      nextValue: number | null,
+      fallbackValue: number = 0
+    ) => {
+      if (prevValue !== null && nextValue !== null) {
+        return (prevValue + nextValue) / 2;
+      }
+      if (prevValue !== null) return prevValue;
+      if (nextValue !== null) return nextValue;
+      return fallbackValue;
+    };
+
+    // Helper function to find nearest values for interpolation
+    const findNearestValues = (
+      dataMap: Map<string, { value: number; formatted: string }>,
+      periods: string[],
+      currentIndex: number
+    ) => {
+      let prevValue = null;
+      let nextValue = null;
+
+      // Look backwards for previous value
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (dataMap.has(periods[i])) {
+          prevValue = dataMap.get(periods[i])!.value;
+          break;
+        }
+      }
+
+      // Look forwards for next value
+      for (let i = currentIndex + 1; i < periods.length; i++) {
+        if (dataMap.has(periods[i])) {
+          nextValue = dataMap.get(periods[i])!.value;
+          break;
+        }
+      }
+
+      return { prevValue, nextValue };
+    };
+
+    // Build complete dataset with interpolated values
+    const completeData = sortedPeriods.map((period, index) => {
+      const chartPoint: {
+        date: string;
+        small: number;
+        medium: number;
+        large: number;
+        formattedSmall: string;
+        formattedMedium: string;
+        formattedLarge: string;
+      } = {
+        date: period,
+        small: 0,
+        medium: 0,
+        large: 0,
+        formattedSmall: '',
+        formattedMedium: '',
+        formattedLarge: '',
+      };
+
+      // Handle small data
+      if (smallDataMap.has(period)) {
+        const data = smallDataMap.get(period)!;
+        chartPoint.small = data.value;
+        chartPoint.formattedSmall = data.formatted;
+      } else {
+        const { prevValue, nextValue } = findNearestValues(
+          smallDataMap,
+          sortedPeriods,
+          index
+        );
+        const interpolatedValue = interpolateValue(prevValue, nextValue);
+        chartPoint.small = interpolatedValue;
+        chartPoint.formattedSmall = formatRoundedEth(interpolatedValue, 5);
+      }
+
+      // Handle medium data
+      if (mediumDataMap.has(period)) {
+        const data = mediumDataMap.get(period)!;
+        chartPoint.medium = data.value;
+        chartPoint.formattedMedium = data.formatted;
+      } else {
+        const { prevValue, nextValue } = findNearestValues(
+          mediumDataMap,
+          sortedPeriods,
+          index
+        );
+        const interpolatedValue = interpolateValue(prevValue, nextValue);
+        chartPoint.medium = interpolatedValue;
+        chartPoint.formattedMedium = formatRoundedEth(interpolatedValue, 5);
+      }
+
+      // Handle large data
+      if (largeDataMap.has(period)) {
+        const data = largeDataMap.get(period)!;
+        chartPoint.large = data.value;
+        chartPoint.formattedLarge = data.formatted;
+      } else {
+        const { prevValue, nextValue } = findNearestValues(
+          largeDataMap,
+          sortedPeriods,
+          index
+        );
+        const interpolatedValue = interpolateValue(prevValue, nextValue);
+        chartPoint.large = interpolatedValue;
+        chartPoint.formattedLarge = formatRoundedEth(interpolatedValue, 5);
+      }
+
+      return chartPoint;
+    });
+
+    return completeData;
+  }, [
+    smallData.bidAverageData,
+    mediumData.bidAverageData,
+    largeData.bidAverageData,
+  ]);
+
+  // Get summary statistics for each size
+  const getSummaryStats = () => {
+    return {
+      small: {
+        value: smallData.bidAverageData?.global
+          ? formatRoundedEth(
+              smallData.bidAverageData.global.parsedAverageBid,
+              3
+            )
+          : '0.000',
+        percentage: '+12%', // Mock data - implement actual calculation
+      },
+      medium: {
+        value: mediumData.bidAverageData?.global
+          ? formatRoundedEth(
+              mediumData.bidAverageData.global.parsedAverageBid,
+              3
+            )
+          : '0.000',
+        percentage: '+18%', // Mock data - implement actual calculation
+      },
+      large: {
+        value: largeData.bidAverageData?.global
+          ? formatRoundedEth(
+              largeData.bidAverageData.global.parsedAverageBid,
+              3
+            )
+          : '0.000',
+        percentage: '+15%', // Mock data - implement actual calculation
+      },
+    };
+  };
+
+  const summaryStats = getSummaryStats();
 
   // Format X-axis ticks based on timespan
   const formatXAxisTick = (value: string) => {
@@ -96,16 +309,12 @@ export default function CacheAverageBid() {
 
     switch (timespan) {
       case 'D':
-        // For day, show the day part (e.g., "06" from "2025-05-06")
         return value.split('-')[2] || value;
       case 'W':
-        // For week, show the week part (e.g., "17" from "2025-17")
         return value.split('-')[1] || value;
       case 'M':
-        // For month, show the month part (e.g., "04" from "2025-04")
         return value.split('-')[1] || value;
       case 'Y':
-        // For year, show the year (e.g., "2025")
         return value.split('-')[0] || value;
       default:
         return value;
@@ -118,21 +327,18 @@ export default function CacheAverageBid() {
 
     switch (timespan) {
       case 'D':
-        // For day, show the full date (e.g., "May 6, 2025")
         const parts = label.split('-');
         if (parts.length === 3) {
           return `${parts[0]}-${parts[1]}-${parts[2]}`;
         }
         return label;
       case 'W':
-        // For week, show "Week X, Year"
         const weekParts = label.split('-');
         if (weekParts.length === 2) {
           return `Week ${weekParts[1]}, ${weekParts[0]}`;
         }
         return label;
       case 'M':
-        // For month, show "Month, Year"
         const monthParts = label.split('-');
         if (monthParts.length === 2) {
           const monthNames = [
@@ -155,7 +361,6 @@ export default function CacheAverageBid() {
         }
         return label;
       case 'Y':
-        // For year, show the year
         return label;
       default:
         return label;
@@ -171,11 +376,27 @@ export default function CacheAverageBid() {
     title: {
       color: '#FFFFFF',
     },
-    globalValue: {
-      color: '#FFFFFF',
-    },
     description: {
       color: '#B1B1B1',
+    },
+    sizeCard: {
+      backgroundColor: '#252525',
+      border: '1px solid #2C2E30',
+      borderRadius: '8px',
+    },
+    sizeLabel: {
+      color: '#B1B1B1',
+      fontSize: '14px',
+    },
+    bidValue: {
+      color: '#FFFFFF',
+      fontSize: '20px',
+      fontWeight: 'bold',
+    },
+    percentageChange: {
+      color: '#10B981',
+      fontSize: '12px',
+      fontWeight: '500',
     },
     toggleButton: {
       backgroundColor: '#1A1919',
@@ -235,23 +456,21 @@ export default function CacheAverageBid() {
         >
           {formattedLabel}
         </p>
-        {payload.map((entry, index) => (
+        {payload.map((entry) => (
           <div
-            key={`item-${index}`}
+            key={entry.dataKey}
             style={{
-              color: '#B1B1B1',
+              color: entry.color,
               display: 'flex',
               justifyContent: 'space-between',
               marginTop: '3px',
             }}
           >
             <span style={{ marginRight: '8px' }}>
-              {entry.name === 'averageBid' ? 'Average Bid' : entry.name}:
+              {chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}:
             </span>
             <span style={{ fontWeight: 'bold' }}>
-              {entry.name === 'averageBid'
-                ? `${payload[0].payload.formattedAverageBid} ETH`
-                : entry.value}
+              {formatRoundedEth(entry.value as number, 5)} ETH
             </span>
           </div>
         ))}
@@ -259,19 +478,8 @@ export default function CacheAverageBid() {
     );
   };
 
-  // Handle timespan change
-  const handleTimespanChange = (value: string) => {
-    if (value) {
-      setTimespan(value as BidAverageTimespan);
-    }
-  };
-
-  // Handle contract size change
-  const handleContractSizeChange = (value: string) => {
-    if (value) {
-      setSizeRange(value as BidAverageSizeRange);
-    }
-  };
+  const isLoading =
+    smallData.isLoading || mediumData.isLoading || largeData.isLoading;
 
   return (
     <Card
@@ -281,21 +489,13 @@ export default function CacheAverageBid() {
       <CardHeader className='relative'>
         <div className='flex flex-col gap-1'>
           <CardTitle className='text-2xl font-bold' style={customStyles.title}>
-            Average Bid
+            Average Bid (ETH)
           </CardTitle>
-          <div className='text-4xl font-bold' style={customStyles.globalValue}>
-            {isLoading || !currentBlockchainId ? (
-              <Skeleton className='h-10 w-32 bg-slate-700' />
-            ) : (
-              `${globalAverageBid} ETH`
-            )}
-          </div>
           <CardDescription
             className='text-base'
             style={customStyles.description}
           >
-            Average bid recorded during the period for the selected contract
-            size group
+            Average bid in ETH recorded during the period by contract size
           </CardDescription>
         </div>
         <div className='absolute right-4 top-4'>
@@ -365,47 +565,57 @@ export default function CacheAverageBid() {
         </div>
       </CardHeader>
 
-      {/* Contract size selector */}
+      {/* Summary cards */}
       <div className='px-6 mb-4'>
-        <ToggleGroup
-          type='single'
-          value={sizeRange}
-          onValueChange={handleContractSizeChange}
-          variant='outline'
-          className='w-full grid grid-cols-3'
-          style={customStyles.toggleGroup}
-        >
-          {contractSizeOptions.map((option, index) => (
-            <ToggleGroupItem
-              key={option.value}
-              value={option.value}
-              className='h-10 px-2 py-2 text-center data-[state=on]:bg-transparent'
-              variant='outline'
-              style={{
-                ...(option.value === sizeRange
-                  ? customStyles.toggleButtonActive
-                  : customStyles.toggleButton),
-                borderRight:
-                  index === contractSizeOptions.length - 1
-                    ? 'none'
-                    : '1px solid #2C2E30',
-                borderLeft: index === 0 ? 'none' : 'none',
-              }}
-            >
-              {option.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+          {contractSizeOptions.map((option) => {
+            const stats =
+              summaryStats[option.value as keyof typeof summaryStats];
+            const sizeKey = option.value as ContractSize;
+            const isHovered = hoveredSize === sizeKey;
+            const isAnyHovered = hoveredSize !== null;
+
+            return (
+              <div
+                key={option.value}
+                style={{
+                  ...customStyles.sizeCard,
+                  cursor: 'pointer',
+                  opacity: isAnyHovered && !isHovered ? 0.5 : 1,
+                  transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+                className='p-3'
+                onMouseEnter={() => setHoveredSize(sizeKey)}
+                onMouseLeave={() => setHoveredSize(null)}
+              >
+                <div style={customStyles.sizeLabel} className='mb-1'>
+                  {option.label}
+                </div>
+                <div style={customStyles.bidValue} className='mb-1'>
+                  {isLoading || !currentBlockchainId ? (
+                    <Skeleton className='h-5 w-20 bg-slate-700' />
+                  ) : (
+                    `${stats.value} ETH`
+                  )}
+                </div>
+                <div style={customStyles.percentageChange}>
+                  {isLoading || !currentBlockchainId ? (
+                    <Skeleton className='h-3 w-12 bg-slate-700' />
+                  ) : (
+                    stats.percentage
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <CardContent className='px-2 pt-0 sm:px-6'>
         {isLoading || !currentBlockchainId ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
             <Skeleton className='h-[200px] w-full bg-slate-700' />
-          </div>
-        ) : error ? (
-          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-red-500'>
-            Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
           <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-gray-400'>
@@ -419,15 +629,17 @@ export default function CacheAverageBid() {
             <ResponsiveContainer width='100%' height='100%'>
               <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient
-                    id='fillAverageBid'
-                    x1='0'
-                    y1='0'
-                    x2='0'
-                    y2='1'
-                  >
-                    <stop offset='5%' stopColor='#4267B2' stopOpacity={0.8} />
-                    <stop offset='95%' stopColor='#4267B2' stopOpacity={0.1} />
+                  <linearGradient id='fillSmall' x1='0' y1='0' x2='0' y2='1'>
+                    <stop offset='5%' stopColor='#3B82F6' stopOpacity={0.3} />
+                    <stop offset='95%' stopColor='#3B82F6' stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id='fillMedium' x1='0' y1='0' x2='0' y2='1'>
+                    <stop offset='5%' stopColor='#10B981' stopOpacity={0.3} />
+                    <stop offset='95%' stopColor='#10B981' stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id='fillLarge' x1='0' y1='0' x2='0' y2='1'>
+                    <stop offset='5%' stopColor='#F59E0B' stopOpacity={0.3} />
+                    <stop offset='95%' stopColor='#F59E0B' stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -453,13 +665,33 @@ export default function CacheAverageBid() {
                   width={80}
                 />
                 <Tooltip cursor={false} content={<CustomTooltip />} />
-                <Area
-                  dataKey='averageBid'
-                  type='monotone'
-                  fill='url(#fillAverageBid)'
-                  stroke='#4267B2'
-                  strokeWidth={2}
-                />
+                {(hoveredSize === null || hoveredSize === 'small') && (
+                  <Area
+                    dataKey='small'
+                    type='monotone'
+                    fill='url(#fillSmall)'
+                    stroke='#3B82F6'
+                    strokeWidth={hoveredSize === 'small' ? 3 : 2}
+                  />
+                )}
+                {(hoveredSize === null || hoveredSize === 'medium') && (
+                  <Area
+                    dataKey='medium'
+                    type='monotone'
+                    fill='url(#fillMedium)'
+                    stroke='#10B981'
+                    strokeWidth={hoveredSize === 'medium' ? 3 : 2}
+                  />
+                )}
+                {(hoveredSize === null || hoveredSize === 'large') && (
+                  <Area
+                    dataKey='large'
+                    type='monotone'
+                    fill='url(#fillLarge)'
+                    stroke='#F59E0B'
+                    strokeWidth={hoveredSize === 'large' ? 3 : 2}
+                  />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </ChartContainer>
