@@ -54,7 +54,7 @@ export default function Header() {
         <Link
           href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
           target='_blank'
-          className='text-white hover:text-gray-300'
+          className='text-white hover:text-gray-300 pb-1'
         >
           Docs
         </Link>

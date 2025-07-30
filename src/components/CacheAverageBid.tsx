@@ -490,7 +490,7 @@ export default function CacheAverageBid() {
 
   return (
     <Card
-      className='@container/card'
+      className='@container/card flex flex-col h-full'
       style={{ ...customStyles.card, borderRadius: '12px' }}
     >
       <CardHeader className='relative'>
@@ -621,9 +621,9 @@ export default function CacheAverageBid() {
         </div>
       </div>
 
-      <CardContent className='px-2 pt-0 sm:px-6'>
+      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col'>
         {isLoading || !currentBlockchainId ? (
-          <div className='aspect-auto h-[250px] w-full flex items-center justify-center'>
+          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center'>
             <Skeleton className='h-[200px] w-full bg-slate-700' />
           </div>
         ) : hasError ? (
@@ -631,13 +631,13 @@ export default function CacheAverageBid() {
             Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
-          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-gray-400'>
+          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center text-center text-gray-400'>
             No data available for the selected filters.
           </div>
         ) : (
           <ChartContainer
             config={chartConfig}
-            className='aspect-auto h-[250px] w-full'
+            className='aspect-auto min-h-[200px] flex-1 w-full'
           >
             <ResponsiveContainer width='100%' height='100%'>
               <AreaChart data={chartData}>

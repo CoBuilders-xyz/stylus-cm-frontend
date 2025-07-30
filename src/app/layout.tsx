@@ -8,6 +8,7 @@ import { AuthenticationProvider } from '../context/AuthenticationProvider';
 import { AlertSettingsProvider } from '../context/AlertSettingsProvider';
 import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvider';
 import { Toaster } from '@/components/ui/sonner';
+import Footer from '@/components/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -30,6 +31,7 @@ export default function RootLayout({
               <AlertSettingsProvider>
                 <Header />
                 {children}
+                <Footer />
               </AlertSettingsProvider>
             </AuthenticationProvider>
           </BlockchainSelectionProvider>
