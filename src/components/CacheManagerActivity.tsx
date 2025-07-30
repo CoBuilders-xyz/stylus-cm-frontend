@@ -2,8 +2,8 @@
 
 import React from 'react';
 import {
-  Bar,
-  BarChart,
+  Line,
+  LineChart,
   CartesianGrid,
   ResponsiveContainer,
   XAxis,
@@ -37,11 +37,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Chart configuration
 const chartConfig = {
   insertCount: {
-    label: 'Insert Count',
+    label: 'Insertions Count',
     color: '#4267B2', // Green for inserts
   },
   deleteCount: {
-    label: 'Delete Count',
+    label: 'Deletions Count',
     color: '#B24942', // Red for deletes
   },
 } satisfies ChartConfig;
@@ -246,7 +246,7 @@ export default function CacheManagerActivity() {
               alignItems: 'center',
             }}
           >
-            <span style={{ marginRight: '12px' }}>Insert Count:</span>
+            <span style={{ marginRight: '12px' }}>Insertions:</span>
             <span style={{ fontWeight: 'bold' }}>{data?.insertCount || 0}</span>
           </div>
           <div
@@ -257,7 +257,7 @@ export default function CacheManagerActivity() {
               alignItems: 'center',
             }}
           >
-            <span style={{ marginRight: '12px' }}>Delete Count:</span>
+            <span style={{ marginRight: '12px' }}>Deletions:</span>
             <span style={{ fontWeight: 'bold' }}>{data?.deleteCount || 0}</span>
           </div>
         </div>
@@ -278,10 +278,16 @@ export default function CacheManagerActivity() {
       style={{ ...customStyles.card, borderRadius: '12px' }}
     >
       <CardHeader className='relative'>
-        <div className='flex flex-col gap-1'>
+        <div className='flex flex-col gap-3'>
           <CardTitle className='text-2xl font-bold' style={customStyles.title}>
             Bid Placement Activity
           </CardTitle>
+          <CardDescription
+            className='text-base'
+            style={customStyles.description}
+          >
+            Bid placement and deletion activity for the selected period
+          </CardDescription>
           <div className='flex flex-col gap-1'>
             <div
               className='text-2xl font-bold'
@@ -291,22 +297,40 @@ export default function CacheManagerActivity() {
                 <Skeleton className='h-8 w-32 bg-slate-700' />
               ) : (
                 <div className='flex flex-row gap-4 text-sm'>
-                  <div style={{ color: '#4267B2' }}>
-                    Inserts: {totalInserts}
+                  <div className='flex items-center'>
+                    <span
+                      className='mr-1 pb-1'
+                      style={{
+                        color: '#4267B2',
+                        fontSize: '24px',
+                        lineHeight: '1',
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      ●
+                    </span>
+                    Insertions: {totalInserts}
                   </div>
-                  <div style={{ color: '#B24942' }}>
-                    Deletes: {totalDeletes}
+                  <div className='flex items-center'>
+                    <span
+                      className='mr-1 pb-1'
+                      style={{
+                        color: '#B24942',
+                        fontSize: '24px',
+                        lineHeight: '1',
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      ●
+                    </span>
+                    Deletions: {totalDeletes}
                   </div>
                 </div>
               )}
             </div>
           </div>
-          <CardDescription
-            className='text-base'
-            style={customStyles.description}
-          >
-            Bid placement and deletion activity for the selected period
-          </CardDescription>
         </div>
         <div className='absolute right-4 top-4'>
           <ToggleGroup
@@ -394,7 +418,7 @@ export default function CacheManagerActivity() {
             className='aspect-auto min-h-[200px] flex-1 w-full'
           >
             <ResponsiveContainer width='100%' height='100%'>
-              <BarChart data={activityData}>
+              <LineChart data={activityData}>
                 <CartesianGrid
                   vertical={false}
                   strokeDasharray='3 3'
@@ -420,23 +444,25 @@ export default function CacheManagerActivity() {
                   cursor={<CustomCursor />}
                   content={<CustomTooltip />}
                 />
-                <Bar
+                <Line
+                  type='natural'
                   dataKey='insertCount'
                   name='Insert Count'
-                  stackId='a'
+                  stroke='#4267B2'
                   fill='#4267B2'
-                  radius={[0, 0, 0, 0]}
-                  barSize={30}
+                  strokeWidth={2}
+                  dot={true}
                 />
-                <Bar
+                <Line
+                  type='natural'
                   dataKey='deleteCount'
                   name='Eviction Count'
-                  stackId='a'
+                  stroke='#B24942'
                   fill='#B24942'
-                  radius={[0, 0, 0, 0]}
-                  barSize={30}
+                  strokeWidth={2}
+                  dot={true}
                 />
-              </BarChart>
+              </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
         )}
