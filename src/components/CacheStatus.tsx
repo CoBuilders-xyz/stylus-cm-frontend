@@ -99,22 +99,54 @@ export default function CacheStatus() {
                 Available Cache Space
               </h2>
               {isLoadingCacheStats || !currentBlockchainId ? (
-                <div className='mt-2 space-y-2'>
+                <div className='mt-2 space-y-3'>
                   <Skeleton className='h-10 w-32 bg-slate-700' />
-                  <Skeleton className='h-4 w-24 bg-slate-700' />
+                  <div className='space-y-2'>
+                    <Skeleton className='h-4 w-full bg-slate-700' />
+                    <Skeleton className='h-4 w-full bg-slate-700' />
+                  </div>
+                  <Skeleton className='h-3 w-full bg-slate-700 rounded-full' />
                 </div>
               ) : errorCacheStats ? (
                 <p className='text-red-500 mt-2'>Error loading data</p>
               ) : cacheStats ? (
                 <>
-                  <p className='text-3xl font-bold text-white mt-2'>
-                    {(100 - cacheStats.cacheFilledPercentage).toFixed(2)}%
+                  <p className='text-3xl font-bold text-white mt-2 mb-4'>
+                    {(100 - cacheStats.cacheFilledPercentage).toFixed(1)}%
                   </p>
-                  <p className='text-[#B1B1B1] text-sm mt-1'>
-                    {cacheStats.queueSizeMB.toFixed(2)}
-                    mb/
-                    {cacheStats.cacheSizeMB.toFixed(2)}mb
-                  </p>
+
+                  {/* Used and Available Labels on Separate Lines */}
+                  <div className='space-y-1 text-sm'>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-gray-400'>Used</span>
+                      <span
+                        className='font-medium'
+                        style={{ color: '#10B981' }}
+                      >
+                        {cacheStats.cacheFilledPercentage.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-gray-400'>Available</span>
+                      <span className='text-white font-medium'>
+                        {(100 - cacheStats.cacheFilledPercentage).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar with Custom Styling */}
+                  <div className='mt-4 mb-4'>
+                    <div className='relative h-3 w-full overflow-hidden rounded-full bg-gray-700'>
+                      {/* Used portion (filled from left) */}
+                      <div
+                        className='h-full transition-all duration-300'
+                        style={{
+                          width: `${cacheStats.cacheFilledPercentage}%`,
+                          background: '#10B981',
+                        }}
+                      />
+                    </div>
+                  </div>
                 </>
               ) : (
                 <p className='text-white mt-2'>No data available</p>
