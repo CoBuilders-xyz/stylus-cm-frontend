@@ -4,11 +4,11 @@ import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import { RainbowKitProvider } from '../context/RainbowKitProvider';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { AuthenticationProvider } from '../context/AuthenticationProvider';
 import { AlertSettingsProvider } from '../context/AlertSettingsProvider';
 import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvider';
 import { Toaster } from '@/components/ui/sonner';
+import Footer from '@/components/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
