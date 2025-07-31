@@ -46,8 +46,8 @@ export default function CacheStatus() {
 
   return (
     <>
-      <div className='flex flex-col w-full pt-16'>
-        <div className='w-full p-8 px-10'>
+      <div className='flex flex-col w-full h-full'>
+        <div className='w-full pb-4 px-10 flex-1'>
           <div className='flex justify-between'>
             <div className='flex flex-col'>
               <h1 className='text-3xl font-bold text-white'>Cache Status</h1>
