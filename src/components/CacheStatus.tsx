@@ -47,7 +47,7 @@ export default function CacheStatus() {
   return (
     <>
       <div className='flex flex-col w-full h-full'>
-        <div className='w-full pb-4 px-10 flex-1'>
+        <div className='w-full pb-2 px-10 flex-1'>
           <div className='flex justify-between'>
             <div className='flex flex-col'>
               <h1 className='text-3xl font-bold text-white'>Cache Status</h1>
@@ -64,7 +64,7 @@ export default function CacheStatus() {
             </Button>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-6'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-4'>
             {/* Total Contracts Card */}
             <div className='p-6 rounded-md' style={{ background: '#1A1919' }}>
               <h2 className='text-gray-300 font-medium'>Total Contracts</h2>
