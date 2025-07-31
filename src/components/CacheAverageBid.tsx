@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { useBidAverage } from '@/hooks/useBidAverage';
 import { BidAverageTimespan } from '@/services/cacheMetricsService';
-import { formatRoundedEth } from '@/utils/formatting';
+import { formatRoundedEth, formatETHForAxis } from '@/utils/formatting';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Chart configuration for multiple lines
@@ -674,7 +674,7 @@ export default function CacheAverageBid() {
                   axisLine={false}
                   tickMargin={8}
                   tick={{ fill: customStyles.yAxis.color }}
-                  tickFormatter={(value) => `${formatRoundedEth(value, 5)} ETH`}
+                  tickFormatter={(value) => `${formatETHForAxis(value)} ETH`}
                   width={80}
                 />
                 <Tooltip cursor={false} content={<CustomTooltip />} />
