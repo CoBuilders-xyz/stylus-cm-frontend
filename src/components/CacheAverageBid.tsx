@@ -622,9 +622,8 @@ export default function CacheAverageBid() {
                     ) : (
                       <span className='block'>
                         <span className='text-xs sm:text-sm'>
-                          {formatETHForAxis(parseFloat(stats.value))}
+                          {formatETHForAxis(parseFloat(stats.value))} ETH
                         </span>
-                        <sub className='text-xs ml-0.5'>ETH</sub>
                       </span>
                     )}
                   </div>
@@ -636,7 +635,7 @@ export default function CacheAverageBid() {
       </div>
 
       {/* Chart Container - flex: 7 (70%) */}
-      <CardContent className='flex-[7] flex flex-col p-2 sm:p-6 min-h-0'>
+      <CardContent className='flex-[7] flex flex-col p-1 sm:p-2 min-h-0'>
         {isLoading || !currentBlockchainId ? (
           <div className='flex-1 w-full flex items-center justify-center'>
             <Skeleton className='h-full w-full bg-slate-700' />
@@ -650,12 +649,12 @@ export default function CacheAverageBid() {
             No data available for the selected filters.
           </div>
         ) : (
-          <div className='flex-1 w-full p-4 min-h-0'>
+          <div className='flex-1 w-full p-1 min-h-0'>
             <ChartContainer config={chartConfig} className='w-full h-full'>
               <ResponsiveContainer width='100%' height='100%'>
                 <AreaChart
                   data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 40 }}
                 >
                   <defs>
                     <linearGradient id='fillSmall' x1='0' y1='0' x2='0' y2='1'>
@@ -702,8 +701,8 @@ export default function CacheAverageBid() {
                     axisLine={false}
                     tickMargin={8}
                     tick={{ fill: customStyles.yAxis.color }}
-                    tickFormatter={(value) => `${formatETHForAxis(value)} ETH`}
-                    width={80}
+                    tickFormatter={(value) => `${formatETHForAxis(value)}`}
+                    width={60}
                   />
                   <Tooltip cursor={false} content={<CustomTooltip />} />
                   {(hoveredSize === null || hoveredSize === 'small') && (

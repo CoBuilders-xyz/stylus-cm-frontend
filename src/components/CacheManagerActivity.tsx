@@ -406,7 +406,7 @@ export default function CacheManagerActivity() {
       </div>
 
       {/* Chart Container - flex: 7 (70%) */}
-      <CardContent className='flex-[7] flex flex-col p-2 sm:p-6 min-h-0'>
+      <CardContent className='flex-[7] flex flex-col p-1 sm:p-2 min-h-0'>
         {isLoading || !currentBlockchainId ? (
           <div className='flex-1 w-full flex items-center justify-center'>
             <Skeleton className='h-full w-full bg-slate-700' />
@@ -420,12 +420,12 @@ export default function CacheManagerActivity() {
             No data available for the selected filters.
           </div>
         ) : (
-          <div className='flex-1 w-full p-4 min-h-0'>
+          <div className='flex-1 w-full p-1 min-h-0'>
             <ChartContainer config={chartConfig} className='w-full h-full'>
               <ResponsiveContainer width='100%' height='100%'>
                 <LineChart
                   data={activityData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 40 }}
                 >
                   <CartesianGrid
                     vertical={false}
@@ -446,7 +446,7 @@ export default function CacheManagerActivity() {
                     axisLine={false}
                     tickMargin={8}
                     tick={{ fill: customStyles.yAxis.color }}
-                    width={40}
+                    width={30}
                   />
                   <Tooltip
                     cursor={<CustomCursor />}
