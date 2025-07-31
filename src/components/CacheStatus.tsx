@@ -46,41 +46,43 @@ export default function CacheStatus() {
 
   return (
     <>
-      <div className='flex flex-col w-full h-full'>
-        <div className='w-full pb-2 px-10 flex-1'>
-          <div className='flex justify-between'>
+      <div className='flex flex-col w-full'>
+        <div className='w-full px-10 py-4'>
+          <div className='flex justify-between items-start'>
             <div className='flex flex-col'>
-              <h1 className='text-3xl font-bold text-white'>Cache Status</h1>
-              <p className='text-gray-300 mt-1 opacity-60'>
+              <h1 className='text-2xl font-bold text-white'>Cache Status</h1>
+              <p className='text-gray-300 text-sm opacity-60'>
                 Monitor the status of contract caching across multiple chains
               </p>
             </div>
             <Button
-              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+              className='px-3 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2 text-sm whitespace-nowrap'
               onClick={handleAddNewContract}
             >
               <span>+</span>
-              <span>Add Your Stylus Contract to the Cache</span>
+              <span>Add Contract</span>
             </Button>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-4'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-3'>
             {/* Total Contracts Card */}
-            <div className='p-6 rounded-md' style={{ background: '#1A1919' }}>
-              <h2 className='text-gray-300 font-medium'>Total Contracts</h2>
+            <div className='p-4 rounded-md' style={{ background: '#1A1919' }}>
+              <h2 className='text-gray-300 font-medium text-sm'>
+                Total Contracts
+              </h2>
               {isLoadingTotalBytecodes || !currentBlockchainId ? (
-                <div className='mt-2 space-y-2'>
-                  <Skeleton className='h-10 w-32 bg-slate-700' />
-                  <Skeleton className='h-4 w-24 bg-slate-700' />
+                <div className='mt-2 space-y-1'>
+                  <Skeleton className='h-8 w-24 bg-slate-700' />
+                  <Skeleton className='h-3 w-20 bg-slate-700' />
                 </div>
               ) : errorTotalBytecodes ? (
-                <p className='text-red-500 mt-2'>Error loading data</p>
+                <p className='text-red-500 mt-2 text-sm'>Error loading data</p>
               ) : totalBytecodes ? (
                 <>
-                  <p className='text-3xl font-bold text-white mt-2'>
+                  <p className='text-2xl font-bold text-white mt-1'>
                     {totalBytecodes.bytecodeCount.toLocaleString()}
                   </p>
-                  <p className='text-[#B1B1B1] text-sm mt-1'>
+                  <p className='text-[#B1B1B1] text-xs mt-1'>
                     {totalBytecodes.bytecodeCountDiffWithLastMonth > 0
                       ? '+'
                       : ''}
@@ -89,34 +91,34 @@ export default function CacheStatus() {
                   </p>
                 </>
               ) : (
-                <p className='text-white mt-2'>No data available</p>
+                <p className='text-white mt-2 text-sm'>No data available</p>
               )}
             </div>
 
             {/* Available Cache Space Card */}
-            <div className='p-6 rounded-md' style={{ background: '#1A1919' }}>
-              <h2 className='text-gray-300 font-medium'>
+            <div className='p-4 rounded-md' style={{ background: '#1A1919' }}>
+              <h2 className='text-gray-300 font-medium text-sm'>
                 Available Cache Space
               </h2>
               {isLoadingCacheStats || !currentBlockchainId ? (
-                <div className='mt-2 space-y-3'>
-                  <Skeleton className='h-10 w-32 bg-slate-700' />
-                  <div className='space-y-2'>
-                    <Skeleton className='h-4 w-full bg-slate-700' />
-                    <Skeleton className='h-4 w-full bg-slate-700' />
+                <div className='mt-2 space-y-2'>
+                  <Skeleton className='h-8 w-24 bg-slate-700' />
+                  <div className='space-y-1'>
+                    <Skeleton className='h-3 w-full bg-slate-700' />
+                    <Skeleton className='h-3 w-full bg-slate-700' />
                   </div>
-                  <Skeleton className='h-3 w-full bg-slate-700 rounded-full' />
+                  <Skeleton className='h-2 w-full bg-slate-700 rounded-full' />
                 </div>
               ) : errorCacheStats ? (
-                <p className='text-red-500 mt-2'>Error loading data</p>
+                <p className='text-red-500 mt-2 text-sm'>Error loading data</p>
               ) : cacheStats ? (
                 <>
-                  <p className='text-3xl font-bold text-white mt-2 mb-4'>
+                  <p className='text-2xl font-bold text-white mt-1 mb-2'>
                     {(100 - cacheStats.cacheFilledPercentage).toFixed(1)}%
                   </p>
 
                   {/* Used and Available Labels on Separate Lines */}
-                  <div className='space-y-1 text-sm'>
+                  <div className='space-y-1 text-xs'>
                     <div className='flex justify-between items-center'>
                       <span className='text-gray-400'>Used</span>
                       <span
@@ -135,8 +137,8 @@ export default function CacheStatus() {
                   </div>
 
                   {/* Progress Bar with Custom Styling */}
-                  <div className='mt-4 mb-4'>
-                    <div className='relative h-3 w-full overflow-hidden rounded-full bg-gray-700'>
+                  <div className='mt-2'>
+                    <div className='relative h-2 w-full overflow-hidden rounded-full bg-gray-700'>
                       {/* Used portion (filled from left) */}
                       <div
                         className='h-full transition-all duration-300'
@@ -149,7 +151,7 @@ export default function CacheStatus() {
                   </div>
                 </>
               ) : (
-                <p className='text-white mt-2'>No data available</p>
+                <p className='text-white mt-2 text-sm'>No data available</p>
               )}
             </div>
           </div>

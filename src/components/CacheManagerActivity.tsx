@@ -399,72 +399,74 @@ export default function CacheManagerActivity() {
         </div>
       </CardHeader>
 
-      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col'>
+      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col min-h-0'>
         {isLoading || !currentBlockchainId ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center'>
-            <Skeleton className='h-[200px] w-full bg-slate-700' />
+          <div className='flex-1 w-full flex items-center justify-center min-h-[180px]'>
+            <Skeleton className='h-full w-full bg-slate-700' />
           </div>
         ) : error ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center text-center text-red-500'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-red-500 min-h-[180px]'>
             Error loading chart data. Please try again.
           </div>
         ) : activityData.length === 0 ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center text-center text-gray-400'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400 min-h-[180px]'>
             No data available for the selected filters.
           </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className='aspect-auto min-h-[200px] flex-1 w-full'
-          >
-            <ResponsiveContainer width='100%' height='100%'>
-              <LineChart data={activityData}>
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray='3 3'
-                  stroke={customStyles.grid.stroke}
-                />
-                <XAxis
-                  dataKey='period'
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  minTickGap={32}
-                  tick={{ fill: customStyles.xAxis.color }}
-                  tickFormatter={formatXAxisTick}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tick={{ fill: customStyles.yAxis.color }}
-                  width={40}
-                />
-                <Tooltip
-                  cursor={<CustomCursor />}
-                  content={<CustomTooltip />}
-                />
-                <Line
-                  type='natural'
-                  dataKey='insertCount'
-                  name='Insert Count'
-                  stroke='#4267B2'
-                  fill='#4267B2'
-                  strokeWidth={2}
-                  dot={true}
-                />
-                <Line
-                  type='natural'
-                  dataKey='deleteCount'
-                  name='Eviction Count'
-                  stroke='#B24942'
-                  fill='#B24942'
-                  strokeWidth={2}
-                  dot={true}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <div className='flex-1 w-full min-h-[200px] p-2'>
+            <ChartContainer config={chartConfig} className='w-full h-full'>
+              <ResponsiveContainer width='100%' height='100%'>
+                <LineChart
+                  data={activityData}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 30 }}
+                >
+                  <CartesianGrid
+                    vertical={false}
+                    strokeDasharray='3 3'
+                    stroke={customStyles.grid.stroke}
+                  />
+                  <XAxis
+                    dataKey='period'
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
+                    tick={{ fill: customStyles.xAxis.color }}
+                    tickFormatter={formatXAxisTick}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fill: customStyles.yAxis.color }}
+                    width={40}
+                  />
+                  <Tooltip
+                    cursor={<CustomCursor />}
+                    content={<CustomTooltip />}
+                  />
+                  <Line
+                    type='natural'
+                    dataKey='insertCount'
+                    name='Insert Count'
+                    stroke='#4267B2'
+                    fill='#4267B2'
+                    strokeWidth={2}
+                    dot={true}
+                  />
+                  <Line
+                    type='natural'
+                    dataKey='deleteCount'
+                    name='Eviction Count'
+                    stroke='#B24942'
+                    fill='#B24942'
+                    strokeWidth={2}
+                    dot={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
         )}
       </CardContent>
     </Card>

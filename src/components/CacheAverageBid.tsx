@@ -621,93 +621,107 @@ export default function CacheAverageBid() {
         </div>
       </div>
 
-      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col'>
+      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col min-h-0'>
         {isLoading || !currentBlockchainId ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center'>
-            <Skeleton className='h-[200px] w-full bg-slate-700' />
+          <div className='flex-1 w-full flex items-center justify-center min-h-[180px]'>
+            <Skeleton className='h-full w-full bg-slate-700' />
           </div>
         ) : hasError ? (
-          <div className='aspect-auto h-[250px] w-full flex items-center justify-center text-center text-red-500'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-red-500 min-h-[180px]'>
             Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center text-center text-gray-400'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400 min-h-[180px]'>
             No data available for the selected filters.
           </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className='aspect-auto min-h-[200px] flex-1 w-full'
-          >
-            <ResponsiveContainer width='100%' height='100%'>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id='fillSmall' x1='0' y1='0' x2='0' y2='1'>
-                    <stop offset='5%' stopColor='#3B82F6' stopOpacity={0.3} />
-                    <stop offset='95%' stopColor='#3B82F6' stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id='fillMedium' x1='0' y1='0' x2='0' y2='1'>
-                    <stop offset='5%' stopColor='#10B981' stopOpacity={0.3} />
-                    <stop offset='95%' stopColor='#10B981' stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id='fillLarge' x1='0' y1='0' x2='0' y2='1'>
-                    <stop offset='5%' stopColor='#F59E0B' stopOpacity={0.3} />
-                    <stop offset='95%' stopColor='#F59E0B' stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray='3 3'
-                  stroke={customStyles.grid.stroke}
-                />
-                <XAxis
-                  dataKey='date'
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  minTickGap={32}
-                  tick={{ fill: customStyles.xAxis.color }}
-                  tickFormatter={formatXAxisTick}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tick={{ fill: customStyles.yAxis.color }}
-                  tickFormatter={(value) => `${formatETHForAxis(value)} ETH`}
-                  width={80}
-                />
-                <Tooltip cursor={false} content={<CustomTooltip />} />
-                {(hoveredSize === null || hoveredSize === 'small') && (
-                  <Area
-                    dataKey='small'
-                    type='monotone'
-                    fill='url(#fillSmall)'
-                    stroke='#3B82F6'
-                    strokeWidth={hoveredSize === 'small' ? 3 : 2}
+          <div className='flex-1 w-full min-h-[200px] p-2'>
+            <ChartContainer config={chartConfig} className='w-full h-full'>
+              <ResponsiveContainer width='100%' height='100%'>
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 30 }}
+                >
+                  <defs>
+                    <linearGradient id='fillSmall' x1='0' y1='0' x2='0' y2='1'>
+                      <stop offset='5%' stopColor='#3B82F6' stopOpacity={0.3} />
+                      <stop
+                        offset='95%'
+                        stopColor='#3B82F6'
+                        stopOpacity={0.1}
+                      />
+                    </linearGradient>
+                    <linearGradient id='fillMedium' x1='0' y1='0' x2='0' y2='1'>
+                      <stop offset='5%' stopColor='#10B981' stopOpacity={0.3} />
+                      <stop
+                        offset='95%'
+                        stopColor='#10B981'
+                        stopOpacity={0.1}
+                      />
+                    </linearGradient>
+                    <linearGradient id='fillLarge' x1='0' y1='0' x2='0' y2='1'>
+                      <stop offset='5%' stopColor='#F59E0B' stopOpacity={0.3} />
+                      <stop
+                        offset='95%'
+                        stopColor='#F59E0B'
+                        stopOpacity={0.1}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    vertical={false}
+                    strokeDasharray='3 3'
+                    stroke={customStyles.grid.stroke}
                   />
-                )}
-                {(hoveredSize === null || hoveredSize === 'medium') && (
-                  <Area
-                    dataKey='medium'
-                    type='monotone'
-                    fill='url(#fillMedium)'
-                    stroke='#10B981'
-                    strokeWidth={hoveredSize === 'medium' ? 3 : 2}
+                  <XAxis
+                    dataKey='date'
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
+                    tick={{ fill: customStyles.xAxis.color }}
+                    tickFormatter={formatXAxisTick}
                   />
-                )}
-                {(hoveredSize === null || hoveredSize === 'large') && (
-                  <Area
-                    dataKey='large'
-                    type='monotone'
-                    fill='url(#fillLarge)'
-                    stroke='#F59E0B'
-                    strokeWidth={hoveredSize === 'large' ? 3 : 2}
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fill: customStyles.yAxis.color }}
+                    tickFormatter={(value) => `${formatETHForAxis(value)} ETH`}
+                    width={80}
                   />
-                )}
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+                  <Tooltip cursor={false} content={<CustomTooltip />} />
+                  {(hoveredSize === null || hoveredSize === 'small') && (
+                    <Area
+                      dataKey='small'
+                      type='monotone'
+                      fill='url(#fillSmall)'
+                      stroke='#3B82F6'
+                      strokeWidth={hoveredSize === 'small' ? 3 : 2}
+                    />
+                  )}
+                  {(hoveredSize === null || hoveredSize === 'medium') && (
+                    <Area
+                      dataKey='medium'
+                      type='monotone'
+                      fill='url(#fillMedium)'
+                      stroke='#10B981'
+                      strokeWidth={hoveredSize === 'medium' ? 3 : 2}
+                    />
+                  )}
+                  {(hoveredSize === null || hoveredSize === 'large') && (
+                    <Area
+                      dataKey='large'
+                      type='monotone'
+                      fill='url(#fillLarge)'
+                      stroke='#F59E0B'
+                      strokeWidth={hoveredSize === 'large' ? 3 : 2}
+                    />
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
         )}
       </CardContent>
     </Card>
