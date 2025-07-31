@@ -64,7 +64,7 @@ export default function CacheStatus() {
             </Button>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-3'>
+          <div className='grid grid-cols-1 xl:grid-cols-2 gap-4 mt-3'>
             {/* Total Contracts Card */}
             <div className='p-4 rounded-md' style={{ background: '#1A1919' }}>
               <h2 className='text-gray-300 font-medium text-sm'>

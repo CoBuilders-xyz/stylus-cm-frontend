@@ -493,154 +493,169 @@ export default function CacheAverageBid() {
       className='@container/card flex flex-col h-full'
       style={{ ...customStyles.card, borderRadius: '12px' }}
     >
-      <CardHeader className='relative'>
-        <div className='flex flex-col gap-1'>
-          <CardTitle className='text-2xl font-bold' style={customStyles.title}>
-            Average Bid (ETH)
-          </CardTitle>
-          <CardDescription
-            className='text-base'
-            style={customStyles.description}
-          >
-            Average bid in ETH recorded during the period by contract size
-          </CardDescription>
-        </div>
-        <div className='absolute right-4 top-4'>
-          <ToggleGroup
-            type='single'
-            value={timespan}
-            onValueChange={handleTimespanChange}
-            variant='outline'
-            className='hidden md:flex'
-            style={customStyles.toggleGroup}
-          >
-            {timespanOptions.map((option, index) => (
-              <ToggleGroupItem
-                key={option.value}
-                value={option.value}
-                className='h-8 w-10 px-2.5 font-medium data-[state=on]:bg-transparent'
-                style={{
-                  ...(option.value === timespan
-                    ? customStyles.toggleButtonActive
-                    : customStyles.toggleButton),
-                  borderRight:
-                    index === timespanOptions.length - 1
-                      ? 'none'
-                      : '1px solid #2C2E30',
-                  borderLeft: index === 0 ? 'none' : 'none',
-                }}
-              >
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          <Select value={timespan} onValueChange={handleTimespanChange}>
-            <SelectTrigger
-              className='md:hidden flex w-40'
-              aria-label='Select a timespan'
-              style={{
-                backgroundColor: '#1A1919',
-                color: '#FFFFFF',
-                border: '1px solid #2C2E30',
-              }}
+      {/* Header and Summary Cards - flex: 3 (30%) */}
+      <div className='flex flex-col flex-[3] min-h-0'>
+        <CardHeader className='relative pb-1 sm:pb-2 flex-shrink-0'>
+          <div className='flex flex-col gap-1 pr-20'>
+            <CardTitle
+              className='text-base sm:text-2xl font-bold'
+              style={customStyles.title}
             >
-              <SelectValue placeholder='Select timespan' />
-            </SelectTrigger>
-            <SelectContent
-              className='rounded-xl'
-              style={{
-                backgroundColor: '#1A1919',
-                border: '1px solid #2C2E30',
-              }}
+              Average Bid (ETH)
+            </CardTitle>
+            <CardDescription
+              className='text-xs sm:text-base'
+              style={customStyles.description}
             >
-              {timespanOptions.map((option) => (
-                <SelectItem
+              Average bid in ETH recorded during the period by contract size
+            </CardDescription>
+          </div>
+          <div className='absolute right-2 top-2'>
+            <ToggleGroup
+              type='single'
+              value={timespan}
+              onValueChange={handleTimespanChange}
+              variant='outline'
+              className='hidden xl:flex'
+              style={customStyles.toggleGroup}
+            >
+              {timespanOptions.map((option, index) => (
+                <ToggleGroupItem
                   key={option.value}
                   value={option.value}
-                  className='rounded-lg'
+                  className='h-7 w-8 px-1.5 text-xs font-medium data-[state=on]:bg-transparent'
                   style={{
-                    color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
-                    backgroundColor:
-                      option.value === timespan ? '#2C2E30' : '#1A1919',
+                    ...(option.value === timespan
+                      ? customStyles.toggleButtonActive
+                      : customStyles.toggleButton),
+                    borderRight:
+                      index === timespanOptions.length - 1
+                        ? 'none'
+                        : '1px solid #2C2E30',
+                    borderLeft: index === 0 ? 'none' : 'none',
                   }}
                 >
                   {option.label}
-                </SelectItem>
+                </ToggleGroupItem>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-
-      {/* Summary cards */}
-      <div className='px-6 mb-4'>
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-          {contractSizeOptions.map((option) => {
-            const stats =
-              summaryStats[option.value as keyof typeof summaryStats];
-            const sizeKey = option.value as ContractSize;
-            const isHovered = hoveredSize === sizeKey;
-            const isAnyHovered = hoveredSize !== null;
-
-            // Get the color for this size from chartConfig
-            const lineColor = chartConfig[sizeKey].color;
-
-            return (
-              <div
-                key={option.value}
+            </ToggleGroup>
+            <Select value={timespan} onValueChange={handleTimespanChange}>
+              <SelectTrigger
+                className='xl:hidden flex w-20 h-7 text-xs'
+                aria-label='Select a timespan'
                 style={{
-                  ...customStyles.sizeCard,
-                  opacity: isAnyHovered && !isHovered ? 0.5 : 1,
-                  transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-                  transition: 'all 0.2s ease-in-out',
+                  backgroundColor: '#1A1919',
+                  color: '#FFFFFF',
+                  border: '1px solid #2C2E30',
                 }}
-                className='p-3 text-center cursor-pointer'
-                onMouseEnter={() => setHoveredSize(sizeKey)}
-                onMouseLeave={() => setHoveredSize(null)}
               >
+                <SelectValue placeholder='D' />
+              </SelectTrigger>
+              <SelectContent
+                className='rounded-xl'
+                style={{
+                  backgroundColor: '#1A1919',
+                  border: '1px solid #2C2E30',
+                }}
+              >
+                {timespanOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className='rounded-lg text-xs'
+                    style={{
+                      color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
+                      backgroundColor:
+                        option.value === timespan ? '#2C2E30' : '#1A1919',
+                    }}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+
+        {/* Summary cards */}
+        <div className='px-2 sm:px-6 flex-1 flex items-center min-h-0'>
+          <div className='grid grid-cols-3 gap-1 sm:gap-2 w-full'>
+            {contractSizeOptions.map((option) => {
+              const stats =
+                summaryStats[option.value as keyof typeof summaryStats];
+              const sizeKey = option.value as ContractSize;
+              const isHovered = hoveredSize === sizeKey;
+              const isAnyHovered = hoveredSize !== null;
+
+              // Get the color for this size from chartConfig
+              const lineColor = chartConfig[sizeKey].color;
+
+              return (
                 <div
+                  key={option.value}
                   style={{
-                    ...customStyles.sizeLabel,
-                    color: lineColor,
-                    fontWeight: '600',
+                    ...customStyles.sizeCard,
+                    opacity: isAnyHovered && !isHovered ? 0.5 : 1,
+                    transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 0.2s ease-in-out',
                   }}
-                  className='mb-2'
+                  className='px-1 py-1 sm:px-2 sm:py-2 text-center cursor-pointer'
+                  onMouseEnter={() => setHoveredSize(sizeKey)}
+                  onMouseLeave={() => setHoveredSize(null)}
                 >
-                  {option.label}
+                  <div
+                    style={{
+                      color: lineColor,
+                      fontWeight: '600',
+                    }}
+                    className='text-xs sm:text-sm mb-0.5 sm:mb-1'
+                  >
+                    {option.label}
+                  </div>
+                  {/* Show bid values only on larger screens */}
+                  <div
+                    className='hidden sm:block text-xs sm:text-lg'
+                    style={customStyles.bidValue}
+                  >
+                    {isLoading || !currentBlockchainId ? (
+                      <Skeleton className='h-4 w-16 bg-slate-700 mx-auto' />
+                    ) : (
+                      <span className='block'>
+                        <span className='text-xs sm:text-sm'>
+                          {formatETHForAxis(parseFloat(stats.value))}
+                        </span>
+                        <sub className='text-xs ml-0.5'>ETH</sub>
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div style={customStyles.bidValue} className='mb-1'>
-                  {isLoading || !currentBlockchainId ? (
-                    <Skeleton className='h-5 w-20 bg-slate-700 mx-auto' />
-                  ) : (
-                    `${stats.value} ETH`
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col min-h-0'>
+      {/* Chart Container - flex: 7 (70%) */}
+      <CardContent className='flex-[7] flex flex-col p-2 sm:p-6 min-h-0'>
         {isLoading || !currentBlockchainId ? (
-          <div className='flex-1 w-full flex items-center justify-center min-h-[180px]'>
+          <div className='flex-1 w-full flex items-center justify-center'>
             <Skeleton className='h-full w-full bg-slate-700' />
           </div>
         ) : hasError ? (
-          <div className='flex-1 w-full flex items-center justify-center text-center text-red-500 min-h-[180px]'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-red-500'>
             Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
-          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400 min-h-[180px]'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400'>
             No data available for the selected filters.
           </div>
         ) : (
-          <div className='flex-1 w-full min-h-[200px] p-2'>
+          <div className='flex-1 w-full p-4 min-h-0'>
             <ChartContainer config={chartConfig} className='w-full h-full'>
               <ResponsiveContainer width='100%' height='100%'>
                 <AreaChart
                   data={chartData}
-                  margin={{ top: 10, right: 10, left: 10, bottom: 30 }}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 >
                   <defs>
                     <linearGradient id='fillSmall' x1='0' y1='0' x2='0' y2='1'>
