@@ -70,7 +70,36 @@ export default function Header() {
               Docs
             </Link>
           </div>
+        </div>
 
+        {/* Right section - Actions (Always visible) */}
+        <div className='flex space-x-2 sm:space-x-4 text-xs items-center'>
+          {/* Mobile-only alert settings */}
+          <button
+            className='lg:hidden border border-white rounded-[10px] p-2 flex items-center justify-center hover:bg-gray-900'
+            style={{ borderWidth: '1px' }}
+            onClick={openAlertSettings}
+            title='Alert Settings'
+          >
+            <Megaphone className='w-4 h-4' />
+          </button>
+
+          {/* Desktop actions */}
+          <div className='hidden lg:flex space-x-4 items-center'>
+            <GasTankModal />
+            <div
+              className='border border-white rounded-[10px] p-2 flex items-center justify-center cursor-pointer hover:bg-gray-900'
+              style={{ borderWidth: '1px' }}
+              onClick={openAlertSettings}
+              title='Alert Settings'
+            >
+              <Megaphone className='w-4 h-4' />
+            </div>
+          </div>
+
+          {/* Always visible */}
+          <BlockchainSelector />
+          <ConnectWallet />
           {/* Mobile Menu Trigger - Shown only on mobile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -107,36 +136,6 @@ export default function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-
-        {/* Right section - Actions (Always visible) */}
-        <div className='flex space-x-2 sm:space-x-4 text-xs items-center'>
-          {/* Mobile-only alert settings */}
-          <button
-            className='lg:hidden border border-white rounded-[10px] p-2 flex items-center justify-center hover:bg-gray-900'
-            style={{ borderWidth: '1px' }}
-            onClick={openAlertSettings}
-            title='Alert Settings'
-          >
-            <Megaphone className='w-4 h-4' />
-          </button>
-
-          {/* Desktop actions */}
-          <div className='hidden lg:flex space-x-4 items-center'>
-            <GasTankModal />
-            <div
-              className='border border-white rounded-[10px] p-2 flex items-center justify-center cursor-pointer hover:bg-gray-900'
-              style={{ borderWidth: '1px' }}
-              onClick={openAlertSettings}
-              title='Alert Settings'
-            >
-              <Megaphone className='w-4 h-4' />
-            </div>
-          </div>
-
-          {/* Always visible */}
-          <BlockchainSelector />
-          <ConnectWallet />
         </div>
       </div>
 
