@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAlertService } from './useAlertService';
+import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import {
   ValidationResult,
   validateNotificationChannels,
@@ -32,6 +33,7 @@ interface UseNotificationChannelValidationReturn
  *
  * This hook automatically loads user alert preferences and validates
  * whether the user has at least one properly configured notification channel.
+ * It also listens for updates from the AlertSettingsProvider context.
  *
  * @param autoValidate Whether to automatically validate on mount (default: true)
  * @returns Validation state and control functions
@@ -40,6 +42,7 @@ export function useNotificationChannelValidation(
   autoValidate: boolean = true
 ): UseNotificationChannelValidationReturn {
   const alertService = useAlertService();
+  const { notificationChannelsUpdatedAt } = useAlertSettings();
 
   const [state, setState] = useState<NotificationChannelValidationState>({
     isValidating: false,
@@ -125,6 +128,18 @@ export function useNotificationChannelValidation(
       validateChannels();
     }
   }, [alertService, autoValidate, validateChannels]);
+
+  // Re-validate when notification channels are updated
+  useEffect(() => {
+    if (notificationChannelsUpdatedAt > 0 && autoValidate) {
+      // Add a small delay to ensure the backend has processed the update
+      const timer = setTimeout(() => {
+        validateChannels();
+      }, 100); // Reduced from 500ms to 100ms
+
+      return () => clearTimeout(timer);
+    }
+  }, [notificationChannelsUpdatedAt, autoValidate, validateChannels]);
 
   return {
     ...state,

@@ -14,6 +14,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { useNotificationChannelValidation } from '@/hooks/useNotificationChannelValidation';
 import NotificationChannelWarning from '@/components/NotificationChannelWarning';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useAlertSettings } from '@/context/AlertSettingsProvider';
+import { NotificationChannel } from '@/services/alertService';
 
 interface AlertsSettingsProps {
   onSuccess?: () => void;
@@ -32,6 +40,7 @@ export default function AlertsSettings({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alertService = useAlertService();
+  const { openAlertSettings } = useAlertSettings();
 
   // Notification channel validation
   const {
@@ -310,6 +319,155 @@ export default function AlertsSettings({
     }
   };
 
+  // Helper function to determine which notification channels are available
+  const getAvailableChannels = () => {
+    if (!validationResult) return [];
+    return validationResult.configuredChannels;
+  };
+
+  // Helper function to render channel checkboxes based on available channels
+  const renderChannelCheckboxes = (
+    alertType: 'eviction' | 'noGas' | 'lowGas' | 'bidSafety'
+  ) => {
+    const availableChannels = getAvailableChannels();
+    const allChannels: NotificationChannel[] = ['telegram', 'slack', 'webhook'];
+
+    const channelConfig = {
+      telegram: {
+        id: `${alertType}Telegram`,
+        label: 'Telegram',
+        checked:
+          alertType === 'eviction'
+            ? evictionTelegramEnabled
+            : alertType === 'noGas'
+            ? noGasTelegramEnabled
+            : alertType === 'lowGas'
+            ? lowGasTelegramEnabled
+            : bidSafetyTelegramEnabled,
+        onChange:
+          alertType === 'eviction'
+            ? setEvictionTelegramEnabled
+            : alertType === 'noGas'
+            ? setNoGasTelegramEnabled
+            : alertType === 'lowGas'
+            ? setLowGasTelegramEnabled
+            : setBidSafetyTelegramEnabled,
+      },
+      slack: {
+        id: `${alertType}Slack`,
+        label: 'Slack',
+        checked:
+          alertType === 'eviction'
+            ? evictionSlackEnabled
+            : alertType === 'noGas'
+            ? noGasSlackEnabled
+            : alertType === 'lowGas'
+            ? lowGasSlackEnabled
+            : bidSafetySlackEnabled,
+        onChange:
+          alertType === 'eviction'
+            ? setEvictionSlackEnabled
+            : alertType === 'noGas'
+            ? setNoGasSlackEnabled
+            : alertType === 'lowGas'
+            ? setLowGasSlackEnabled
+            : setBidSafetySlackEnabled,
+      },
+      webhook: {
+        id: `${alertType}Webhook`,
+        label: 'Webhook',
+        checked:
+          alertType === 'eviction'
+            ? evictionWebhookEnabled
+            : alertType === 'noGas'
+            ? noGasWebhookEnabled
+            : alertType === 'lowGas'
+            ? lowGasWebhookEnabled
+            : bidSafetyWebhookEnabled,
+        onChange:
+          alertType === 'eviction'
+            ? setEvictionWebhookEnabled
+            : alertType === 'noGas'
+            ? setNoGasWebhookEnabled
+            : alertType === 'lowGas'
+            ? setLowGasWebhookEnabled
+            : setBidSafetyWebhookEnabled,
+      },
+    };
+
+    return (
+      <div className='grid grid-cols-2 gap-4'>
+        {allChannels.map((channel) => {
+          const config = channelConfig[channel];
+          if (!config) return null;
+
+          const isConfigured = availableChannels.includes(channel);
+
+          // If channel is not configured, show disabled checkbox with tooltip
+          if (!isConfigured) {
+            return (
+              <div
+                key={channel}
+                className='flex items-center space-x-2 opacity-40'
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Checkbox
+                        id={config.id}
+                        checked={false}
+                        disabled={true}
+                        className='data-[state=checked]:bg-gray-500 border-gray-500 cursor-not-allowed'
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side='top' className='max-w-xs p-2'>
+                      <div className='space-y-1'>
+                        <p className='text-xs font-medium'>
+                          {config.label} not configured
+                        </p>
+                        <Button
+                          size='sm'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAlertSettings();
+                          }}
+                          className='w-full text-xs h-6 bg-blue-600 hover:bg-blue-700'
+                        >
+                          Configure
+                        </Button>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <label
+                  htmlFor={config.id}
+                  className='text-sm text-gray-500 cursor-not-allowed'
+                >
+                  {config.label}
+                </label>
+              </div>
+            );
+          }
+
+          // Channel is configured, show normal functional checkbox
+          return (
+            <div key={channel} className='flex items-center space-x-2'>
+              <Checkbox
+                id={config.id}
+                checked={config.checked}
+                onCheckedChange={handleCheckedChange(config.onChange)}
+                className='data-[state=checked]:bg-[#335CD7]'
+              />
+              <label htmlFor={config.id} className='text-sm cursor-pointer'>
+                {config.label}
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919] shadow-xl  overflow-hidden border-l border-gray-800'>
       {/* Title header with gradient background and noise texture */}
@@ -350,7 +508,7 @@ export default function AlertsSettings({
 
       <div className='p-6 flex-1 overflow-auto'>
         {/* Notification Channel Validation Warning */}
-        {isValidating && (
+        {isValidating && !validationResult && (
           <div className='mb-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg'>
             <div className='flex items-center gap-2 text-gray-400'>
               <div className='animate-spin w-4 h-4 border-2 border-gray-600 border-t-white rounded-full' />
@@ -396,7 +554,7 @@ export default function AlertsSettings({
             </div>
           )}
 
-        {/* Alert Configuration Sections - Only show if channels are valid or validation is loading */}
+        {/* Alert Configuration Sections - Show immediately but with proper channel filtering */}
         <div
           className={cn(
             'space-y-8',
@@ -434,56 +592,7 @@ export default function AlertsSettings({
             </div>
 
             {evictionAlertEnabled && (
-              <div className='mt-4 grid grid-cols-2 gap-4'>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='evictionTelegram'
-                    checked={evictionTelegramEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setEvictionTelegramEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='evictionTelegram'
-                    className='text-sm cursor-pointer'
-                  >
-                    Telegram
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='evictionSlack'
-                    checked={evictionSlackEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setEvictionSlackEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='evictionSlack'
-                    className='text-sm cursor-pointer'
-                  >
-                    Slack
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='evictionWebhook'
-                    checked={evictionWebhookEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setEvictionWebhookEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='evictionWebhook'
-                    className='text-sm cursor-pointer'
-                  >
-                    Webhook
-                  </label>
-                </div>
-              </div>
+              <div className='mt-4'>{renderChannelCheckboxes('eviction')}</div>
             )}
           </div>
 
@@ -515,54 +624,7 @@ export default function AlertsSettings({
             </div>
 
             {noGasAlertEnabled && (
-              <div className='mt-4 grid grid-cols-2 gap-4'>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='noGasTelegram'
-                    checked={noGasTelegramEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setNoGasTelegramEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='noGasTelegram'
-                    className='text-sm cursor-pointer'
-                  >
-                    Telegram
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='noGasSlack'
-                    checked={noGasSlackEnabled}
-                    onCheckedChange={handleCheckedChange(setNoGasSlackEnabled)}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='noGasSlack'
-                    className='text-sm cursor-pointer'
-                  >
-                    Slack
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='noGasWebhook'
-                    checked={noGasWebhookEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setNoGasWebhookEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='noGasWebhook'
-                    className='text-sm cursor-pointer'
-                  >
-                    Webhook
-                  </label>
-                </div>
-              </div>
+              <div className='mt-4'>{renderChannelCheckboxes('noGas')}</div>
             )}
           </div>
 
@@ -608,56 +670,7 @@ export default function AlertsSettings({
                   />
                 </div>
 
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='lowGasTelegram'
-                      checked={lowGasTelegramEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setLowGasTelegramEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='lowGasTelegram'
-                      className='text-sm cursor-pointer'
-                    >
-                      Telegram
-                    </label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='lowGasSlack'
-                      checked={lowGasSlackEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setLowGasSlackEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='lowGasSlack'
-                      className='text-sm cursor-pointer'
-                    >
-                      Slack
-                    </label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='lowGasWebhook'
-                      checked={lowGasWebhookEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setLowGasWebhookEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='lowGasWebhook'
-                      className='text-sm cursor-pointer'
-                    >
-                      Webhook
-                    </label>
-                  </div>
-                </div>
+                {renderChannelCheckboxes('lowGas')}
               </>
             )}
           </div>
@@ -725,56 +738,7 @@ export default function AlertsSettings({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='bidSafetyTelegram'
-                      checked={bidSafetyTelegramEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setBidSafetyTelegramEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='bidSafetyTelegram'
-                      className='text-sm cursor-pointer'
-                    >
-                      Telegram
-                    </label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='bidSafetySlack'
-                      checked={bidSafetySlackEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setBidSafetySlackEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='bidSafetySlack'
-                      className='text-sm cursor-pointer'
-                    >
-                      Slack
-                    </label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='bidSafetyWebhook'
-                      checked={bidSafetyWebhookEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setBidSafetyWebhookEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='bidSafetyWebhook'
-                      className='text-sm cursor-pointer'
-                    >
-                      Webhook
-                    </label>
-                  </div>
-                </div>
+                {renderChannelCheckboxes('bidSafety')}
               </>
             )}
           </div>

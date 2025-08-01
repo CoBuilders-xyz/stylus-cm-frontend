@@ -10,6 +10,7 @@ import {
   NotificationChannel,
 } from '@/services/alertService';
 import { useAlertService } from '@/hooks/useAlertService';
+import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
 import { showSuccessToast, showErrorToast } from '@/components/Toast';
@@ -28,6 +29,7 @@ export default function UserAlertSettings({
   onSuccess,
 }: UserAlertSettingsProps) {
   const { onClose } = useSidePanel();
+  const { notifyChannelsUpdated } = useAlertSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alertService = useAlertService();
@@ -291,6 +293,9 @@ export default function UserAlertSettings({
       setHasChangedTelegram(false);
       setHasChangedSlack(false);
       setHasChangedWebhook(false);
+
+      // Notify context that channels have been updated
+      notifyChannelsUpdated();
 
       // Show custom toast for success
       showSuccessToast({
