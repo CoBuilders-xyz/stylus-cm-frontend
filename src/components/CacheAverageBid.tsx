@@ -579,7 +579,7 @@ export default function CacheAverageBid() {
 
         {/* Summary cards */}
         <div className='px-2 sm:px-6 flex-1 flex items-center min-h-0'>
-          <div className='grid grid-cols-3 gap-1 sm:gap-2 w-full'>
+          <div className='grid grid-cols-3 gap-1 sm:gap-2 w-full min-h-0'>
             {contractSizeOptions.map((option) => {
               const stats =
                 summaryStats[option.value as keyof typeof summaryStats];
@@ -599,7 +599,7 @@ export default function CacheAverageBid() {
                     transform: isHovered ? 'scale(1.02)' : 'scale(1)',
                     transition: 'all 0.2s ease-in-out',
                   }}
-                  className='px-1 py-1 sm:px-2 sm:py-2 text-center cursor-pointer'
+                  className='px-1 py-0.5 sm:px-2 sm:py-1 md:py-2 text-center cursor-pointer flex flex-col justify-center h-full min-h-0'
                   onMouseEnter={() => setHoveredSize(sizeKey)}
                   onMouseLeave={() => setHoveredSize(null)}
                 >
@@ -608,20 +608,20 @@ export default function CacheAverageBid() {
                       color: lineColor,
                       fontWeight: '600',
                     }}
-                    className='text-xs sm:text-sm mb-0.5 sm:mb-1'
+                    className='text-[10px] sm:text-xs md:text-sm leading-tight mb-0 sm:mb-0.5'
                   >
                     {option.label}
                   </div>
-                  {/* Show bid values only on larger screens */}
+                  {/* Show bid values - hide on very small heights */}
                   <div
-                    className='hidden sm:block text-xs sm:text-lg'
+                    className='hidden sm:block text-[8px] sm:text-xs md:text-sm leading-tight'
                     style={customStyles.bidValue}
                   >
                     {isLoading || !currentBlockchainId ? (
-                      <Skeleton className='h-4 w-16 bg-slate-700 mx-auto' />
+                      <Skeleton className='h-2 sm:h-3 md:h-4 w-8 sm:w-12 md:w-16 bg-slate-700 mx-auto' />
                     ) : (
                       <span className='block'>
-                        <span className='text-xs sm:text-sm'>
+                        <span>
                           {formatETHForAxis(parseFloat(stats.value))} ETH
                         </span>
                       </span>
