@@ -101,7 +101,7 @@ export default function Header() {
           <BlockchainSelector />
           <ConnectWallet />
           {/* Mobile Menu Trigger - Shown only on mobile */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button className='lg:hidden p-2 hover:bg-gray-800 rounded-md'>
                 <Menu className='w-5 h-5' />
