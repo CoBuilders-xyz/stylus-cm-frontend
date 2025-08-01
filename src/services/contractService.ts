@@ -69,7 +69,6 @@ export interface Alert {
   lastTriggered: string | null;
   lastNotified: string | null;
   triggeredCount: number;
-  emailChannelEnabled: boolean;
   slackChannelEnabled: boolean;
   telegramChannelEnabled: boolean;
   webhookChannelEnabled: boolean;
