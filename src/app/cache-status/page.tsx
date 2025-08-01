@@ -19,11 +19,11 @@ export default function CacheStatusPage() {
 
       {/* Metrics Section */}
       <div className='w-full px-10 flex-1 xl:min-h-0 pb-10'>
-        <div className='grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[500px] xl:h-full'>
-          <div className='min-h-[500px] xl:h-full xl:min-h-0'>
+        <div className='grid grid-cols-1 xl:grid-cols-2 gap-6 h-full xl:h-full'>
+          <div className='min-h-[300px] xl:h-full xl:min-h-0'>
             <CacheAverageBid />
           </div>
-          <div className='min-h-[500px] xl:h-full xl:min-h-0'>
+          <div className='min-h-[300px] xl:h-full xl:min-h-0'>
             <CacheManagerActivity />
           </div>
         </div>
