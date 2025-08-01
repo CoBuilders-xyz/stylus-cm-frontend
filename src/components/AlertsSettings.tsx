@@ -380,7 +380,6 @@ export default function AlertsSettings({
               validationResult={validationResult}
               title='Configure Notification Channels First'
               message='You need to set up at least one notification channel before configuring alerts for this contract.'
-              showDetails={true}
             />
           </div>
         )}
@@ -391,10 +390,8 @@ export default function AlertsSettings({
             <div className='mb-6'>
               <NotificationChannelWarning
                 validationResult={validationResult}
-                variant='compact'
                 title='Some channels need attention'
                 message='Some of your notification channels are enabled but missing destinations.'
-                showDetails={false}
               />
             </div>
           )}
