@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import logo from 'public/logo.svg';
-import { Megaphone, Menu } from 'lucide-react';
+import { Megaphone, Menu, MessageCircle } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import { GasTankModal } from './GasTankModal';
 import BlockchainSelector from './BlockchainSelector';
@@ -16,6 +16,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function Header() {
   const { openAlertSettings } = useAlertSettings();
@@ -69,6 +75,22 @@ export default function Header() {
             >
               Docs
             </Link>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href='https://forms.google.com/your-feedback-form-url'
+                    target='_blank'
+                    className='text-white hover:text-gray-300 pb-1 inline-flex items-center'
+                  >
+                    <MessageCircle className='w-4 h-4' />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Give us Feedback</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
