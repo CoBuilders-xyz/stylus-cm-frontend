@@ -6,7 +6,7 @@ import { useSidePanel } from './SidePanel';
 import { Info, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserAlertPreferences } from '@/services/alertService';
-import { NotificationChannel, CHANNELS } from '@/types/alerts';
+import { NotificationChannel } from '@/types/alerts';
 import { useAlertService } from '@/hooks/useAlertService';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
@@ -173,11 +173,11 @@ export default function UserAlertSettings({
     // Check if there are unsaved changes for this channel
     let hasUnsavedChanges = false;
 
-    if (channel === CHANNELS.TELEGRAM && hasChangedTelegram) {
+    if (channel === NotificationChannel.TELEGRAM && hasChangedTelegram) {
       hasUnsavedChanges = true;
-    } else if (channel === CHANNELS.SLACK && hasChangedSlack) {
+    } else if (channel === NotificationChannel.SLACK && hasChangedSlack) {
       hasUnsavedChanges = true;
-    } else if (channel === CHANNELS.WEBHOOK && hasChangedWebhook) {
+    } else if (channel === NotificationChannel.WEBHOOK && hasChangedWebhook) {
       hasUnsavedChanges = true;
     }
 
@@ -199,14 +199,14 @@ export default function UserAlertSettings({
       let isValid = true;
 
       if (
-        channel === CHANNELS.TELEGRAM &&
+        channel === NotificationChannel.TELEGRAM &&
         !validateTelegram(telegramDestination)
       ) {
         isValid = false;
       }
 
       if (
-        channel === CHANNELS.WEBHOOK &&
+        channel === NotificationChannel.WEBHOOK &&
         !validateWebhook(webhookDestination)
       ) {
         isValid = false;
@@ -423,7 +423,7 @@ export default function UserAlertSettings({
                   className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
                 />
                 <Button
-                  onClick={() => testNotification(CHANNELS.TELEGRAM)}
+                  onClick={() => testNotification(NotificationChannel.TELEGRAM)}
                   disabled={!telegramDestination}
                   className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >
@@ -511,7 +511,7 @@ export default function UserAlertSettings({
                   className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
                 />
                 <Button
-                  onClick={() => testNotification(CHANNELS.SLACK)}
+                  onClick={() => testNotification(NotificationChannel.SLACK)}
                   disabled={!slackDestination}
                   className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >
@@ -578,7 +578,7 @@ export default function UserAlertSettings({
                   className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
                 />
                 <Button
-                  onClick={() => testNotification(CHANNELS.WEBHOOK)}
+                  onClick={() => testNotification(NotificationChannel.WEBHOOK)}
                   disabled={!webhookDestination}
                   className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
                 >

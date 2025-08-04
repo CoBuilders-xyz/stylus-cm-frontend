@@ -9,24 +9,19 @@ export enum AlertType {
 }
 
 /**
- * Notification channel type
+ * Notification channel enum
  */
-export type NotificationChannel = 'telegram' | 'slack' | 'webhook';
-
-/**
- * Individual notification channel constants
- */
-export const CHANNELS = {
-  TELEGRAM: 'telegram' as const,
-  SLACK: 'slack' as const,
-  WEBHOOK: 'webhook' as const,
-} as const;
+export enum NotificationChannel {
+  TELEGRAM = 'telegram',
+  SLACK = 'slack',
+  WEBHOOK = 'webhook',
+}
 
 /**
  * Array of all available notification channels
  */
 export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
-  CHANNELS.TELEGRAM,
-  CHANNELS.SLACK,
-  CHANNELS.WEBHOOK,
+  NotificationChannel.TELEGRAM,
+  NotificationChannel.SLACK,
+  NotificationChannel.WEBHOOK,
 ];
