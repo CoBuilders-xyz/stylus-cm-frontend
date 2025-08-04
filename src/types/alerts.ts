@@ -20,8 +20,4 @@ export enum NotificationChannel {
 /**
  * Array of all available notification channels
  */
-export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
-  NotificationChannel.TELEGRAM,
-  NotificationChannel.SLACK,
-  NotificationChannel.WEBHOOK,
-];
+export const NOTIFICATION_CHANNELS = Object.values(NotificationChannel);
