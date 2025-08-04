@@ -1,7 +1,9 @@
+import { UserAlertPreferences } from '@/services/alertService';
 import {
-  UserAlertPreferences,
   NotificationChannel,
-} from '@/services/alertService';
+  NOTIFICATION_CHANNELS,
+  CHANNELS,
+} from '@/types/alerts';
 
 /**
  * Validation result interface providing detailed information about notification channel status
@@ -24,17 +26,17 @@ export function isChannelValid(
   channel: NotificationChannel
 ): boolean {
   switch (channel) {
-    case 'telegram':
+    case CHANNELS.TELEGRAM:
       return Boolean(
         preferences.telegramSettings?.enabled &&
           preferences.telegramSettings?.destination?.trim()
       );
-    case 'slack':
+    case CHANNELS.SLACK:
       return Boolean(
         preferences.slackSettings?.enabled &&
           preferences.slackSettings?.destination?.trim()
       );
-    case 'webhook':
+    case CHANNELS.WEBHOOK:
       return Boolean(
         preferences.webhookSettings?.enabled &&
           preferences.webhookSettings?.destination?.trim()
@@ -55,17 +57,17 @@ export function isChannelEnabledButInvalid(
   channel: NotificationChannel
 ): boolean {
   switch (channel) {
-    case 'telegram':
+    case CHANNELS.TELEGRAM:
       return Boolean(
         preferences.telegramSettings?.enabled &&
           !preferences.telegramSettings?.destination?.trim()
       );
-    case 'slack':
+    case CHANNELS.SLACK:
       return Boolean(
         preferences.slackSettings?.enabled &&
           !preferences.slackSettings?.destination?.trim()
       );
-    case 'webhook':
+    case CHANNELS.WEBHOOK:
       return Boolean(
         preferences.webhookSettings?.enabled &&
           !preferences.webhookSettings?.destination?.trim()
@@ -83,8 +85,9 @@ export function isChannelEnabledButInvalid(
 export function hasValidNotificationChannels(
   preferences: UserAlertPreferences
 ): boolean {
-  const channels: NotificationChannel[] = ['telegram', 'slack', 'webhook'];
-  return channels.some((channel) => isChannelValid(preferences, channel));
+  return NOTIFICATION_CHANNELS.some((channel) =>
+    isChannelValid(preferences, channel)
+  );
 }
 
 /**
@@ -95,8 +98,9 @@ export function hasValidNotificationChannels(
 export function getConfiguredChannels(
   preferences: UserAlertPreferences
 ): NotificationChannel[] {
-  const channels: NotificationChannel[] = ['telegram', 'slack', 'webhook'];
-  return channels.filter((channel) => isChannelValid(preferences, channel));
+  return NOTIFICATION_CHANNELS.filter((channel) =>
+    isChannelValid(preferences, channel)
+  );
 }
 
 /**
@@ -107,8 +111,7 @@ export function getConfiguredChannels(
 export function getMissingChannels(
   preferences: UserAlertPreferences
 ): NotificationChannel[] {
-  const channels: NotificationChannel[] = ['telegram', 'slack', 'webhook'];
-  return channels.filter(
+  return NOTIFICATION_CHANNELS.filter(
     (channel) =>
       !isChannelValid(preferences, channel) &&
       !isChannelEnabledButInvalid(preferences, channel)
@@ -123,8 +126,7 @@ export function getMissingChannels(
 export function getEnabledButInvalidChannels(
   preferences: UserAlertPreferences
 ): NotificationChannel[] {
-  const channels: NotificationChannel[] = ['telegram', 'slack', 'webhook'];
-  return channels.filter((channel) =>
+  return NOTIFICATION_CHANNELS.filter((channel) =>
     isChannelEnabledButInvalid(preferences, channel)
   );
 }
@@ -156,11 +158,11 @@ export function validateNotificationChannels(
  */
 export function getChannelDisplayName(channel: NotificationChannel): string {
   switch (channel) {
-    case 'telegram':
+    case CHANNELS.TELEGRAM:
       return 'Telegram';
-    case 'slack':
+    case CHANNELS.SLACK:
       return 'Slack';
-    case 'webhook':
+    case CHANNELS.WEBHOOK:
       return 'Webhook';
     default:
       return channel;
@@ -174,11 +176,11 @@ export function getChannelDisplayName(channel: NotificationChannel): string {
  */
 export function getChannelDescription(channel: NotificationChannel): string {
   switch (channel) {
-    case 'telegram':
+    case CHANNELS.TELEGRAM:
       return 'Get instant alerts through Telegram bot';
-    case 'slack':
+    case CHANNELS.SLACK:
       return 'Send alerts to your Slack channel or DM';
-    case 'webhook':
+    case CHANNELS.WEBHOOK:
       return 'Forward alerts to your custom webhook endpoint';
     default:
       return 'Notification channel';

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useSidePanel } from './SidePanel';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertSettings, AlertType } from '@/services/alertService';
+import { Alert, AlertSettings } from '@/services/alertService';
+import { AlertType, NOTIFICATION_CHANNELS } from '@/types/alerts';
 import { useAlertService } from '@/hooks/useAlertService';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
@@ -21,7 +22,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
-import { NotificationChannel } from '@/services/alertService';
 
 interface AlertsSettingsProps {
   onSuccess?: () => void;
@@ -29,6 +29,9 @@ interface AlertsSettingsProps {
   contractAddress: string;
   initialAlerts?: Alert[];
 }
+
+// Type alias for alert type values used in component logic
+type AlertTypeValue = `${AlertType}`;
 
 export default function AlertsSettings({
   onSuccess,
@@ -326,30 +329,28 @@ export default function AlertsSettings({
   };
 
   // Helper function to render channel checkboxes based on available channels
-  const renderChannelCheckboxes = (
-    alertType: 'eviction' | 'noGas' | 'lowGas' | 'bidSafety'
-  ) => {
+  const renderChannelCheckboxes = (alertType: AlertTypeValue) => {
     const availableChannels = getAvailableChannels();
-    const allChannels: NotificationChannel[] = ['telegram', 'slack', 'webhook'];
+    const allChannels = NOTIFICATION_CHANNELS;
 
     const channelConfig = {
       telegram: {
         id: `${alertType}Telegram`,
         label: 'Telegram',
         checked:
-          alertType === 'eviction'
+          alertType === AlertType.EVICTION
             ? evictionTelegramEnabled
-            : alertType === 'noGas'
+            : alertType === AlertType.NO_GAS
             ? noGasTelegramEnabled
-            : alertType === 'lowGas'
+            : alertType === AlertType.LOW_GAS
             ? lowGasTelegramEnabled
             : bidSafetyTelegramEnabled,
         onChange:
-          alertType === 'eviction'
+          alertType === AlertType.EVICTION
             ? setEvictionTelegramEnabled
-            : alertType === 'noGas'
+            : alertType === AlertType.NO_GAS
             ? setNoGasTelegramEnabled
-            : alertType === 'lowGas'
+            : alertType === AlertType.LOW_GAS
             ? setLowGasTelegramEnabled
             : setBidSafetyTelegramEnabled,
       },
@@ -357,19 +358,19 @@ export default function AlertsSettings({
         id: `${alertType}Slack`,
         label: 'Slack',
         checked:
-          alertType === 'eviction'
+          alertType === AlertType.EVICTION
             ? evictionSlackEnabled
-            : alertType === 'noGas'
+            : alertType === AlertType.NO_GAS
             ? noGasSlackEnabled
-            : alertType === 'lowGas'
+            : alertType === AlertType.LOW_GAS
             ? lowGasSlackEnabled
             : bidSafetySlackEnabled,
         onChange:
-          alertType === 'eviction'
+          alertType === AlertType.EVICTION
             ? setEvictionSlackEnabled
-            : alertType === 'noGas'
+            : alertType === AlertType.NO_GAS
             ? setNoGasSlackEnabled
-            : alertType === 'lowGas'
+            : alertType === AlertType.LOW_GAS
             ? setLowGasSlackEnabled
             : setBidSafetySlackEnabled,
       },
@@ -377,19 +378,19 @@ export default function AlertsSettings({
         id: `${alertType}Webhook`,
         label: 'Webhook',
         checked:
-          alertType === 'eviction'
+          alertType === AlertType.EVICTION
             ? evictionWebhookEnabled
-            : alertType === 'noGas'
+            : alertType === AlertType.NO_GAS
             ? noGasWebhookEnabled
-            : alertType === 'lowGas'
+            : alertType === AlertType.LOW_GAS
             ? lowGasWebhookEnabled
             : bidSafetyWebhookEnabled,
         onChange:
-          alertType === 'eviction'
+          alertType === AlertType.EVICTION
             ? setEvictionWebhookEnabled
-            : alertType === 'noGas'
+            : alertType === AlertType.NO_GAS
             ? setNoGasWebhookEnabled
-            : alertType === 'lowGas'
+            : alertType === AlertType.LOW_GAS
             ? setLowGasWebhookEnabled
             : setBidSafetyWebhookEnabled,
       },
@@ -592,7 +593,9 @@ export default function AlertsSettings({
             </div>
 
             {evictionAlertEnabled && (
-              <div className='mt-4'>{renderChannelCheckboxes('eviction')}</div>
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.EVICTION)}
+              </div>
             )}
           </div>
 
@@ -624,7 +627,9 @@ export default function AlertsSettings({
             </div>
 
             {noGasAlertEnabled && (
-              <div className='mt-4'>{renderChannelCheckboxes('noGas')}</div>
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.NO_GAS)}
+              </div>
             )}
           </div>
 
@@ -670,7 +675,7 @@ export default function AlertsSettings({
                   />
                 </div>
 
-                {renderChannelCheckboxes('lowGas')}
+                {renderChannelCheckboxes(AlertType.LOW_GAS)}
               </>
             )}
           </div>
@@ -738,7 +743,7 @@ export default function AlertsSettings({
                   </div>
                 </div>
 
-                {renderChannelCheckboxes('bidSafety')}
+                {renderChannelCheckboxes(AlertType.BID_SAFETY)}
               </>
             )}
           </div>

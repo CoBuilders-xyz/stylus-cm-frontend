@@ -1,14 +1,5 @@
 import { ApiClient } from './api';
-
-/**
- * Alert type enum matching the backend
- */
-export enum AlertType {
-  EVICTION = 'eviction',
-  NO_GAS = 'noGas',
-  LOW_GAS = 'lowGas',
-  BID_SAFETY = 'bidSafety',
-}
+import { AlertType, NotificationChannel } from '@/types/alerts';
 
 /**
  * Alert data interface for contract monitoring
@@ -72,11 +63,6 @@ export interface UserAlertPreferences {
   slackSettings?: SlackSettings;
   webhookSettings?: WebhookSettings;
 }
-
-/**
- * Notification channel type
- */
-export type NotificationChannel = 'telegram' | 'slack' | 'webhook';
 
 /**
  * Alert service for handling alert-related API requests
