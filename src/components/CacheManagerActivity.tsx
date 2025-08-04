@@ -277,194 +277,203 @@ export default function CacheManagerActivity() {
       className='@container/card flex flex-col h-full'
       style={{ ...customStyles.card, borderRadius: '12px' }}
     >
-      <CardHeader className='relative'>
-        <div className='flex flex-col gap-3'>
-          <CardTitle className='text-2xl font-bold' style={customStyles.title}>
-            Bid Placement Activity
-          </CardTitle>
-          <CardDescription
-            className='text-base'
-            style={customStyles.description}
-          >
-            Bid placement and deletion activity for the selected period
-          </CardDescription>
-          <div className='flex flex-col gap-1'>
-            <div
-              className='text-2xl font-bold'
-              style={customStyles.globalValue}
+      {/* Header - flex: 3 (30%) */}
+      <div className='flex flex-col flex-[3] min-h-0'>
+        <CardHeader className='relative pb-1 sm:pb-2 flex-1'>
+          <div className='flex flex-col gap-1 sm:gap-2 pr-20 h-full'>
+            <CardTitle
+              className='text-base sm:text-2xl font-bold'
+              style={customStyles.title}
             >
-              {isLoading || !currentBlockchainId ? (
-                <Skeleton className='h-8 w-32 bg-slate-700' />
-              ) : (
-                <div className='flex flex-row gap-4 text-sm'>
-                  <div className='flex items-center'>
-                    <span
-                      className='mr-1 pb-1'
-                      style={{
-                        color: '#4267B2',
-                        fontSize: '24px',
-                        lineHeight: '1',
-                        display: 'inline-block',
-                        verticalAlign: 'middle',
-                      }}
-                    >
-                      ●
-                    </span>
-                    Insertions: {totalInserts}
+              Bid Placement Activity
+            </CardTitle>
+            <CardDescription
+              className='text-xs sm:text-base'
+              style={customStyles.description}
+            >
+              Bid placement and deletion activity for the selected period
+            </CardDescription>
+            <div className='flex flex-col gap-1 flex-1 justify-center'>
+              <div
+                className='text-sm sm:text-2xl font-bold'
+                style={customStyles.globalValue}
+              >
+                {isLoading || !currentBlockchainId ? (
+                  <Skeleton className='h-4 sm:h-8 w-32 bg-slate-700' />
+                ) : (
+                  <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs sm:text-sm'>
+                    <div className='flex items-center'>
+                      <span
+                        className='mr-1 pb-1'
+                        style={{
+                          color: '#4267B2',
+                          fontSize: '12px sm:24px',
+                          lineHeight: '1',
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        ●
+                      </span>
+                      Insertions: {totalInserts}
+                    </div>
+                    <div className='flex items-center'>
+                      <span
+                        className='mr-1 pb-1'
+                        style={{
+                          color: '#B24942',
+                          fontSize: '12px sm:24px',
+                          lineHeight: '1',
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        ●
+                      </span>
+                      Deletions: {totalDeletes}
+                    </div>
                   </div>
-                  <div className='flex items-center'>
-                    <span
-                      className='mr-1 pb-1'
-                      style={{
-                        color: '#B24942',
-                        fontSize: '24px',
-                        lineHeight: '1',
-                        display: 'inline-block',
-                        verticalAlign: 'middle',
-                      }}
-                    >
-                      ●
-                    </span>
-                    Deletions: {totalDeletes}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className='absolute right-4 top-4'>
-          <ToggleGroup
-            type='single'
-            value={timespan}
-            onValueChange={handleTimespanChange}
-            variant='outline'
-            className='hidden md:flex'
-            style={customStyles.toggleGroup}
-          >
-            {timespanOptions.map((option, index) => (
-              <ToggleGroupItem
-                key={option.value}
-                value={option.value}
-                className='h-8 w-10 px-2.5 font-medium data-[state=on]:bg-transparent'
-                style={{
-                  ...(option.value === timespan
-                    ? customStyles.toggleButtonActive
-                    : customStyles.toggleButton),
-                  borderRight:
-                    index === timespanOptions.length - 1
-                      ? 'none'
-                      : '1px solid #2C2E30',
-                  borderLeft: index === 0 ? 'none' : 'none',
-                }}
-              >
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          <Select value={timespan} onValueChange={handleTimespanChange}>
-            <SelectTrigger
-              className='md:hidden flex w-40'
-              aria-label='Select a timespan'
-              style={{
-                backgroundColor: '#1A1919',
-                color: '#FFFFFF',
-                border: '1px solid #2C2E30',
-              }}
+          <div className='absolute right-2 top-2'>
+            <ToggleGroup
+              type='single'
+              value={timespan}
+              onValueChange={handleTimespanChange}
+              variant='outline'
+              className='hidden xl:flex'
+              style={customStyles.toggleGroup}
             >
-              <SelectValue placeholder='Select timespan' />
-            </SelectTrigger>
-            <SelectContent
-              className='rounded-xl'
-              style={{
-                backgroundColor: '#1A1919',
-                border: '1px solid #2C2E30',
-              }}
-            >
-              {timespanOptions.map((option) => (
-                <SelectItem
+              {timespanOptions.map((option, index) => (
+                <ToggleGroupItem
                   key={option.value}
                   value={option.value}
-                  className='rounded-lg'
+                  className='h-7 w-8 px-1.5 text-xs font-medium data-[state=on]:bg-transparent'
                   style={{
-                    color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
-                    backgroundColor:
-                      option.value === timespan ? '#2C2E30' : '#1A1919',
+                    ...(option.value === timespan
+                      ? customStyles.toggleButtonActive
+                      : customStyles.toggleButton),
+                    borderRight:
+                      index === timespanOptions.length - 1
+                        ? 'none'
+                        : '1px solid #2C2E30',
+                    borderLeft: index === 0 ? 'none' : 'none',
                   }}
                 >
                   {option.label}
-                </SelectItem>
+                </ToggleGroupItem>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
+            </ToggleGroup>
+            <Select value={timespan} onValueChange={handleTimespanChange}>
+              <SelectTrigger
+                className='xl:hidden flex w-20 h-7 text-xs'
+                aria-label='Select a timespan'
+                style={{
+                  backgroundColor: '#1A1919',
+                  color: '#FFFFFF',
+                  border: '1px solid #2C2E30',
+                }}
+              >
+                <SelectValue placeholder='D' />
+              </SelectTrigger>
+              <SelectContent
+                className='rounded-xl'
+                style={{
+                  backgroundColor: '#1A1919',
+                  border: '1px solid #2C2E30',
+                }}
+              >
+                {timespanOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className='rounded-lg text-xs'
+                    style={{
+                      color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
+                      backgroundColor:
+                        option.value === timespan ? '#2C2E30' : '#1A1919',
+                    }}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+      </div>
 
-      <CardContent className='px-2 pt-0 sm:px-6 flex-1 flex flex-col'>
+      {/* Chart Container - flex: 7 (70%) */}
+      <CardContent className='flex-[7] flex flex-col p-1 sm:p-2 min-h-0'>
         {isLoading || !currentBlockchainId ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center'>
-            <Skeleton className='h-[200px] w-full bg-slate-700' />
+          <div className='flex-1 w-full flex items-center justify-center'>
+            <Skeleton className='h-full w-full bg-slate-700' />
           </div>
         ) : error ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center text-center text-red-500'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-red-500'>
             Error loading chart data. Please try again.
           </div>
         ) : activityData.length === 0 ? (
-          <div className='aspect-auto min-h-[200px] flex-1 w-full flex items-center justify-center text-center text-gray-400'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400'>
             No data available for the selected filters.
           </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className='aspect-auto min-h-[200px] flex-1 w-full'
-          >
-            <ResponsiveContainer width='100%' height='100%'>
-              <LineChart data={activityData}>
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray='3 3'
-                  stroke={customStyles.grid.stroke}
-                />
-                <XAxis
-                  dataKey='period'
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  minTickGap={32}
-                  tick={{ fill: customStyles.xAxis.color }}
-                  tickFormatter={formatXAxisTick}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tick={{ fill: customStyles.yAxis.color }}
-                  width={40}
-                />
-                <Tooltip
-                  cursor={<CustomCursor />}
-                  content={<CustomTooltip />}
-                />
-                <Line
-                  type='natural'
-                  dataKey='insertCount'
-                  name='Insert Count'
-                  stroke='#4267B2'
-                  fill='#4267B2'
-                  strokeWidth={2}
-                  dot={true}
-                />
-                <Line
-                  type='natural'
-                  dataKey='deleteCount'
-                  name='Eviction Count'
-                  stroke='#B24942'
-                  fill='#B24942'
-                  strokeWidth={2}
-                  dot={true}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <div className='flex-1 w-full p-1 min-h-0'>
+            <ChartContainer config={chartConfig} className='w-full h-full'>
+              <ResponsiveContainer width='100%' height='100%'>
+                <LineChart
+                  data={activityData}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 40 }}
+                >
+                  <CartesianGrid
+                    vertical={false}
+                    strokeDasharray='3 3'
+                    stroke={customStyles.grid.stroke}
+                  />
+                  <XAxis
+                    dataKey='period'
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
+                    tick={{ fill: customStyles.xAxis.color }}
+                    tickFormatter={formatXAxisTick}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fill: customStyles.yAxis.color }}
+                    width={30}
+                  />
+                  <Tooltip
+                    cursor={<CustomCursor />}
+                    content={<CustomTooltip />}
+                  />
+                  <Line
+                    type='natural'
+                    dataKey='insertCount'
+                    name='Insert Count'
+                    stroke='#4267B2'
+                    fill='#4267B2'
+                    strokeWidth={2}
+                    dot={true}
+                  />
+                  <Line
+                    type='natural'
+                    dataKey='deleteCount'
+                    name='Eviction Count'
+                    stroke='#B24942'
+                    fill='#B24942'
+                    strokeWidth={2}
+                    dot={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
         )}
       </CardContent>
     </Card>
