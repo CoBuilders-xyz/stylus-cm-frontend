@@ -2,6 +2,7 @@ import React from 'react';
 import { formatEther } from 'viem';
 import { Contract } from '@/services/contractService';
 import type { Alert as ContractAlert } from '@/services/contractService';
+import { AlertType } from '@/types/alerts';
 import {
   formatSize,
   formatRiskLevel,
@@ -116,13 +117,13 @@ export function ContractInfo({
                   // Helper to format alert display text
                   const getAlertText = (alert: ContractAlert) => {
                     switch (alert.type) {
-                      case 'eviction':
+                      case AlertType.EVICTION:
                         return 'Eviction';
-                      case 'noGas':
+                      case AlertType.NO_GAS:
                         return 'No gas';
-                      case 'lowGas':
+                      case AlertType.LOW_GAS:
                         return `Low gas: ${alert.value} ETH`;
-                      case 'bidSafety':
+                      case AlertType.BID_SAFETY:
                         return `Bid Safety: ${alert.value}%`;
                       default:
                         return alert.type;

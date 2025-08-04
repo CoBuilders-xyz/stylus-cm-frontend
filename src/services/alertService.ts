@@ -1,14 +1,5 @@
 import { ApiClient } from './api';
-
-/**
- * Alert type enum matching the backend
- */
-export enum AlertType {
-  EVICTION = 'eviction',
-  NO_GAS = 'noGas',
-  LOW_GAS = 'lowGas',
-  BID_SAFETY = 'bidSafety',
-}
+import { AlertType, NotificationChannel } from '@/types/alerts';
 
 /**
  * Alert data interface for contract monitoring
@@ -21,7 +12,6 @@ export interface Alert {
   lastTriggered: string | null;
   lastNotified: string | null;
   triggeredCount: number;
-  emailChannelEnabled: boolean;
   slackChannelEnabled: boolean;
   telegramChannelEnabled: boolean;
   webhookChannelEnabled: boolean;
@@ -36,18 +26,9 @@ export interface AlertSettings {
   isActive: boolean;
   value?: number | string;
   userContractId: string;
-  emailChannelEnabled?: boolean;
   slackChannelEnabled?: boolean;
   telegramChannelEnabled?: boolean;
   webhookChannelEnabled?: boolean;
-}
-
-/**
- * Email settings for user alert preferences
- */
-export interface EmailSettings {
-  enabled: boolean;
-  destination: string;
 }
 
 /**
@@ -78,16 +59,10 @@ export interface WebhookSettings {
  * User alert preferences interface
  */
 export interface UserAlertPreferences {
-  emailSettings?: EmailSettings;
   telegramSettings?: TelegramSettings;
   slackSettings?: SlackSettings;
   webhookSettings?: WebhookSettings;
 }
-
-/**
- * Notification channel type
- */
-export type NotificationChannel = 'email' | 'telegram' | 'slack' | 'webhook';
 
 /**
  * Alert service for handling alert-related API requests
@@ -127,7 +102,6 @@ export class AlertService {
       value: existingAlert.value,
       userContractId: existingAlert.userContractId,
       isActive: false,
-      emailChannelEnabled: existingAlert.emailChannelEnabled,
       slackChannelEnabled: existingAlert.slackChannelEnabled,
       telegramChannelEnabled: existingAlert.telegramChannelEnabled,
       webhookChannelEnabled: existingAlert.webhookChannelEnabled,
@@ -158,7 +132,7 @@ export class AlertService {
 
   /**
    * Send a test notification to verify notification channel setup
-   * @param notificationChannel The channel to test (email, telegram, slack, webhook)
+   * @param notificationChannel The channel to test ( telegram, slack, webhook)
    * @returns Promise with the test notification result
    */
   async testNotification(

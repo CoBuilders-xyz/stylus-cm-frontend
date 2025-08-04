@@ -5,13 +5,23 @@ import { Button } from '@/components/ui/button';
 import { useSidePanel } from './SidePanel';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertSettings, AlertType } from '@/services/alertService';
+import { Alert, AlertSettings } from '@/services/alertService';
+import { AlertType, NOTIFICATION_CHANNELS } from '@/types/alerts';
 import { useAlertService } from '@/hooks/useAlertService';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckedState } from '@radix-ui/react-checkbox';
+import { useNotificationChannelValidation } from '@/hooks/useNotificationChannelValidation';
+import NotificationChannelWarning from '@/components/NotificationChannelWarning';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useAlertSettings } from '@/context/AlertSettingsProvider';
 
 interface AlertsSettingsProps {
   onSuccess?: () => void;
@@ -19,6 +29,9 @@ interface AlertsSettingsProps {
   contractAddress: string;
   initialAlerts?: Alert[];
 }
+
+// Type alias for alert type values used in component logic
+type AlertTypeValue = `${AlertType}`;
 
 export default function AlertsSettings({
   onSuccess,
@@ -30,6 +43,16 @@ export default function AlertsSettings({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alertService = useAlertService();
+  const { openAlertSettings } = useAlertSettings();
+
+  // Notification channel validation
+  const {
+    hasValidChannels,
+    isValidating,
+    validationResult,
+    error: validationError,
+    revalidate,
+  } = useNotificationChannelValidation();
 
   // No need to track alerts separately, just use initialAlerts
 
@@ -49,22 +72,18 @@ export default function AlertsSettings({
   const [bidSafetyThreshold, setBidSafetyThreshold] = useState(50); // Default to 50%
 
   // Communication channels - will be configured elsewhere but maintain for backend API
-  const [evictionEmailEnabled, setEvictionEmailEnabled] = useState(false);
   const [evictionTelegramEnabled, setEvictionTelegramEnabled] = useState(false);
   const [evictionSlackEnabled, setEvictionSlackEnabled] = useState(false);
   const [evictionWebhookEnabled, setEvictionWebhookEnabled] = useState(false);
 
-  const [noGasEmailEnabled, setNoGasEmailEnabled] = useState(false);
   const [noGasTelegramEnabled, setNoGasTelegramEnabled] = useState(false);
   const [noGasSlackEnabled, setNoGasSlackEnabled] = useState(false);
   const [noGasWebhookEnabled, setNoGasWebhookEnabled] = useState(false);
 
-  const [lowGasEmailEnabled, setLowGasEmailEnabled] = useState(false);
   const [lowGasTelegramEnabled, setLowGasTelegramEnabled] = useState(false);
   const [lowGasSlackEnabled, setLowGasSlackEnabled] = useState(false);
   const [lowGasWebhookEnabled, setLowGasWebhookEnabled] = useState(false);
 
-  const [bidSafetyEmailEnabled, setBidSafetyEmailEnabled] = useState(false);
   const [bidSafetyTelegramEnabled, setBidSafetyTelegramEnabled] =
     useState(false);
   const [bidSafetySlackEnabled, setBidSafetySlackEnabled] = useState(false);
@@ -89,7 +108,6 @@ export default function AlertsSettings({
 
       if (evictionAlert) {
         setEvictionAlertEnabled(evictionAlert.isActive);
-        setEvictionEmailEnabled(evictionAlert.emailChannelEnabled);
         setEvictionTelegramEnabled(evictionAlert.telegramChannelEnabled);
         setEvictionSlackEnabled(evictionAlert.slackChannelEnabled);
         setEvictionWebhookEnabled(evictionAlert.webhookChannelEnabled);
@@ -97,7 +115,6 @@ export default function AlertsSettings({
 
       if (noGasAlert) {
         setNoGasAlertEnabled(noGasAlert.isActive);
-        setNoGasEmailEnabled(noGasAlert.emailChannelEnabled);
         setNoGasTelegramEnabled(noGasAlert.telegramChannelEnabled);
         setNoGasSlackEnabled(noGasAlert.slackChannelEnabled);
         setNoGasWebhookEnabled(noGasAlert.webhookChannelEnabled);
@@ -116,7 +133,6 @@ export default function AlertsSettings({
         } else {
           setLowGasThreshold(''); // No value, reset
         }
-        setLowGasEmailEnabled(lowGasAlert.emailChannelEnabled);
         setLowGasTelegramEnabled(lowGasAlert.telegramChannelEnabled);
         setLowGasSlackEnabled(lowGasAlert.slackChannelEnabled);
         setLowGasWebhookEnabled(lowGasAlert.webhookChannelEnabled);
@@ -133,7 +149,6 @@ export default function AlertsSettings({
             setBidSafetyThreshold(50); // Invalid value, use default
           }
         }
-        setBidSafetyEmailEnabled(bidSafetyAlert.emailChannelEnabled);
         setBidSafetyTelegramEnabled(bidSafetyAlert.telegramChannelEnabled);
         setBidSafetySlackEnabled(bidSafetyAlert.slackChannelEnabled);
         setBidSafetyWebhookEnabled(bidSafetyAlert.webhookChannelEnabled);
@@ -209,7 +224,6 @@ export default function AlertsSettings({
           type: AlertType.EVICTION,
           isActive: evictionAlertEnabled,
           userContractId: contractId,
-          emailChannelEnabled: evictionEmailEnabled,
           slackChannelEnabled: evictionSlackEnabled,
           telegramChannelEnabled: evictionTelegramEnabled,
           webhookChannelEnabled: evictionWebhookEnabled,
@@ -219,7 +233,6 @@ export default function AlertsSettings({
           type: AlertType.NO_GAS,
           isActive: noGasAlertEnabled,
           userContractId: contractId,
-          emailChannelEnabled: noGasEmailEnabled,
           slackChannelEnabled: noGasSlackEnabled,
           telegramChannelEnabled: noGasTelegramEnabled,
           webhookChannelEnabled: noGasWebhookEnabled,
@@ -230,7 +243,6 @@ export default function AlertsSettings({
           value: lowGasValueNumeric, // Use the validated number
           isActive: lowGasAlertEnabled,
           userContractId: contractId,
-          emailChannelEnabled: lowGasEmailEnabled,
           slackChannelEnabled: lowGasSlackEnabled,
           telegramChannelEnabled: lowGasTelegramEnabled,
           webhookChannelEnabled: lowGasWebhookEnabled,
@@ -241,7 +253,6 @@ export default function AlertsSettings({
           value: bidSafetyThreshold, // Already a number
           isActive: bidSafetyAlertEnabled,
           userContractId: contractId,
-          emailChannelEnabled: bidSafetyEmailEnabled,
           slackChannelEnabled: bidSafetySlackEnabled,
           telegramChannelEnabled: bidSafetyTelegramEnabled,
           webhookChannelEnabled: bidSafetyWebhookEnabled,
@@ -275,7 +286,6 @@ export default function AlertsSettings({
     setEvictionAlertEnabled(checked);
     if (checked) {
       // Enable all channels by default when alert is enabled
-      setEvictionEmailEnabled(true);
       setEvictionTelegramEnabled(true);
       setEvictionSlackEnabled(true);
       setEvictionWebhookEnabled(true);
@@ -286,7 +296,6 @@ export default function AlertsSettings({
     setNoGasAlertEnabled(checked);
     if (checked) {
       // Enable all channels by default when alert is enabled
-      setNoGasEmailEnabled(true);
       setNoGasTelegramEnabled(true);
       setNoGasSlackEnabled(true);
       setNoGasWebhookEnabled(true);
@@ -297,7 +306,6 @@ export default function AlertsSettings({
     setLowGasAlertEnabled(checked);
     if (checked) {
       // Enable all channels by default when alert is enabled
-      setLowGasEmailEnabled(true);
       setLowGasTelegramEnabled(true);
       setLowGasSlackEnabled(true);
       setLowGasWebhookEnabled(true);
@@ -308,11 +316,157 @@ export default function AlertsSettings({
     setBidSafetyAlertEnabled(checked);
     if (checked) {
       // Enable all channels by default when alert is enabled
-      setBidSafetyEmailEnabled(true);
       setBidSafetyTelegramEnabled(true);
       setBidSafetySlackEnabled(true);
       setBidSafetyWebhookEnabled(true);
     }
+  };
+
+  // Helper function to determine which notification channels are available
+  const getAvailableChannels = () => {
+    if (!validationResult) return [];
+    return validationResult.configuredChannels;
+  };
+
+  // Helper function to render channel checkboxes based on available channels
+  const renderChannelCheckboxes = (alertType: AlertTypeValue) => {
+    const availableChannels = getAvailableChannels();
+    const allChannels = NOTIFICATION_CHANNELS;
+
+    const channelConfig = {
+      telegram: {
+        id: `${alertType}Telegram`,
+        label: 'Telegram',
+        checked:
+          alertType === AlertType.EVICTION
+            ? evictionTelegramEnabled
+            : alertType === AlertType.NO_GAS
+            ? noGasTelegramEnabled
+            : alertType === AlertType.LOW_GAS
+            ? lowGasTelegramEnabled
+            : bidSafetyTelegramEnabled,
+        onChange:
+          alertType === AlertType.EVICTION
+            ? setEvictionTelegramEnabled
+            : alertType === AlertType.NO_GAS
+            ? setNoGasTelegramEnabled
+            : alertType === AlertType.LOW_GAS
+            ? setLowGasTelegramEnabled
+            : setBidSafetyTelegramEnabled,
+      },
+      slack: {
+        id: `${alertType}Slack`,
+        label: 'Slack',
+        checked:
+          alertType === AlertType.EVICTION
+            ? evictionSlackEnabled
+            : alertType === AlertType.NO_GAS
+            ? noGasSlackEnabled
+            : alertType === AlertType.LOW_GAS
+            ? lowGasSlackEnabled
+            : bidSafetySlackEnabled,
+        onChange:
+          alertType === AlertType.EVICTION
+            ? setEvictionSlackEnabled
+            : alertType === AlertType.NO_GAS
+            ? setNoGasSlackEnabled
+            : alertType === AlertType.LOW_GAS
+            ? setLowGasSlackEnabled
+            : setBidSafetySlackEnabled,
+      },
+      webhook: {
+        id: `${alertType}Webhook`,
+        label: 'Webhook',
+        checked:
+          alertType === AlertType.EVICTION
+            ? evictionWebhookEnabled
+            : alertType === AlertType.NO_GAS
+            ? noGasWebhookEnabled
+            : alertType === AlertType.LOW_GAS
+            ? lowGasWebhookEnabled
+            : bidSafetyWebhookEnabled,
+        onChange:
+          alertType === AlertType.EVICTION
+            ? setEvictionWebhookEnabled
+            : alertType === AlertType.NO_GAS
+            ? setNoGasWebhookEnabled
+            : alertType === AlertType.LOW_GAS
+            ? setLowGasWebhookEnabled
+            : setBidSafetyWebhookEnabled,
+      },
+    };
+
+    return (
+      <div className='grid grid-cols-2 gap-4'>
+        {allChannels.map((channel) => {
+          const config = channelConfig[channel];
+          if (!config) return null;
+
+          const isConfigured = availableChannels.includes(channel);
+
+          // If channel is not configured, show disabled checkbox with tooltip
+          if (!isConfigured) {
+            return (
+              <div
+                key={channel}
+                className='flex items-center space-x-2 opacity-40'
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Checkbox
+                        id={config.id}
+                        checked={false}
+                        disabled={true}
+                        className='data-[state=checked]:bg-gray-500 border-gray-500 cursor-not-allowed'
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side='top' className='max-w-xs p-2'>
+                      <div className='space-y-1'>
+                        <p className='text-xs font-medium'>
+                          {config.label} not configured
+                        </p>
+                        <Button
+                          size='sm'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAlertSettings();
+                          }}
+                          className='w-full text-xs h-6 bg-blue-600 hover:bg-blue-700'
+                        >
+                          Configure
+                        </Button>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <label
+                  htmlFor={config.id}
+                  className='text-sm text-gray-500 cursor-not-allowed'
+                >
+                  {config.label}
+                </label>
+              </div>
+            );
+          }
+
+          // Channel is configured, show normal functional checkbox
+          return (
+            <div key={channel} className='flex items-center space-x-2'>
+              <Checkbox
+                id={config.id}
+                checked={config.checked}
+                onCheckedChange={handleCheckedChange(config.onChange)}
+                className='data-[state=checked]:bg-[#335CD7]'
+              />
+              <label htmlFor={config.id} className='text-sm cursor-pointer'>
+                {config.label}
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -354,434 +508,247 @@ export default function AlertsSettings({
       </div>
 
       <div className='p-6 flex-1 overflow-auto'>
-        {/* Eviction Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <div>
-              <h3 className='text-lg font-medium'>Eviction</h3>
-              <p className='text-gray-400 text-sm'>
-                Alert me when my contract gets evicted from the cache.
-              </p>
+        {/* Notification Channel Validation Warning */}
+        {isValidating && !validationResult && (
+          <div className='mb-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg'>
+            <div className='flex items-center gap-2 text-gray-400'>
+              <div className='animate-spin w-4 h-4 border-2 border-gray-600 border-t-white rounded-full' />
+              <span className='text-sm'>Checking notification channels...</span>
             </div>
-            <SwitchPrimitive.Root
-              checked={evictionAlertEnabled}
-              onCheckedChange={handleEvictionAlertToggle}
-              className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-              )}
-            >
-              <SwitchPrimitive.Thumb
-                className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-                )}
-              />
-            </SwitchPrimitive.Root>
           </div>
+        )}
 
-          {evictionAlertEnabled && (
-            <div className='mt-4 grid grid-cols-2 gap-4'>
-              {/* // Uncomment this if email notifications are required
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='evictionEmail'
-                    checked={evictionEmailEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setEvictionEmailEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='evictionEmail'
-                    className='text-sm cursor-pointer'
-                  >
-                    Email
-                  </label>
-                </div>
-              */}
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='evictionTelegram'
-                  checked={evictionTelegramEnabled}
-                  onCheckedChange={handleCheckedChange(
-                    setEvictionTelegramEnabled
+        {validationError && (
+          <div className='mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg'>
+            <p className='text-red-400 text-sm'>
+              Failed to check notification channels: {validationError}
+            </p>
+            <Button
+              onClick={revalidate}
+              size='sm'
+              className='mt-2 bg-red-500/20 text-red-400 hover:bg-red-500/30'
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {validationResult && !hasValidChannels && (
+          <div className='mb-6'>
+            <NotificationChannelWarning
+              validationResult={validationResult}
+              title='Configure Notification Channels First'
+              message='You need to set up at least one notification channel before configuring alerts for this contract.'
+            />
+          </div>
+        )}
+
+        {validationResult &&
+          hasValidChannels &&
+          validationResult.enabledButInvalidChannels.length > 0 && (
+            <div className='mb-6'>
+              <NotificationChannelWarning
+                validationResult={validationResult}
+                title='Some channels need attention'
+                message='Some of your notification channels are enabled but missing destinations.'
+              />
+            </div>
+          )}
+
+        {/* Alert Configuration Sections - Show immediately but with proper channel filtering */}
+        <div
+          className={cn(
+            'space-y-8',
+            !hasValidChannels &&
+              !isValidating &&
+              validationResult &&
+              'opacity-50 pointer-events-none'
+          )}
+        >
+          {/* Eviction Alerts */}
+          <div className='rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Eviction</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when my contract gets evicted from the cache.
+                </p>
+              </div>
+              <SwitchPrimitive.Root
+                checked={evictionAlertEnabled}
+                onCheckedChange={handleEvictionAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
                   )}
-                  className='data-[state=checked]:bg-[#335CD7]'
                 />
-                <label
-                  htmlFor='evictionTelegram'
-                  className='text-sm cursor-pointer'
-                >
-                  Telegram
-                </label>
+              </SwitchPrimitive.Root>
+            </div>
+
+            {evictionAlertEnabled && (
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.EVICTION)}
               </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='evictionSlack'
-                  checked={evictionSlackEnabled}
-                  onCheckedChange={handleCheckedChange(setEvictionSlackEnabled)}
-                  className='data-[state=checked]:bg-[#335CD7]'
-                />
-                <label
-                  htmlFor='evictionSlack'
-                  className='text-sm cursor-pointer'
-                >
-                  Slack
-                </label>
+            )}
+          </div>
+
+          {/* No Gas Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>No Gas</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when my balance can&apos;t cover gas for auto-bids.
+                </p>
               </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='evictionWebhook'
-                  checked={evictionWebhookEnabled}
-                  onCheckedChange={handleCheckedChange(
-                    setEvictionWebhookEnabled
+              <SwitchPrimitive.Root
+                checked={noGasAlertEnabled}
+                onCheckedChange={handleNoGasAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
                   )}
-                  className='data-[state=checked]:bg-[#335CD7]'
                 />
-                <label
-                  htmlFor='evictionWebhook'
-                  className='text-sm cursor-pointer'
-                >
-                  Webhook
-                </label>
-              </div>
+              </SwitchPrimitive.Root>
             </div>
-          )}
-        </div>
 
-        {/* No Gas Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <div>
-              <h3 className='text-lg font-medium'>No Gas</h3>
-              <p className='text-gray-400 text-sm'>
-                Alert me when my balance can&apos;t cover gas for auto-bids.
-              </p>
-            </div>
-            <SwitchPrimitive.Root
-              checked={noGasAlertEnabled}
-              onCheckedChange={handleNoGasAlertToggle}
-              className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-              )}
-            >
-              <SwitchPrimitive.Thumb
-                className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-                )}
-              />
-            </SwitchPrimitive.Root>
+            {noGasAlertEnabled && (
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.NO_GAS)}
+              </div>
+            )}
           </div>
 
-          {noGasAlertEnabled && (
-            <div className='mt-4 grid grid-cols-2 gap-4'>
-              {/* // Uncomment this if email notifications are required
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='noGasEmail'
-                    checked={noGasEmailEnabled}
-                    onCheckedChange={handleCheckedChange(setNoGasEmailEnabled)}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='noGasEmail'
-                    className='text-sm cursor-pointer'
-                  >
-                    Email
+          {/* Low Gas Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Low Gas</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when my balance goes below the threshold.
+                </p>
+              </div>
+              <SwitchPrimitive.Root
+                checked={lowGasAlertEnabled}
+                onCheckedChange={handleLowGasAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+
+            {lowGasAlertEnabled && (
+              <>
+                <div className='mt-4 mb-4'>
+                  <label className='block text-sm mb-1'>
+                    Low gas threshold (ETH)
                   </label>
+                  <Input
+                    type='number'
+                    placeholder='e.g. 0.1'
+                    value={lowGasThreshold}
+                    onChange={handleLowGasThresholdChange}
+                    className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
+                  />
                 </div>
-              */}
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='noGasTelegram'
-                  checked={noGasTelegramEnabled}
-                  onCheckedChange={handleCheckedChange(setNoGasTelegramEnabled)}
-                  className='data-[state=checked]:bg-[#335CD7]'
-                />
-                <label
-                  htmlFor='noGasTelegram'
-                  className='text-sm cursor-pointer'
-                >
-                  Telegram
-                </label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='noGasSlack'
-                  checked={noGasSlackEnabled}
-                  onCheckedChange={handleCheckedChange(setNoGasSlackEnabled)}
-                  className='data-[state=checked]:bg-[#335CD7]'
-                />
-                <label htmlFor='noGasSlack' className='text-sm cursor-pointer'>
-                  Slack
-                </label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='noGasWebhook'
-                  checked={noGasWebhookEnabled}
-                  onCheckedChange={handleCheckedChange(setNoGasWebhookEnabled)}
-                  className='data-[state=checked]:bg-[#335CD7]'
-                />
-                <label
-                  htmlFor='noGasWebhook'
-                  className='text-sm cursor-pointer'
-                >
-                  Webhook
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Low Gas Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <div>
-              <h3 className='text-lg font-medium'>Low Gas</h3>
-              <p className='text-gray-400 text-sm'>
-                Alert me when my balance goes below the threshold.
-              </p>
-            </div>
-            <SwitchPrimitive.Root
-              checked={lowGasAlertEnabled}
-              onCheckedChange={handleLowGasAlertToggle}
-              className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-              )}
-            >
-              <SwitchPrimitive.Thumb
-                className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-                )}
-              />
-            </SwitchPrimitive.Root>
+                {renderChannelCheckboxes(AlertType.LOW_GAS)}
+              </>
+            )}
           </div>
 
-          {lowGasAlertEnabled && (
-            <>
-              <div className='mt-4 mb-4'>
-                <label className='block text-sm mb-1'>
-                  Low gas threshold (ETH)
-                </label>
-                <Input
-                  type='number'
-                  placeholder='e.g. 0.1'
-                  value={lowGasThreshold}
-                  onChange={handleLowGasThresholdChange}
-                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
-                />
+          {/* Bid Safety Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Bid Safety</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when the minimum bid nears contract bid.
+                </p>
               </div>
+              <SwitchPrimitive.Root
+                checked={bidSafetyAlertEnabled}
+                onCheckedChange={handleBidSafetyAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
 
-              <div className='grid grid-cols-2 gap-4'>
-                {/* // TODO: Uncomment this if email notifications are required
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='lowGasEmail'
-                      checked={lowGasEmailEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setLowGasEmailEnabled
+            {bidSafetyAlertEnabled && (
+              <>
+                <div className='mt-4 mb-8'>
+                  <div className='flex flex-col gap-3'>
+                    <Slider
+                      value={[bidSafetyThreshold]}
+                      max={100}
+                      step={1}
+                      onValueChange={(values) =>
+                        setBidSafetyThreshold(values[0])
+                      }
+                      className={cn(
+                        'w-full',
+                        '[&>span]:bg-black', // Black track
+                        '[&>span>span]:bg-white', // White fill
+                        '[&_[data-slot=slider-thumb]]:bg-white' // White thumb
                       )}
-                      className='data-[state=checked]:bg-[#335CD7]'
                     />
-                    <label
-                      htmlFor='lowGasEmail'
-                      className='text-sm cursor-pointer'
-                    >
-                      Email
-                    </label>
+                    <div className='flex justify-between text-xs text-gray-400 mt-1 px-1'>
+                      <span>0%</span>
+                      <span className='text-center text-white font-medium'>
+                        {bidSafetyThreshold}%
+                      </span>
+                      <span>100%</span>
+                    </div>
+                    <div className='text-xs text-center mt-3 text-gray-400 border-t border-gray-800 pt-3'>
+                      MinBid-to-EffectiveBid distance:{' '}
+                      {bidSafetyThreshold < 30
+                        ? 'Close'
+                        : bidSafetyThreshold < 70
+                        ? 'Medium'
+                        : 'Far'}
+                    </div>
                   </div>
-                */}
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='lowGasTelegram'
-                    checked={lowGasTelegramEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setLowGasTelegramEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='lowGasTelegram'
-                    className='text-sm cursor-pointer'
-                  >
-                    Telegram
-                  </label>
                 </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='lowGasSlack'
-                    checked={lowGasSlackEnabled}
-                    onCheckedChange={handleCheckedChange(setLowGasSlackEnabled)}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='lowGasSlack'
-                    className='text-sm cursor-pointer'
-                  >
-                    Slack
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='lowGasWebhook'
-                    checked={lowGasWebhookEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setLowGasWebhookEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='lowGasWebhook'
-                    className='text-sm cursor-pointer'
-                  >
-                    Webhook
-                  </label>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
 
-        {/* Bid Safety Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <div>
-              <h3 className='text-lg font-medium'>Bid Safety</h3>
-              <p className='text-gray-400 text-sm'>
-                Alert me when the minimum bid nears contract bid.
-              </p>
-            </div>
-            <SwitchPrimitive.Root
-              checked={bidSafetyAlertEnabled}
-              onCheckedChange={handleBidSafetyAlertToggle}
-              className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
-              )}
-            >
-              <SwitchPrimitive.Thumb
-                className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
-                )}
-              />
-            </SwitchPrimitive.Root>
+                {renderChannelCheckboxes(AlertType.BID_SAFETY)}
+              </>
+            )}
           </div>
 
-          {bidSafetyAlertEnabled && (
-            <>
-              <div className='mt-4 mb-8'>
-                <div className='flex flex-col gap-3'>
-                  <Slider
-                    value={[bidSafetyThreshold]}
-                    max={100}
-                    step={1}
-                    onValueChange={(values) => setBidSafetyThreshold(values[0])}
-                    className={cn(
-                      'w-full',
-                      '[&>span]:bg-black', // Black track
-                      '[&>span>span]:bg-white', // White fill
-                      '[&_[data-slot=slider-thumb]]:bg-white' // White thumb
-                    )}
-                  />
-                  <div className='flex justify-between text-xs text-gray-400 mt-1 px-1'>
-                    <span>0%</span>
-                    <span className='text-center text-white font-medium'>
-                      {bidSafetyThreshold}%
-                    </span>
-                    <span>100%</span>
-                  </div>
-                  <div className='text-xs text-center mt-3 text-gray-400 border-t border-gray-800 pt-3'>
-                    MinBid-to-EffectiveBid distance:{' '}
-                    {bidSafetyThreshold < 30
-                      ? 'Close'
-                      : bidSafetyThreshold < 70
-                      ? 'Medium'
-                      : 'Far'}
-                  </div>
-                </div>
-              </div>
-
-              <div className='grid grid-cols-2 gap-4'>
-                {/* // Uncomment this if email notifications are required
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='bidSafetyEmail'
-                      checked={bidSafetyEmailEnabled}
-                      onCheckedChange={handleCheckedChange(
-                        setBidSafetyEmailEnabled
-                      )}
-                      className='data-[state=checked]:bg-[#335CD7]'
-                    />
-                    <label
-                      htmlFor='bidSafetyEmail'
-                      className='text-sm cursor-pointer'
-                    >
-                      Email
-                    </label>
-                  </div>
-                */}
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='bidSafetyTelegram'
-                    checked={bidSafetyTelegramEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setBidSafetyTelegramEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='bidSafetyTelegram'
-                    className='text-sm cursor-pointer'
-                  >
-                    Telegram
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='bidSafetySlack'
-                    checked={bidSafetySlackEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setBidSafetySlackEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='bidSafetySlack'
-                    className='text-sm cursor-pointer'
-                  >
-                    Slack
-                  </label>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='bidSafetyWebhook'
-                    checked={bidSafetyWebhookEnabled}
-                    onCheckedChange={handleCheckedChange(
-                      setBidSafetyWebhookEnabled
-                    )}
-                    className='data-[state=checked]:bg-[#335CD7]'
-                  />
-                  <label
-                    htmlFor='bidSafetyWebhook'
-                    className='text-sm cursor-pointer'
-                  >
-                    Webhook
-                  </label>
-                </div>
-              </div>
-            </>
-          )}
+          {/* End of Alert Configuration Sections */}
         </div>
 
         {error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
