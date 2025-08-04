@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { FEEDBACK_FORM_URL } from '@/utils/env';
 
 export default function Header() {
   const { openAlertSettings } = useAlertSettings();
@@ -79,7 +80,7 @@ export default function Header() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
-                    href='https://forms.google.com/your-feedback-form-url'
+                    href={FEEDBACK_FORM_URL}
                     target='_blank'
                     className='text-white hover:text-gray-300 pb-1 inline-flex items-center'
                   >
