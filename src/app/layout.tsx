@@ -15,6 +15,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Stylus Cache Manager',
   description: 'For Managing Arbitrum Stylus Cache',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
