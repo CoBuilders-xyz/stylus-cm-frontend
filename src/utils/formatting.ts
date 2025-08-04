@@ -31,6 +31,56 @@ export const formatRoundedEth = (
 };
 
 /**
+ * Format ETH values with subscript notation for small amounts on chart axes
+ * @param value ETH amount as number
+ * @returns Formatted ETH amount with subscript notation for small values
+ */
+export const formatETHForAxis = (value: number): string => {
+  if (value < 0.001 && value > 0) {
+    // Convert to string and find the position of the first non-zero digit after decimal
+    const str = value.toString();
+    const decimalIndex = str.indexOf('.');
+    if (decimalIndex !== -1) {
+      const afterDecimal = str.substring(decimalIndex + 1);
+      let firstNonZeroIndex = -1;
+      for (let i = 0; i < afterDecimal.length; i++) {
+        if (afterDecimal[i] !== '0') {
+          firstNonZeroIndex = i;
+          break;
+        }
+      }
+      if (firstNonZeroIndex >= 3) {
+        // Only use notation if there are 3+ leading zeros
+        const leadingZeros = firstNonZeroIndex;
+        const significantDigits = afterDecimal.substring(firstNonZeroIndex);
+
+        // Convert leading zeros count to subscript
+        const subscriptMap: { [key: string]: string } = {
+          '0': '₀',
+          '1': '₁',
+          '2': '₂',
+          '3': '₃',
+          '4': '₄',
+          '5': '₅',
+          '6': '₆',
+          '7': '₇',
+          '8': '₈',
+          '9': '₉',
+        };
+        const subscriptNumber = leadingZeros
+          .toString()
+          .split('')
+          .map((digit) => subscriptMap[digit])
+          .join('');
+
+        return `0.0${subscriptNumber}${significantDigits.substring(0, 3)}`;
+      }
+    }
+  }
+  return formatRoundedEth(value, 5);
+};
+
+/**
  * Format a file size from bytes to appropriate units (B, KB, MB)
  * @param bytes Size in bytes as string
  * @returns Formatted size with units

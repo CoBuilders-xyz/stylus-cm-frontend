@@ -2,7 +2,7 @@
 
 import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
 import { useSwitchChain, useAccount } from 'wagmi';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,31 +23,35 @@ export default function BlockchainSelector() {
   const { switchChain } = useSwitchChain();
   const { isConnected, chain } = useAccount();
 
-  // Auto-switch to selected blockchain on load
-  useEffect(() => {
-    console.log('BlockchainSelector effect running:', {
-      selectedBlockchain: selectedBlockchain?.name,
-      chainId: selectedBlockchain?.chainId,
-      hasSwitchChain: !!switchChain,
-      isLoading,
-      isWalletConnected: isConnected,
-      currentWalletChain: chain?.id,
-      currentWalletChainName: chain?.name,
-    });
+  // Track if we initiated the chain switch to prevent loops
+  const isInternalSwitch = useRef(false);
 
-    if (selectedBlockchain && switchChain && !isLoading && isConnected) {
-      try {
-        switchChain({ chainId: selectedBlockchain.chainId });
-      } catch (error) {
-        console.warn(
-          `Failed to switch to chain ${selectedBlockchain.name}:`,
-          error
-        );
-      }
-    } else if (selectedBlockchain && !isConnected) {
-      console.log('Cannot switch chain: wallet not connected');
+  // Sync wallet chain changes to UI selector
+  useEffect(() => {
+    if (isInternalSwitch.current || !isConnected || !chain?.id || isLoading) {
+      return;
     }
-  }, [selectedBlockchain, switchChain, isLoading, isConnected, chain]);
+
+    // Find matching blockchain for the current wallet chain
+    const matchingBlockchain = availableBlockchains.find(
+      (blockchain) => blockchain.chainId === chain.id
+    );
+
+    // Update selector if wallet chain is different from selected blockchain
+    if (
+      matchingBlockchain &&
+      matchingBlockchain.id !== selectedBlockchain?.id
+    ) {
+      setSelectedBlockchain(matchingBlockchain);
+    }
+  }, [
+    chain?.id,
+    availableBlockchains,
+    selectedBlockchain?.id,
+    setSelectedBlockchain,
+    isConnected,
+    isLoading,
+  ]);
 
   // Don't render if still loading or no blockchains available
   if (isLoading || availableBlockchains.length === 0) {
@@ -57,7 +61,25 @@ export default function BlockchainSelector() {
   const handleBlockchainSelect = (
     blockchain: (typeof availableBlockchains)[0]
   ) => {
+    // Only switch if user selected a different blockchain
+    if (blockchain.id === selectedBlockchain?.id) return;
+
     setSelectedBlockchain(blockchain);
+
+    // Switch wallet chain if connected
+    if (isConnected && switchChain) {
+      isInternalSwitch.current = true;
+      try {
+        switchChain({ chainId: blockchain.chainId });
+      } catch (error) {
+        console.warn(`Failed to switch to chain ${blockchain.name}:`, error);
+      } finally {
+        // Reset flag after a short delay to allow chain switch to complete
+        setTimeout(() => {
+          isInternalSwitch.current = false;
+        }, 1000);
+      }
+    }
   };
 
   return (

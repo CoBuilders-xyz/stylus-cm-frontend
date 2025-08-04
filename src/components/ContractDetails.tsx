@@ -450,108 +450,109 @@ export default function ContractDetails({
 
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
-      {/* Main content with ScrollArea */}
-
-      <ScrollArea className='flex-1'>
-        <div className='p-6'>
-          {/* Top Section: Contract Address and Name with Options */}
-          <div className='flex justify-between items-center mb-6'>
-            <div>
-              {viewType === 'my-contracts' ? (
-                <>
-                  <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
-                    {contractData.address}
-                    <ExplorerLinkButton
-                      chainId={currentBlockchain?.chainId.toString() || null}
-                      contractAddress={contractData.address}
-                    />
-                  </div>
-                  <EditableContractName
-                    name={contractName}
-                    contractId={userContractId || contractId}
-                    onNameChange={handleNameChange}
-                    ref={contractNameRef}
+      {/* Sticky Header */}
+      <div className='flex-shrink-0  bg-[#1A1919] p-6'>
+        <div className='flex justify-between items-center'>
+          <div>
+            {viewType === 'my-contracts' ? (
+              <>
+                <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
+                  {contractData.address}
+                  <ExplorerLinkButton
+                    chainId={currentBlockchain?.chainId.toString() || null}
+                    contractAddress={contractData.address}
                   />
-                </>
-              ) : contractData.isSavedByUser ? (
-                <>
-                  <div className='text-sm font-mono text-gray-300'>
-                    {contractData.address}
-                  </div>
-                  <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
-                    {contractData.savedContractName}
-                  </div>
-                </>
-              ) : (
-                <div className='text-2xl font-mono mb-1'>
+                </div>
+                <EditableContractName
+                  name={contractName}
+                  contractId={userContractId || contractId}
+                  onNameChange={handleNameChange}
+                  ref={contractNameRef}
+                />
+              </>
+            ) : contractData.isSavedByUser ? (
+              <>
+                <div className='text-sm font-mono text-gray-300'>
                   {contractData.address}
                 </div>
-              )}
-            </div>
-            <div className='flex gap-2'>
-              {/* Dropdown Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className='p-2 rounded-md border border-white hover:bg-gray-900'>
-                    <MoreHorizontal className='h-5 w-5' />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className='bg-[#1E1E1E] border border-[#2C2E30] text-white'>
-                  {viewType === 'my-contracts' ? (
-                    <>
-                      <DropdownMenuItem
-                        className='hover:bg-gray-800 cursor-pointer'
-                        onClick={handleContractAlerts}
-                      >
-                        <BellRing className='h-4 w-4 mr-2' />
-                        Contract Alerts
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className='hover:bg-gray-800 cursor-pointer'
-                        onClick={handleRenameContract}
-                      >
-                        <Edit2 className='h-4 w-4 mr-2' />
-                        Rename Contract
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className='bg-[#2C2E30]' />
-                      <DropdownMenuItem
-                        className='hover:bg-gray-800 cursor-pointer text-red-500'
-                        onClick={handleRemoveContract}
-                      >
-                        <Trash2 className='h-4 w-4 mr-2' />
-                        Remove Contract
-                      </DropdownMenuItem>
-                    </>
-                  ) : (
-                    <DropdownMenuItem
-                      className={`${
-                        !contractData.isSavedByUser
-                          ? 'hover:bg-gray-800 cursor-pointer'
-                          : 'cursor-not-allowed opacity-50'
-                      }`}
-                      onClick={
-                        !contractData.isSavedByUser
-                          ? handleManageContract
-                          : undefined
-                      }
-                    >
-                      <PlusCircle className='h-4 w-4 mr-2' />
-                      {contractData.isSavedByUser
-                        ? 'Contract Already Added'
-                        : 'Manage This Contract'}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                className='rounded-md border border-white hover:bg-gray-900'
-                onClick={onClose}
-              >
-                <ChevronLast className='h-5 w-5' />
-              </Button>
-            </div>
+                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
+                  {contractData.savedContractName}
+                </div>
+              </>
+            ) : (
+              <div className='text-2xl font-mono mb-1'>
+                {contractData.address}
+              </div>
+            )}
           </div>
-          {/* Rest of component remains mostly the same except uses contractData directly */}
+          <div className='flex gap-2'>
+            {/* Dropdown Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className='p-2 rounded-md border border-white hover:bg-gray-900'>
+                  <MoreHorizontal className='h-5 w-5' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className='bg-[#1E1E1E] border border-[#2C2E30] text-white'>
+                {viewType === 'my-contracts' ? (
+                  <>
+                    <DropdownMenuItem
+                      className='hover:bg-gray-800 cursor-pointer'
+                      onClick={handleContractAlerts}
+                    >
+                      <BellRing className='h-4 w-4 mr-2' />
+                      Contract Alerts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className='hover:bg-gray-800 cursor-pointer'
+                      onClick={handleRenameContract}
+                    >
+                      <Edit2 className='h-4 w-4 mr-2' />
+                      Rename Contract
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className='bg-[#2C2E30]' />
+                    <DropdownMenuItem
+                      className='hover:bg-gray-800 cursor-pointer text-red-500'
+                      onClick={handleRemoveContract}
+                    >
+                      <Trash2 className='h-4 w-4 mr-2' />
+                      Remove Contract
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem
+                    className={`${
+                      !contractData.isSavedByUser
+                        ? 'hover:bg-gray-800 cursor-pointer'
+                        : 'cursor-not-allowed opacity-50'
+                    }`}
+                    onClick={
+                      !contractData.isSavedByUser
+                        ? handleManageContract
+                        : undefined
+                    }
+                  >
+                    <PlusCircle className='h-4 w-4 mr-2' />
+                    {contractData.isSavedByUser
+                      ? 'Contract Already Added'
+                      : 'Manage This Contract'}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              className='rounded-md border border-white hover:bg-gray-900'
+              onClick={onClose}
+            >
+              <ChevronLast className='h-5 w-5' />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable Main Content */}
+      <ScrollArea className='flex-1'>
+        <div className='p-6'>
           {viewType === 'my-contracts' ? (
             <>
               {/* Main statistics in a 2-column grid layout */}

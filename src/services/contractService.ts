@@ -1,4 +1,5 @@
 import { ApiClient } from './api';
+import { AlertType } from '@/types/alerts';
 
 /**
  * Blockchain data interface
@@ -63,13 +64,12 @@ export interface EvictionRisk {
  */
 export interface Alert {
   id: string;
-  type: 'eviction' | 'noGas' | 'lowGas' | 'bidSafety';
+  type: AlertType;
   value: string;
   isActive: boolean;
   lastTriggered: string | null;
   lastNotified: string | null;
   triggeredCount: number;
-  emailChannelEnabled: boolean;
   slackChannelEnabled: boolean;
   telegramChannelEnabled: boolean;
   webhookChannelEnabled: boolean;

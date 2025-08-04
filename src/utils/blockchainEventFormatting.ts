@@ -89,7 +89,7 @@ export const formatRelativeTime = (timestamp: string): string => {
 export const getEventTypeBadgeVariant = (eventType: string) => {
   switch (eventType) {
     case BlockchainEventType.INSERT:
-      return 'default'; // Green-ish for inserts
+      return 'secondary'; // Better contrast for inserts
     case BlockchainEventType.DELETE:
       return 'destructive'; // Red-ish for deletes
     default:

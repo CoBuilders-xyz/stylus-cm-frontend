@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSidePanel } from './SidePanel';
@@ -8,7 +8,18 @@ import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
+import { useBytecode, useReadContract } from 'wagmi';
+import { isAddress } from 'viem';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  ARB_WASM_ABI,
+  ARB_WASM_PRECOMPILE,
+} from '@/config/abis/arbWasm/arbWasm';
 
 interface AddContractProps {
   onSuccess?: () => void;
@@ -34,13 +45,184 @@ export default function AddContract({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addressError, setAddressError] = useState<string | null>(null);
+  const [validationState, setValidationState] = useState<{
+    message: string;
+    type: 'loading' | 'success' | 'warning' | 'error';
+  } | null>(null);
+  const [isWasmContract, setIsWasmContract] = useState(false);
+
+  // Get bytecode for the contract address if it's a valid address
+  const {
+    data: bytecode,
+    isLoading: isBytecodeLoading,
+    error: bytecodeError,
+  } = useBytecode({
+    address: contractAddress as `0x${string}`,
+    query: {
+      enabled:
+        !!contractAddress && contractAddress.length === 42 && !addressError,
+    },
+  });
+
+  // Check if WASM contract is active using ArbWasm precompile
+  const {
+    data: timeLeftSeconds,
+    isLoading: isCheckingWasmActive,
+    error: wasmActiveError,
+  } = useReadContract({
+    address: ARB_WASM_PRECOMPILE,
+    abi: ARB_WASM_ABI,
+    functionName: 'programTimeLeft',
+    args: [contractAddress as `0x${string}`],
+    query: {
+      enabled:
+        isWasmContract && !!contractAddress && contractAddress.length === 42,
+    },
+  });
+
+  // Handle all validation logic in one place
+  useEffect(() => {
+    // Clear validation state if address is not valid
+    if (!contractAddress || contractAddress.length !== 42 || addressError) {
+      setValidationState(null);
+      setIsWasmContract(false);
+      return;
+    }
+
+    // Show loading state while fetching bytecode
+    if (isBytecodeLoading) {
+      setValidationState({
+        message: 'Validating contract...',
+        type: 'loading',
+      });
+      return;
+    }
+
+    // Handle bytecode error
+    if (bytecodeError) {
+      setValidationState({
+        message: 'Error validating contract',
+        type: 'error',
+      });
+      console.error('Error fetching bytecode:', bytecodeError);
+      return;
+    }
+
+    // Handle case where no contract is found (bytecode fetch completed but no contract)
+    // This covers both '0x' (empty bytecode) and null/undefined (no contract at address)
+    if (
+      bytecode === '0x' ||
+      (bytecode == null && !isBytecodeLoading && !bytecodeError)
+    ) {
+      setValidationState({
+        message: 'Wrong contract address, no bytecode found',
+        type: 'error',
+      });
+      setIsWasmContract(false);
+      return;
+    }
+
+    // Analyze bytecode if it exists
+    if (bytecode && bytecode !== '0x') {
+      // Detect contract type based on Arbitrum's official Stylus prefix
+      // According to Arbitrum docs: "when a contract's bytecode starts with the magic 0xEFF00000 prefix, it's a Stylus WASM contract"
+      const bytecodeStart = bytecode.slice(0, 10).toLowerCase(); // Get first 4 bytes: 0x + 8 hex chars
+
+      const isStylus = bytecodeStart === '0xeff00000';
+      const detectedType = isStylus ? 'WASM' : 'EVM';
+
+      if (detectedType === 'EVM') {
+        setValidationState({
+          message:
+            'This appears to be an EVM contract. Only WASM contracts (Stylus) are supported.',
+          type: 'error',
+        });
+        // Also set addressError to prevent form submission
+        setAddressError(
+          'This appears to be an EVM contract. Only WASM contracts (Stylus) are supported.'
+        );
+        setIsWasmContract(false);
+      } else {
+        // It's a WASM contract, now we need to check if it's active
+        setIsWasmContract(true);
+        // Show loading while checking activation status
+        if (isCheckingWasmActive) {
+          setValidationState({
+            message: 'Checking WASM contract activation status...',
+            type: 'loading',
+          });
+          return;
+        }
+
+        // Handle timeout case
+        if (wasmActiveError) {
+          // programTimeLeft reverts for EVM contracts or non-activated programs
+          setValidationState({
+            message: 'Make sure your WASM contract is active',
+            type: 'error',
+          });
+          setAddressError('Make sure your WASM contract is active');
+          return;
+        }
+
+        // Check if WASM program is expired
+        if (
+          typeof timeLeftSeconds === 'bigint' &&
+          timeLeftSeconds === BigInt(0)
+        ) {
+          setValidationState({
+            message: 'WASM contract has expired and needs reactivation',
+            type: 'error',
+          });
+          setAddressError('WASM contract has expired and needs reactivation');
+          return;
+        }
+
+        // WASM contract exists, is active, and still valid
+        if (
+          typeof timeLeftSeconds === 'bigint' &&
+          timeLeftSeconds > BigInt(0)
+        ) {
+          const timeInSeconds = Number(timeLeftSeconds);
+          const daysLeft = Math.floor(timeInSeconds / 86400); // Convert seconds to days
+          setValidationState({
+            message: `Valid WASM contract. Program expires in ${daysLeft} days`,
+            type: 'success',
+          });
+          // Clear any previous address error
+          setAddressError(null);
+          return;
+        }
+      }
+      return;
+    }
+
+    // If we reach here, something unexpected happened - no validation state will be shown
+  }, [
+    contractAddress,
+    addressError,
+    bytecode,
+    isBytecodeLoading,
+    bytecodeError,
+    isWasmContract,
+    timeLeftSeconds,
+    isCheckingWasmActive,
+    wasmActiveError,
+  ]);
 
   // Function to validate Ethereum address
   const validateAddress = (address: string): boolean => {
-    // Basic Ethereum address validation
-    const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!addressRegex.test(address)) {
-      setAddressError('Please enter a valid Ethereum address');
+    // Check if address is too long
+    if (address.length > 42) {
+      setAddressError(
+        'Address is too long. Ethereum addresses must be exactly 42 characters (0x + 40 hex chars)'
+      );
+      return false;
+    }
+
+    // Use viem's isAddress function for proper Ethereum address validation
+    if (!isAddress(address)) {
+      setAddressError('Please enter a valid Ethereum address (42 characters)');
       return false;
     }
     setAddressError(null);
@@ -49,9 +231,20 @@ export default function AddContract({
 
   // Handle address input change
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setContractAddress(e.target.value);
-    // Clear error when user types
-    if (addressError) setAddressError(null);
+    const newAddress = e.target.value;
+    setContractAddress(newAddress);
+
+    // Clear validation states when user types
+    setValidationState(null);
+    setIsWasmContract(false); // Reset WASM status on address change
+
+    // Validate address on every change for immediate feedback
+    if (newAddress.trim()) {
+      validateAddress(newAddress);
+    } else {
+      // Clear error if field is empty
+      setAddressError(null);
+    }
   };
 
   // Handle name input change
@@ -61,7 +254,11 @@ export default function AddContract({
 
   // Move to the next step
   const handleNextStep = () => {
-    if (validateAddress(contractAddress)) {
+    if (
+      validateAddress(contractAddress) &&
+      !addressError &&
+      validationState?.type === 'success'
+    ) {
       setStep(2);
     }
   };
@@ -158,7 +355,24 @@ export default function AddContract({
             </p>
 
             <div className='mb-4'>
-              <label className='block text-sm mb-1'>Contract Address</label>
+              <div className='flex items-center gap-2'>
+                <label className='block text-sm mb-1'>Contract Address</label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='w-4 h-4 cursor-help mb-1' />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className='max-w-xs'>
+                      <strong>
+                        Arbitrum cache only supports Stylus Contracts.
+                      </strong>
+                      <br />
+                      Only WASM contracts (Stylus) are supported, not EVM
+                      contracts.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type='text'
                 placeholder='0x...'
@@ -171,8 +385,20 @@ export default function AddContract({
               {addressError && (
                 <p className='text-red-500 text-sm mt-1'>{addressError}</p>
               )}
-              {!addressError && contractAddress && (
-                <p className='text-green-500 text-sm mt-1'>Valid Eth address</p>
+              {validationState && (
+                <p
+                  className={`text-sm mt-1 ${
+                    validationState.type === 'loading'
+                      ? 'text-yellow-500'
+                      : validationState.type === 'success'
+                      ? 'text-green-500'
+                      : validationState.type === 'warning'
+                      ? 'text-orange-500'
+                      : 'text-red-500'
+                  }`}
+                >
+                  {validationState.message}
+                </p>
               )}
             </div>
 
@@ -198,13 +424,48 @@ export default function AddContract({
 
             {initialAddress && (
               <div className='mb-4'>
-                <label className='block text-sm mb-1'>Contract Address</label>
+                <div className='flex items-center gap-2'>
+                  <label className='block text-sm'>Contract Address</label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className='w-4 h-4 cursor-help' />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className='max-w-xs'>
+                        <strong>
+                          Arbitrum cache only supports Stylus Contracts.
+                        </strong>
+                        <br />
+                        Only WASM contracts (Stylus) are supported, not EVM
+                        contracts.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type='text'
                   value={contractAddress}
                   disabled
                   className='bg-gray-800 text-gray-400 border border-gray-700 rounded-md p-2 w-full cursor-not-allowed'
                 />
+                {addressError && (
+                  <p className='text-red-500 text-sm mt-1'>{addressError}</p>
+                )}
+                {validationState && (
+                  <p
+                    className={`text-sm mt-1 ${
+                      validationState.type === 'loading'
+                        ? 'text-yellow-500'
+                        : validationState.type === 'success'
+                        ? 'text-green-500'
+                        : validationState.type === 'warning'
+                        ? 'text-orange-500'
+                        : 'text-red-500'
+                    }`}
+                  >
+                    {validationState.message}
+                  </p>
+                )}
               </div>
             )}
 
