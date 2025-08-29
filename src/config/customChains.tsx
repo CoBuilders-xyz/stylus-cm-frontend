@@ -31,7 +31,7 @@ const arbitrumLocal = {
   iconBackground: '#fff',
   nativeCurrency: { name: 'Arbitrum', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
-    default: { http: ['http://localhost:8547'] },
+    default: { http: ['http://10.238.114.183:8547'] },
   },
 } as const satisfies Chain;
 

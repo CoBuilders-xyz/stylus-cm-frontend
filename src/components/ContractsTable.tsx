@@ -23,6 +23,7 @@ import {
   formatRiskLevel,
   getRiskBadgeVariant,
   formatRoundedEth,
+  formatDuration,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
@@ -37,6 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -138,6 +140,9 @@ const ContractRow = React.memo(
     onAddContract?: (contract: Contract) => void;
     isAuthenticated: boolean;
   }) => {
+    const { isLoading: isTLLoading, state: tlState, seconds } = useProgramTimeLeft(
+      viewType === 'my-contracts' ? contract.address : undefined
+    );
     const handleClick = () => {
       if (onContractSelect) {
         onContractSelect(contract.id, contract);
@@ -237,6 +242,29 @@ const ContractRow = React.memo(
               ) + ' ETH'
             : 'N/A'}
         </TableCell>
+        {viewType === 'my-contracts' && (
+          <TableCell className='py-6 text-lg'>
+            {isTLLoading ? (
+              '…'
+            ) : tlState === 'ok' && seconds !== null ? (
+              formatDuration(seconds)
+            ) : tlState === 'expired' ? (
+              <Badge
+                variant='destructive'
+                className='px-3 py-1 text-sm font-semibold w-fit'
+              >
+                Expired
+              </Badge>
+            ) : (
+              <Badge
+                variant='outline'
+                className='px-3 py-1 text-sm font-semibold w-fit'
+              >
+                N/A
+              </Badge>
+            )}
+          </TableCell>
+        )}
         <TableCell className='py-6'>
           <div className='flex flex-col'>
             <Badge
@@ -517,93 +545,102 @@ function ContractsTable({
           <ScrollArea className='h-[calc(100vh-350px)] min-h-[400px]'>
             <Table className='w-full'>
               <TableHeader className='bg-black text-white sticky top-0 z-10'>
-                <TableRow className='h-20 hover:bg-transparent'>
+              <TableRow className='h-20 hover:bg-transparent'>
+                <SortableTableHead
+                  className='w-[250px]'
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Contract
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.LAST_BID}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Bid
+                </SortableTableHead>
+                <SortableTableHead
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  <div className='flex items-center gap-2'>
+                    Effective Bid
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className='w-4 h-4 cursor-help' />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='max-w-xs'>
+                          <strong>Bids decay over time.</strong>
+                          <br />
+                          The effective bid is reduced by a{' '}
+                          <em>decay penalty</em>, calculated as:
+                          <br />
+                          <code>decayPenalty = decayRate × timeCached</code>
+                          <br />
+                          The longer a contract stays cached, the lower its
+                          effective bid becomes.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.BYTECODE_SIZE}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Size
+                </SortableTableHead>
+                <SortableTableHead
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Min. Bid
+                </SortableTableHead>
+                <SortableTableHead
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Eviction Risk
+                </SortableTableHead>
+                <SortableTableHead
+                  sortField={ContractSortField.TOTAL_BID_INVESTMENT}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Total Spent
+                </SortableTableHead>
+                {viewType === 'my-contracts' && (
                   <SortableTableHead
-                    className='w-[250px]'
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
                   >
-                    Contract
+                    Time Left
                   </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.LAST_BID}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Bid
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    <div className='flex items-center gap-2'>
-                      Effective Bid
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className='w-4 h-4 cursor-help' />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className='max-w-xs'>
-                            <strong>Bids decay over time.</strong>
-                            <br />
-                            The effective bid is reduced by a{' '}
-                            <em>decay penalty</em>, calculated as:
-                            <br />
-                            <code>decayPenalty = decayRate × timeCached</code>
-                            <br />
-                            The longer a contract stays cached, the lower its
-                            effective bid becomes.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.BYTECODE_SIZE}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Size
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Min. Bid
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Eviction Risk
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.TOTAL_BID_INVESTMENT}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Total Spent
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.IS_CACHED}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Cache Status
-                  </SortableTableHead>
-                  {viewType === 'explore-contracts' && (
-                    <TableHead className='font-medium text-base py-6'></TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
+                )}
+                <SortableTableHead
+                  sortField={ContractSortField.IS_CACHED}
+                  currentSortBy={sortBy}
+                  currentSortOrder={sortOrder}
+                  onSort={setSorting}
+                >
+                  Cache Status
+                </SortableTableHead>
+                {viewType === 'explore-contracts' && (
+                  <TableHead className='font-medium text-base py-6'></TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
               <TableBody className='text-white [&>tr]:py-2'>
                 {displayContracts.length > 0 ? (
                   displayContracts.map((contract) => (
@@ -619,7 +656,7 @@ function ContractsTable({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                      colSpan={viewType === 'explore-contracts' ? 9 : 9}
                       className='text-center py-12 bg-black'
                     >
                       <NoticeBanner

@@ -154,6 +154,23 @@ export const getRiskBadgeVariant = (risk?: string | null) => {
   }
 };
 
+/**
+ * Format duration from seconds to compact human friendly string
+ * @param secondsInput Number of seconds
+ * @returns String like "2d 5h", "3h 20m", or "15m"
+ */
+export const formatDuration = (secondsInput?: number | null): string => {
+  console.log(secondsInput);
+  if (secondsInput == null || isNaN(secondsInput as number)) return 'N/A';
+  const s = Math.max(0, Math.floor(secondsInput as number));
+  const days = Math.floor(s / 86400);
+  const hours = Math.floor((s % 86400) / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+};
+
 // Also export as a class for better organization if preferred
 export class Format {
   static roundedEth = formatRoundedEth;
@@ -162,4 +179,5 @@ export class Format {
   static evictionRiskColor = getEvictionRiskColor;
   static riskLevel = formatRiskLevel;
   static riskBadgeVariant = getRiskBadgeVariant;
+  static duration = formatDuration;
 }

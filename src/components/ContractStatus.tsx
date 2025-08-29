@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { formatDate, formatRoundedEth, formatDuration } from '@/utils/formatting';
 import { formatEther } from 'viem';
 import { Info } from 'lucide-react';
 import {
@@ -7,6 +7,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
+import { Button } from '@/components/ui/button';
 
 interface ContractStatusProps {
   isLoading: boolean;
@@ -15,6 +17,7 @@ interface ContractStatusProps {
   effectiveBid?: string;
   lastBid?: string;
   viewType?: 'explore-contracts' | 'my-contracts';
+  contractAddress?: string;
 }
 
 export function ContractStatus({
@@ -23,19 +26,84 @@ export function ContractStatus({
   bidBlockTimestamp,
   effectiveBid,
   lastBid,
+  viewType = 'explore-contracts',
+  contractAddress,
 }: ContractStatusProps) {
+  // Time left only relevant for my-contracts
+  const { isLoading: isTLLoading, state: tlState, seconds } = useProgramTimeLeft(
+    viewType === 'my-contracts' ? contractAddress : undefined
+  );
+  // Determine button disabled state and tooltip
+  const computeActivationState = () => {
+    // Default: disabled with generic reason
+    let disabled = true;
+    let reason: string | undefined = 'Time left unavailable';
+
+    if (isTLLoading) {
+      return { disabled: true, reason: 'Checking time left…' };
+    }
+
+    if (tlState === 'ok' && seconds !== null) {
+      if (seconds > 0) {
+        return {
+          disabled: true,
+          reason: 'Contract is active. Activation available once time left is 0.',
+        };
+      }
+      return { disabled: false, reason: undefined };
+    }
+
+    if (tlState === 'expired') {
+      return { disabled: false, reason: undefined };
+    }
+
+    return { disabled, reason };
+  };
+
+  const isMy = viewType === 'my-contracts';
+
   if (isLoading) {
     return (
-      <div className='grid grid-cols-2 gap-4 mb-6'>
-        {/* Cache Status Loading State */}
-        <div className='border border-[#2C2E30] rounded-md p-4'>
+      <div className='flex gap-4 mb-6 items-stretch'>
+        {isMy && (() => {
+          const { disabled, reason } = computeActivationState();
+          return (
+            <div className='border border-[#2C2E30] rounded-md p-4 basis-1/3'>
+              <div className='h-full flex items-center justify-between gap-4'>
+                <div className='flex flex-col'>
+                  <div className='text-gray-400 text-sm'>Time Left</div>
+                  <div className='h-6 bg-gray-700 rounded w-24 mt-1 mb-1 animate-pulse'></div>
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className='inline-flex'>
+                      <Button
+                        className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                        disabled={disabled}
+                        onClick={() => {}}
+                      >
+                        Activate
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {disabled && reason && (
+                    <TooltipContent>
+                      <p>{reason}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </div>
+            </div>
+          );
+        })()}
+
+        <div className={`border border-[#2C2E30] rounded-md p-4 ${isMy ? 'basis-1/3' : 'flex-1'}`}>
           <div className='text-gray-400 text-sm'>Cache Status</div>
           <div className='h-6 bg-gray-700 rounded w-24 mt-1 mb-1 animate-pulse'></div>
           <div className='h-3 bg-gray-700 rounded w-40 mb-0.5 animate-pulse'></div>
         </div>
 
-        {/* Effective Bid Loading State */}
-        <div className='border border-[#2C2E30] rounded-md p-4'>
+        <div className={`border border-[#2C2E30] rounded-md p-4 ${isMy ? 'basis-1/3' : 'flex-1'}`}>
           <div className='text-gray-400 text-sm'>Effective Bid</div>
           <div className='h-6 bg-gray-700 rounded w-24 mt-1 mb-1 animate-pulse'></div>
           <div className='h-3 bg-gray-700 rounded w-32 mb-0.5 animate-pulse'></div>
@@ -48,9 +116,53 @@ export function ContractStatus({
   const displayEffectiveBid = effectiveBid || '';
 
   return (
-    <div className='grid grid-cols-2 gap-4 mb-6'>
+    <div className='flex gap-4 mb-6 items-stretch'>
+      {/* Time Left (first column when available) */}
+      {isMy && (() => {
+        const { disabled, reason } = computeActivationState();
+        return (
+          <div className='border border-[#2C2E30] rounded-md p-4 basis-1/3'>
+            <div className='h-full flex items-center justify-between gap-4'>
+              <div className='flex flex-col'>
+                <div className='text-gray-400 text-sm'>Time Left</div>
+                {isTLLoading ? (
+                  <div className='h-6 bg-gray-700 rounded w-24 mt-1 mb-1 animate-pulse'></div>
+                ) : tlState === 'ok' && seconds !== null ? (
+                  <div className='text-xl font-bold'>{formatDuration(seconds)}</div>
+                ) : tlState === 'expired' ? (
+                  <>
+                    <div className='text-yellow-400 font-semibold'>Contract is inactive</div>
+                    <div className='text-xs text-gray-400'>No active time remaining.</div>
+                  </>
+                ) : (
+                  <div className='text-xl font-bold'>N/A</div>
+                )}
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className='inline-flex'>
+                    <Button
+                      className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                      disabled={disabled}
+                      onClick={() => {}}
+                    >
+                      Activate
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {disabled && reason && (
+                  <TooltipContent>
+                    <p>{reason}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Cache Status */}
-      <div className='border border-[#2C2E30] rounded-md p-4'>
+      <div className={`border border-[#2C2E30] rounded-md p-4 ${isMy ? 'basis-1/3' : 'flex-1'}`}>
         <div className='text-gray-400 text-sm'>Cache Status</div>
         <div className='text-xl font-bold'>
           {isCached ? 'Cached' : 'Not Cached'}
@@ -61,7 +173,7 @@ export function ContractStatus({
       </div>
 
       {/* Effective Bid */}
-      <div className='border border-[#2C2E30] rounded-md p-4'>
+      <div className={`border border-[#2C2E30] rounded-md p-4 ${isMy ? 'basis-1/3' : 'flex-1'}`}>
         <div className='text-gray-400 text-sm flex items-center gap-2'>
           Effective Bid
           <Tooltip>

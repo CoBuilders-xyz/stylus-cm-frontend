@@ -159,6 +159,8 @@ export default function ContractDetails({
     showConfirmation: false,
   });
 
+  // Time-left handled within ContractStatus component
+
   // Initialize contract data from initialContractData whenever it changes
   useEffect(() => {
     if (initialContractData) {
@@ -563,6 +565,7 @@ export default function ContractDetails({
                 effectiveBid={contractData?.effectiveBid}
                 lastBid={contractData?.lastBid}
                 viewType='my-contracts'
+                contractAddress={contractData?.address}
               />
 
               {/* Replace the flex items with the ContractDetailsTable */}
@@ -616,6 +619,7 @@ export default function ContractDetails({
                 effectiveBid={contractData?.effectiveBid}
                 lastBid={contractData?.lastBid}
                 viewType='explore-contracts'
+                contractAddress={contractData?.address}
               />
 
               {/* Replace the flex items with the ContractDetailsTable */}
@@ -667,6 +671,7 @@ export default function ContractDetails({
               </div>
             </>
           )}
+
         </div>
       </ScrollArea>
 
