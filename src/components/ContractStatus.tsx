@@ -9,6 +9,9 @@ import {
 } from '@/components/ui/tooltip';
 import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
 import { Button } from '@/components/ui/button';
+import { useAccount, usePublicClient } from 'wagmi';
+import { ARB_WASM_ABI, ARB_WASM_PRECOMPILE } from '@/config/abis/arbWasm/arbWasm';
+import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 
 interface ContractStatusProps {
   isLoading: boolean;
@@ -33,6 +36,13 @@ export function ContractStatus({
   const { isLoading: isTLLoading, state: tlState, seconds } = useProgramTimeLeft(
     viewType === 'my-contracts' ? contractAddress : undefined
   );
+  const publicClient = usePublicClient();
+  const { address: userAddress, isConnected } = useAccount();
+  const { writeContract, status: txStatus } = useWeb3();
+
+  const isTxBusy =
+    txStatus === TransactionStatus.PREPARING ||
+    txStatus === TransactionStatus.PENDING;
   // Determine button disabled state and tooltip
   const computeActivationState = () => {
     // Default: disabled with generic reason
@@ -61,6 +71,75 @@ export function ContractStatus({
   };
 
   const isMy = viewType === 'my-contracts';
+
+  async function handleActivate() {
+    if (!contractAddress) return;
+    if (!publicClient) return;
+    if (!isConnected || !userAddress) {
+      alert('Please connect your wallet to activate the program.');
+      return;
+    }
+
+    let requiredWei: bigint | null = null;
+
+    try {
+      // Dry run with 0 value to get revert reason containing required value
+      await publicClient.simulateContract({
+        address: ARB_WASM_PRECOMPILE,
+        abi: ARB_WASM_ABI,
+        functionName: 'activateProgram',
+        account: userAddress,
+        args: [contractAddress as `0x${string}`],
+        value: BigInt(0),
+      });
+      // If simulation succeeds with 0 value, then no value required
+      requiredWei = BigInt(0);
+    } catch (err) {
+      const message = (err as Error).message || '';
+      // Try to parse value from revert data blob
+      const dataMatch = message.match(/data:\s*"(0x[0-9a-fA-F]+)"/);
+      if (dataMatch) {
+        try {
+          const hex = dataMatch[1].replace(/^0x/, '');
+          const lastWord = hex.slice(-64) || hex; // last 32 bytes
+          requiredWei = BigInt('0x' + lastWord);
+        } catch (_) {
+          /* noop, fallback below */
+        }
+      }
+      // Fallback: search for first decimal group that looks like a value
+      if (requiredWei === null) {
+        const decMatch = message.match(/(\d{3,})/); // 3+ digits to avoid tiny numbers
+        if (decMatch) {
+          try {
+            requiredWei = BigInt(decMatch[1]);
+          } catch (_) {
+            // ignore
+          }
+        }
+      }
+    }
+
+    if (requiredWei === null) {
+      alert('Could not determine the required activation value.');
+      return;
+    }
+
+    const requiredEth = formatEther(requiredWei);
+
+    const proceed = window.confirm(
+      `Activate program by sending ${requiredEth} ETH?`
+    );
+    if (!proceed) return;
+
+    writeContract({
+      address: ARB_WASM_PRECOMPILE,
+      abi: ARB_WASM_ABI,
+      functionName: 'activateProgram',
+      args: [contractAddress as `0x${string}`],
+      value: requiredEth,
+    });
+  }
 
   if (isLoading) {
     return (
@@ -131,7 +210,7 @@ export function ContractStatus({
                   <div className='text-xl font-bold'>{formatDuration(seconds)}</div>
                 ) : tlState === 'expired' ? (
                   <>
-                    <div className='text-yellow-400 font-semibold'>Contract is inactive</div>
+                    <div className='text-yellow-400 font-semibold'>Expired</div>
                     <div className='text-xs text-gray-400'>No active time remaining.</div>
                   </>
                 ) : (
@@ -143,10 +222,10 @@ export function ContractStatus({
                   <span className='inline-flex'>
                     <Button
                       className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                      disabled={disabled}
-                      onClick={() => {}}
+                      disabled={disabled || isTxBusy}
+                      onClick={handleActivate}
                     >
-                      Activate
+                      {isTxBusy ? 'Activating…' : 'Activate'}
                     </Button>
                   </span>
                 </TooltipTrigger>
