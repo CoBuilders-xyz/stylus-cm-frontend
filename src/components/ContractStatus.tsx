@@ -9,9 +9,10 @@ import {
 } from '@/components/ui/tooltip';
 import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
 import { Button } from '@/components/ui/button';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { ARB_WASM_ABI, ARB_WASM_PRECOMPILE } from '@/config/abis/arbWasm/arbWasm';
-import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
+import { showErrorToast, showSuccessToast } from '@/components/Toast';
+// import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 
 interface ContractStatusProps {
   isLoading: boolean;
@@ -38,11 +39,8 @@ export function ContractStatus({
   );
   const publicClient = usePublicClient();
   const { address: userAddress, isConnected } = useAccount();
-  const { writeContract, status: txStatus } = useWeb3();
-
-  const isTxBusy =
-    txStatus === TransactionStatus.PREPARING ||
-    txStatus === TransactionStatus.PENDING;
+  const { data: walletClient } = useWalletClient();
+  const [isTxBusy, setIsTxBusy] = React.useState(false);
   // Determine button disabled state and tooltip
   const computeActivationState = () => {
     // Default: disabled with generic reason
@@ -76,7 +74,7 @@ export function ContractStatus({
     if (!contractAddress) return;
     if (!publicClient) return;
     if (!isConnected || !userAddress) {
-      alert('Please connect your wallet to activate the program.');
+      showErrorToast({ message: 'Please connect your wallet to activate the program.' });
       return;
     }
 
@@ -121,24 +119,39 @@ export function ContractStatus({
     }
 
     if (requiredWei === null) {
-      alert('Could not determine the required activation value.');
+      showErrorToast({ message: 'Could not determine the required activation value.' });
       return;
     }
 
     const requiredEth = formatEther(requiredWei);
 
-    const proceed = window.confirm(
-      `Activate program by sending ${requiredEth} ETH?`
-    );
-    if (!proceed) return;
+    showSuccessToast({ message: `Preparing activation with ${requiredEth} ETH…` });
 
-    writeContract({
-      address: ARB_WASM_PRECOMPILE,
-      abi: ARB_WASM_ABI,
-      functionName: 'activateProgram',
-      args: [contractAddress as `0x${string}`],
-      value: requiredEth,
-    });
+    try {
+      if (!walletClient) {
+        showErrorToast({ message: 'No wallet client available. Please reconnect your wallet.' });
+        return;
+      }
+      setIsTxBusy(true);
+      // Simulate again with the required value to produce an exact request
+      const { request } = await publicClient.simulateContract({
+        address: ARB_WASM_PRECOMPILE,
+        abi: ARB_WASM_ABI,
+        functionName: 'activateProgram',
+        account: userAddress,
+        args: [contractAddress as `0x${string}`],
+        value: requiredWei,
+      });
+
+      // Execute via the connected wallet (MetaMask), which will prompt the user
+      const txHash = await walletClient.writeContract(request);
+      showSuccessToast({ message: `Transaction sent: ${txHash}` });
+    } catch (e) {
+      console.error('Activation failed:', e);
+      showErrorToast({ message: (e as Error).message || 'Activation failed' });
+    } finally {
+      setIsTxBusy(false);
+    }
   }
 
   if (isLoading) {
