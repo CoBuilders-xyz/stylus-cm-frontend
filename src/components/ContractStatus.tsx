@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatDate, formatRoundedEth, formatDuration } from '@/utils/formatting';
-import { formatEther } from 'viem';
+import { encodeFunctionData, formatEther } from 'viem';
 import { Info } from 'lucide-react';
 import {
   Tooltip,
@@ -81,39 +81,57 @@ export function ContractStatus({
     let requiredWei: bigint | null = null;
 
     try {
-      // Dry run with 0 value to get revert reason containing required value
-      await publicClient.simulateContract({
-        address: ARB_WASM_PRECOMPILE,
+      // Low-level call with 0 value to fetch raw revert data (avoid decode step)
+      const data = encodeFunctionData({
         abi: ARB_WASM_ABI,
         functionName: 'activateProgram',
-        account: userAddress,
         args: [contractAddress as `0x${string}`],
-        value: BigInt(0),
       });
-      // If simulation succeeds with 0 value, then no value required
+      await publicClient.call({
+        to: ARB_WASM_PRECOMPILE,
+        data,
+        value: BigInt(0),
+        account: userAddress,
+      });
+      // If call succeeds with 0 value, then no value required
       requiredWei = BigInt(0);
     } catch (err) {
-      const message = (err as Error).message || '';
-      // Try to parse value from revert data blob
-      const dataMatch = message.match(/data:\s*"(0x[0-9a-fA-F]+)"/);
-      if (dataMatch) {
+      // Extract raw revert data from nested error structure
+      const tryExtractData = (e: any, depth = 0): string | null => {
+        if (!e || depth > 6) return null;
+        if (typeof e.data === 'string' && e.data.startsWith('0x')) return e.data;
+        if (typeof e?.cause?.data === 'string' && e.cause.data.startsWith('0x'))
+          return e.cause.data;
+        if (typeof e?.shortMessage === 'string') {
+          const m = e.shortMessage.match(/data:\s*"(0x[0-9a-fA-F]+)"/);
+          if (m) return m[1];
+        }
+        if (typeof e?.message === 'string') {
+          const m = e.message.match(/data:\s*"(0x[0-9a-fA-F]+)"/);
+          if (m) return m[1];
+        }
+        return tryExtractData(e.cause, depth + 1);
+      };
+
+      const revertData = tryExtractData(err);
+      if (revertData) {
         try {
-          const hex = dataMatch[1].replace(/^0x/, '');
+          const hex = revertData.replace(/^0x/, '');
           const lastWord = hex.slice(-64) || hex; // last 32 bytes
           requiredWei = BigInt('0x' + lastWord);
         } catch (_) {
-          /* noop, fallback below */
+          // ignore, will fall back below
         }
       }
-      // Fallback: search for first decimal group that looks like a value
+
+      // Fallback: parse decimal from message if present
       if (requiredWei === null) {
-        const decMatch = message.match(/(\d{3,})/); // 3+ digits to avoid tiny numbers
+        const message = (err as Error).message || '';
+        const decMatch = message.match(/(\d{3,})/);
         if (decMatch) {
           try {
             requiredWei = BigInt(decMatch[1]);
-          } catch (_) {
-            // ignore
-          }
+          } catch (_) {}
         }
       }
     }
