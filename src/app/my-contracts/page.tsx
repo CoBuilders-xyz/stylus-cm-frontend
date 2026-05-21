@@ -9,8 +9,10 @@ import AlertsSettings from '@/components/AlertsSettings';
 import { Contract, Alert } from '@/services/contractService';
 import { Alert as AlertServiceAlert } from '@/services/alertService';
 import { useContractService } from '@/hooks/useContractService';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export default function MyContractsPage() {
+  const isMobile = useIsMobile();
   const contractService = useContractService();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(
     null
@@ -106,12 +108,12 @@ export default function MyContractsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-72px)] pt-18 flex flex-col'>
+    <div className='min-h-[calc(100vh-72px)] pt-16 sm:pt-18 flex flex-col'>
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
-        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
+        style={{ paddingRight: isPanelOpen && !isMobile ? panelWidth : '0' }}
       >
-        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='p-4 sm:p-10 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='my-contracts'

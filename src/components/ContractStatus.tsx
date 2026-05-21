@@ -26,16 +26,16 @@ export function ContractStatus({
 }: ContractStatusProps) {
   if (isLoading) {
     return (
-      <div className='grid grid-cols-2 gap-4 mb-6'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6'>
         {/* Cache Status Loading State */}
-        <div className='border border-[#2C2E30] rounded-md p-4'>
+        <div className='border border-[#2C2E30] rounded-md p-3 sm:p-4'>
           <div className='text-gray-400 text-sm'>Cache Status</div>
           <div className='h-6 bg-gray-700 rounded w-24 mt-1 mb-1 animate-pulse'></div>
           <div className='h-3 bg-gray-700 rounded w-40 mb-0.5 animate-pulse'></div>
         </div>
 
         {/* Effective Bid Loading State */}
-        <div className='border border-[#2C2E30] rounded-md p-4'>
+        <div className='border border-[#2C2E30] rounded-md p-3 sm:p-4'>
           <div className='text-gray-400 text-sm'>Effective Bid</div>
           <div className='h-6 bg-gray-700 rounded w-24 mt-1 mb-1 animate-pulse'></div>
           <div className='h-3 bg-gray-700 rounded w-32 mb-0.5 animate-pulse'></div>
@@ -48,11 +48,11 @@ export function ContractStatus({
   const displayEffectiveBid = effectiveBid || '';
 
   return (
-    <div className='grid grid-cols-2 gap-4 mb-6'>
+    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6'>
       {/* Cache Status */}
-      <div className='border border-[#2C2E30] rounded-md p-4'>
+      <div className='border border-[#2C2E30] rounded-md p-3 sm:p-4'>
         <div className='text-gray-400 text-sm'>Cache Status</div>
-        <div className='text-xl font-bold'>
+        <div className='text-lg sm:text-xl font-bold'>
           {isCached ? 'Cached' : 'Not Cached'}
         </div>
         <div className='text-xs text-gray-400'>
@@ -61,7 +61,7 @@ export function ContractStatus({
       </div>
 
       {/* Effective Bid */}
-      <div className='border border-[#2C2E30] rounded-md p-4'>
+      <div className='border border-[#2C2E30] rounded-md p-3 sm:p-4'>
         <div className='text-gray-400 text-sm flex items-center gap-2'>
           Effective Bid
           <Tooltip>
@@ -83,7 +83,7 @@ export function ContractStatus({
             </TooltipContent>
           </Tooltip>
         </div>
-        <div className='text-xl font-bold'>
+        <div className='text-lg sm:text-xl font-bold'>
           {displayEffectiveBid
             ? formatRoundedEth(formatEther(BigInt(displayEffectiveBid))) +
               ' ETH'

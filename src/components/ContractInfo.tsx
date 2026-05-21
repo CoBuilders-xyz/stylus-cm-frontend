@@ -13,6 +13,7 @@ import { PlusCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface ContractInfoProps {
   contractData: Contract;
@@ -27,25 +28,21 @@ export function ContractInfo({
   isLoading = false,
   viewType = 'my-contracts',
 }: ContractInfoProps) {
+  const isMobile = useIsMobile();
+
   if (isLoading) {
     return (
       <div className='mb-6'>
-        <Table>
-          <TableBody>
-            {Array(viewType === 'my-contracts' ? 4 : 3)
-              .fill(0)
-              .map((_, index) => (
-                <TableRow key={index} className='hover:bg-transparent'>
-                  <TableCell className='p-2 w-1/3'>
-                    <div className='h-4 bg-gray-700 rounded w-24'></div>
-                  </TableCell>
-                  <TableCell className='p-2 w-2/3'>
-                    <div className='h-4 bg-gray-700 rounded w-24'></div>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
+        <div className='space-y-3'>
+          {Array(viewType === 'my-contracts' ? 4 : 3)
+            .fill(0)
+            .map((_, index) => (
+              <div key={index} className='animate-pulse bg-gray-800 rounded p-3'>
+                <div className='h-4 bg-gray-700 rounded w-1/4 mb-2'></div>
+                <div className='h-4 bg-gray-700 rounded w-1/2'></div>
+              </div>
+            ))}
+        </div>
       </div>
     );
   }
@@ -133,7 +130,7 @@ export function ContractInfo({
                   return (
                     <div
                       key={alert.id}
-                      className='px-3 py-2 text-white text-xs rounded-md inline-block bg-[#1A1A1A] border border-[#333]'
+                      className='px-2 sm:px-3 py-1 sm:py-2 text-white text-xs rounded-md inline-block bg-[#1A1A1A] border border-[#333]'
                     >
                       {getAlertText(alert)}
                     </div>
@@ -152,6 +149,21 @@ export function ContractInfo({
     });
   }
 
+  // Mobile layout - stack items vertically
+  if (isMobile) {
+    return (
+      <div className='mb-6 space-y-3'>
+        {rows.map((row, index) => (
+          <div key={index} className='bg-gray-900/30 rounded-lg p-3'>
+            <span className='text-gray-400 text-sm block mb-1'>{row.label}</span>
+            <div>{row.content}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop layout - table
   return (
     <div className='mb-6'>
       <Table>

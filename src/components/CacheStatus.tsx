@@ -47,16 +47,16 @@ export default function CacheStatus() {
   return (
     <>
       <div className='flex flex-col w-full'>
-        <div className='w-full px-10 py-4'>
-          <div className='flex justify-between items-start'>
+        <div className='w-full px-4 sm:px-10 py-4'>
+          <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3'>
             <div className='flex flex-col'>
-              <h1 className='text-2xl font-bold text-white'>Cache Status</h1>
+              <h1 className='text-xl sm:text-2xl font-bold text-white'>Cache Status</h1>
               <p className='text-gray-300 text-sm opacity-60'>
                 Monitor the status of contract caching across multiple chains
               </p>
             </div>
             <Button
-              className='px-3 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2 text-sm whitespace-nowrap'
+              className='px-3 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2 text-sm whitespace-nowrap w-full sm:w-auto'
               onClick={handleAddNewContract}
             >
               <span>+</span>

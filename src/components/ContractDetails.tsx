@@ -451,13 +451,13 @@ export default function ContractDetails({
   return (
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Sticky Header */}
-      <div className='flex-shrink-0  bg-[#1A1919] p-6'>
-        <div className='flex justify-between items-center'>
-          <div>
+      <div className='flex-shrink-0 bg-[#1A1919] p-4 sm:p-6'>
+        <div className='flex justify-between items-start gap-2'>
+          <div className='flex-1 min-w-0'>
             {viewType === 'my-contracts' ? (
               <>
-                <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
-                  {contractData.address}
+                <div className='text-xs sm:text-sm font-mono text-gray-300 flex items-center gap-2 break-all'>
+                  <span className='truncate'>{contractData.address}</span>
                   <ExplorerLinkButton
                     chainId={currentBlockchain?.chainId.toString() || null}
                     contractAddress={contractData.address}
@@ -472,20 +472,20 @@ export default function ContractDetails({
               </>
             ) : contractData.isSavedByUser ? (
               <>
-                <div className='text-sm font-mono text-gray-300'>
+                <div className='text-xs sm:text-sm font-mono text-gray-300 break-all'>
                   {contractData.address}
                 </div>
-                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
+                <div className='text-xl sm:text-2xl font-bold bg-transparent outline-none border-0 w-full'>
                   {contractData.savedContractName}
                 </div>
               </>
             ) : (
-              <div className='text-2xl font-mono mb-1'>
+              <div className='text-lg sm:text-2xl font-mono mb-1 break-all'>
                 {contractData.address}
               </div>
             )}
           </div>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 flex-shrink-0'>
             {/* Dropdown Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -552,7 +552,7 @@ export default function ContractDetails({
 
       {/* Scrollable Main Content */}
       <ScrollArea className='flex-1'>
-        <div className='p-6'>
+        <div className='p-4 sm:p-6'>
           {viewType === 'my-contracts' ? (
             <>
               {/* Main statistics in a 2-column grid layout */}

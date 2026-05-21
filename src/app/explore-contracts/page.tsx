@@ -11,8 +11,10 @@ import { Contract } from '@/services/contractService';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ConnectWallet from '@/components/ConnectWallet';
 import authRequiredImage from 'public/auth-required.svg';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export default function ExploreContractsPage() {
+  const isMobile = useIsMobile();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(
     null
   );
@@ -91,12 +93,12 @@ export default function ExploreContractsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-72px)] pt-18 flex flex-col'>
+    <div className='min-h-[calc(100vh-72px)] pt-16 sm:pt-18 flex flex-col'>
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
-        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
+        style={{ paddingRight: isPanelOpen && !isMobile ? panelWidth : '0' }}
       >
-        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='p-4 sm:p-10 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='explore-contracts'
@@ -133,7 +135,7 @@ export default function ExploreContractsPage() {
       </SidePanel>
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className='bg-black border-gray-700 max-w-md'>
+        <DialogContent className='bg-black border-gray-700 max-w-md mx-4'>
           <DialogTitle className='sr-only'>Authentication Required</DialogTitle>
           <div className='p-4'>
             <NoticeBanner

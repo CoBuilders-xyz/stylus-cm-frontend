@@ -533,7 +533,7 @@ export function AutomatedBiddingSection({
       {/* Gas Price Warning */}
       {isGasPriceHigh && (
         <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center relative z-10'>
-          <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
+          <AlertTriangle className='w-5 h-5 mr-2 text-red-300 flex-shrink-0' />
           <span className='text-sm'>
             Warning: Network fees are extremely high{' '}
             {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
@@ -542,8 +542,8 @@ export function AutomatedBiddingSection({
         </div>
       )}
 
-      <div className='flex justify-between items-start relative z-10'>
-        <div>
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 relative z-10'>
+        <div className='flex-1 min-w-0'>
           <p className='font-bold'>Automated Bidding Configuration</p>
           <p className='text-sm text-blue-200'>
             Configure automated bidding to maintain your position in the cache
@@ -552,7 +552,7 @@ export function AutomatedBiddingSection({
         </div>
         <button
           onClick={() => setShowAutomationPanel(!showAutomationPanel)}
-          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
+          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0 self-start'
           disabled={isTransactionInProgress}
         >
           {showAutomationPanel ? (
@@ -574,17 +574,17 @@ export function AutomatedBiddingSection({
 
         {/* Show automation status for existing contracts */}
         {contractExists && (
-          <div className='flex items-center justify-left mt-1'>
+          <div className='flex flex-wrap items-center justify-start gap-2 mt-1'>
             <div>
               <span>Automation is currently: </span>
               <span className='font-semibold'>
                 {automatedBidding ? 'Enabled' : 'Disabled'}
               </span>
             </div>
-            <div className='flex items-center px-2'>
+            <div className='flex items-center gap-1'>
               <Button
                 onClick={handleToggleAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 py-1 h-6'
                 disabled={isTransactionInProgress || isSuccess}
               >
                 {isTransactionInProgress ? (

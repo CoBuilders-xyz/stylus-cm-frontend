@@ -330,22 +330,22 @@ export default function AddContract({
         />
 
         {/* Header content */}
-        <div className='flex justify-between items-center p-6 relative z-10'>
+        <div className='flex justify-between items-center p-4 sm:p-6 relative z-10'>
           <div>
-            <h2 className='text-2xl font-bold text-white'>Add Contract</h2>
-            <div className='text-white/80 mt-1'>Step {step} of 2</div>
+            <h2 className='text-xl sm:text-2xl font-bold text-white'>Add Contract</h2>
+            <div className='text-white/80 mt-1 text-sm'>Step {step} of 2</div>
           </div>
           <Button
             size='icon'
             onClick={onClose}
-            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
+            className='w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
           >
-            <X className='h-6 w-6' />
+            <X className='h-5 w-5 sm:h-6 sm:w-6' />
           </Button>
         </div>
       </div>
 
-      <div className='p-6 flex-1'>
+      <div className='p-4 sm:p-6 flex-1'>
         {step === 1 && (
           <div>
             <h3 className='text-lg font-medium mb-2'>Set Contract Details</h3>

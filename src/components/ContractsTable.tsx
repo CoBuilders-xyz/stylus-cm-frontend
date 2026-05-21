@@ -28,7 +28,7 @@ import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
 import { formatEther } from 'viem';
@@ -37,6 +37,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -122,6 +123,141 @@ const SortableTableHead = React.memo(
 );
 
 SortableTableHead.displayName = 'SortableTableHead';
+
+// Mobile card component for contract display
+const ContractCard = React.memo(
+  ({
+    contract,
+    viewType,
+    onContractSelect,
+    onAddContract,
+    isAuthenticated,
+  }: {
+    contract: Contract;
+    viewType: string;
+    onContractSelect?: (contractId: string, initialData?: Contract) => void;
+    onAddContract?: (contract: Contract) => void;
+    isAuthenticated: boolean;
+  }) => {
+    const handleClick = () => {
+      if (onContractSelect) {
+        onContractSelect(contract.id, contract);
+      }
+    };
+
+    const handleAddContractClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onAddContract) {
+        onAddContract(contract);
+      }
+    };
+
+    return (
+      <div
+        className='bg-gray-900/50 rounded-lg p-4 mb-3 cursor-pointer hover:bg-gradient-to-r hover:from-[#0B436E] hover:to-[#1581D4] transition-colors duration-300'
+        onClick={handleClick}
+      >
+        {/* Contract Address/Name */}
+        <div className='mb-3'>
+          {viewType === 'my-contracts' && contract.name ? (
+            <div>
+              <span className='text-base font-medium block'>{contract.name}</span>
+              <span className='text-sm text-gray-400 font-mono break-all'>{contract.address}</span>
+            </div>
+          ) : contract.isSavedByUser ? (
+            <div>
+              <span className='text-base font-medium block'>{contract.savedContractName}</span>
+              <span className='text-sm text-gray-400 font-mono break-all'>{contract.address}</span>
+            </div>
+          ) : (
+            <span className='text-sm font-mono break-all'>{contract.address}</span>
+          )}
+        </div>
+
+        {/* Stats Grid */}
+        <div className='grid grid-cols-2 gap-3 text-sm'>
+          <div>
+            <span className='text-gray-400 block text-xs'>Bid</span>
+            {contract.lastBid ? (
+              <span className='font-medium'>{formatRoundedEth(formatEther(BigInt(contract.lastBid)))} ETH</span>
+            ) : (
+              <Badge variant='outline' className='px-2 py-0.5 text-xs'>N/A</Badge>
+            )}
+          </div>
+          <div>
+            <span className='text-gray-400 block text-xs'>Effective Bid</span>
+            {contract.effectiveBid ? (
+              <span className='font-medium'>{formatRoundedEth(formatEther(BigInt(contract.effectiveBid)))} ETH</span>
+            ) : (
+              <Badge variant='outline' className='px-2 py-0.5 text-xs'>N/A</Badge>
+            )}
+          </div>
+          <div>
+            <span className='text-gray-400 block text-xs'>Size</span>
+            <span className='font-medium'>{formatSize(contract.bytecode.size)}</span>
+          </div>
+          <div>
+            <span className='text-gray-400 block text-xs'>Min. Bid</span>
+            {contract.minBid ? (
+              <span className='font-medium'>{formatRoundedEth(formatEther(BigInt(contract.minBid)))} ETH</span>
+            ) : (
+              <Badge variant='outline' className='px-2 py-0.5 text-xs'>N/A</Badge>
+            )}
+          </div>
+          <div>
+            <span className='text-gray-400 block text-xs'>Eviction Risk</span>
+            {contract.evictionRisk ? (
+              <Badge
+                variant={getRiskBadgeVariant(contract.evictionRisk.riskLevel)}
+                className='px-2 py-0.5 text-xs'
+              >
+                {formatRiskLevel(contract.evictionRisk.riskLevel)}
+              </Badge>
+            ) : (
+              <Badge variant='outline' className='px-2 py-0.5 text-xs'>N/A</Badge>
+            )}
+          </div>
+          <div>
+            <span className='text-gray-400 block text-xs'>Total Spent</span>
+            <span className='font-medium'>
+              {contract.totalBidInvestment
+                ? formatRoundedEth(formatEther(BigInt(contract.totalBidInvestment))) + ' ETH'
+                : 'N/A'}
+            </span>
+          </div>
+        </div>
+
+        {/* Cache Status and Actions */}
+        <div className='flex items-center justify-between mt-3 pt-3 border-t border-gray-700'>
+          <div>
+            <Badge
+              variant={contract.bytecode.isCached ? 'secondary' : 'outline'}
+              className='px-2 py-0.5 text-xs'
+            >
+              {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
+            </Badge>
+            <span className='text-xs text-gray-400 ml-2'>
+              {formatDate(contract.bidBlockTimestamp)}
+            </span>
+          </div>
+          {viewType === 'explore-contracts' && !contract.isSavedByUser && isAuthenticated && (
+            <Button
+              className='w-8 h-8 flex items-center justify-center bg-black border border-white text-white rounded-md text-sm'
+              onClick={handleAddContractClick}
+            >
+              +
+            </Button>
+          )}
+          {viewType === 'explore-contracts' && contract.isSavedByUser && (
+            <Badge variant='secondary' className='px-2 py-0.5 text-xs'>Added</Badge>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+ContractCard.displayName = 'ContractCard';
 
 // Table row component - separate to improve performance
 const ContractRow = React.memo(
@@ -285,11 +421,54 @@ const Pagination = React.memo(
     pagination,
     handlePageChange,
     handleItemsPerPageChange,
+    isMobile,
   }: {
     pagination: PaginationMeta;
     handlePageChange: (page: number) => void;
     handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    isMobile: boolean;
   }) => {
+    if (isMobile) {
+      return (
+        <div className='flex flex-col gap-3 mt-4 text-sm text-white'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <span>Show</span>
+              <select
+                className='bg-black text-white rounded-md px-2 py-1 focus:outline-none border border-gray-600'
+                value={pagination.limit}
+                onChange={handleItemsPerPageChange}
+              >
+                <option value='5'>5</option>
+                <option value='10'>10</option>
+              </select>
+            </div>
+            <span className='text-gray-400'>
+              {pagination.totalItems > 0
+                ? `${pagination.page}/${pagination.totalPages}`
+                : 'No results'}
+            </span>
+          </div>
+          <div className='flex justify-center gap-2'>
+            <Button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPreviousPage}
+              className='px-3 py-2 bg-black text-white rounded-md disabled:opacity-50 border border-gray-600'
+            >
+              <ChevronLeft className='w-4 h-4' />
+            </Button>
+            <Button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNextPage}
+              className='px-3 py-2 bg-black text-white rounded-md disabled:opacity-50 border border-gray-600'
+            >
+              <ChevronRight className='w-4 h-4' />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className='flex items-center justify-between mt-4 text-sm text-white'>
         <div className='flex items-center space-x-2'>
@@ -380,6 +559,8 @@ function ContractsTable({
   onAddContract,
   onAddNewContract,
 }: ContractsTableProps) {
+  const isMobile = useIsMobile();
+  
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
     contracts,
@@ -457,25 +638,26 @@ function ContractsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex justify-between mb-8 flex-shrink-0'>
-        <h1 className='text-xl font-bold text-white'>
+      {/* Header - responsive layout */}
+      <div className='flex flex-col sm:flex-row sm:justify-between gap-4 mb-4 sm:mb-8 flex-shrink-0'>
+        <h1 className='text-lg sm:text-xl font-bold text-white'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
         {viewType === 'my-contracts' ? (
           <Button
-            className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+            className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2 w-full sm:w-auto'
             onClick={onAddNewContract}
           >
             <span>+</span>
             <span>Add Contract</span>
           </Button>
         ) : (
-          <div className='flex items-center gap-3'>
+          <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3'>
             <div className='relative'>
               <input
                 type='text'
                 placeholder='Search contracts...'
-                className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
+                className='p-2 pl-10 bg-black rounded-md w-full sm:w-60 border border-gray-500 focus:outline-none focus:border-white'
                 value={searchInput}
                 onChange={handleSearchInputChange}
                 onKeyDown={handleKeyDown}
@@ -488,7 +670,7 @@ function ContractsTable({
               </Button>
             </div>
             <Button
-              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2'
               onClick={onAddNewContract}
             >
               <span>+</span>
@@ -514,101 +696,14 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
-          <ScrollArea className='h-[calc(100vh-350px)] min-h-[400px]'>
-            <Table className='w-full'>
-              <TableHeader className='bg-black text-white sticky top-0 z-10'>
-                <TableRow className='h-20 hover:bg-transparent'>
-                  <SortableTableHead
-                    className='w-[250px]'
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Contract
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.LAST_BID}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Bid
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    <div className='flex items-center gap-2'>
-                      Effective Bid
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className='w-4 h-4 cursor-help' />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className='max-w-xs'>
-                            <strong>Bids decay over time.</strong>
-                            <br />
-                            The effective bid is reduced by a{' '}
-                            <em>decay penalty</em>, calculated as:
-                            <br />
-                            <code>decayPenalty = decayRate × timeCached</code>
-                            <br />
-                            The longer a contract stays cached, the lower its
-                            effective bid becomes.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.BYTECODE_SIZE}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Size
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Min. Bid
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Eviction Risk
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.TOTAL_BID_INVESTMENT}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Total Spent
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.IS_CACHED}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Cache Status
-                  </SortableTableHead>
-                  {viewType === 'explore-contracts' && (
-                    <TableHead className='font-medium text-base py-6'></TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody className='text-white [&>tr]:py-2'>
+          {isMobile ? (
+            // Mobile card view
+            <ScrollArea className='h-[calc(100vh-280px)] min-h-[300px]'>
+              <div className='pr-2'>
                 {displayContracts.length > 0 ? (
                   displayContracts.map((contract) => (
-                    <ContractRow
-                      key={contract.address}
+                    <ContractCard
+                      key={contract.id}
                       contract={contract}
                       viewType={viewType}
                       onContractSelect={onContractSelect}
@@ -617,22 +712,136 @@ function ContractsTable({
                     />
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={viewType === 'explore-contracts' ? 9 : 8}
-                      className='text-center py-12 bg-black'
-                    >
-                      <NoticeBanner
-                        image={noContractsFoundImage}
-                        title='No Contracts Found'
-                        description='No contracts found.'
-                      />
-                    </TableCell>
-                  </TableRow>
+                  <NoticeBanner
+                    image={noContractsFoundImage}
+                    title='No Contracts Found'
+                    description='No contracts found matching your criteria.'
+                  />
                 )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          ) : (
+            // Desktop table view
+            <ScrollArea className='h-[calc(100vh-350px)] min-h-[400px]'>
+              <Table className='w-full'>
+                <TableHeader className='bg-black text-white sticky top-0 z-10'>
+                  <TableRow className='h-20 hover:bg-transparent'>
+                    <SortableTableHead
+                      className='w-[250px]'
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Contract
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.LAST_BID}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Effective Bid
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className='w-4 h-4 cursor-help' />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className='max-w-xs'>
+                              <strong>Bids decay over time.</strong>
+                              <br />
+                              The effective bid is reduced by a{' '}
+                              <em>decay penalty</em>, calculated as:
+                              <br />
+                              <code>decayPenalty = decayRate × timeCached</code>
+                              <br />
+                              The longer a contract stays cached, the lower its
+                              effective bid becomes.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.BYTECODE_SIZE}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Size
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Min. Bid
+                    </SortableTableHead>
+                    <SortableTableHead
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Eviction Risk
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.TOTAL_BID_INVESTMENT}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Total Spent
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortField={ContractSortField.IS_CACHED}
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={setSorting}
+                    >
+                      Cache Status
+                    </SortableTableHead>
+                    {viewType === 'explore-contracts' && (
+                      <TableHead className='font-medium text-base py-6'></TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody className='text-white [&>tr]:py-2'>
+                  {displayContracts.length > 0 ? (
+                    displayContracts.map((contract) => (
+                      <ContractRow
+                        key={contract.id}
+                        contract={contract}
+                        viewType={viewType}
+                        onContractSelect={onContractSelect}
+                        onAddContract={onAddContract}
+                        isAuthenticated={isAuthenticated}
+                      />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                        className='text-center py-12 bg-black'
+                      >
+                        <NoticeBanner
+                          image={noContractsFoundImage}
+                          title='No Contracts Found'
+                          description='No contracts found matching your criteria.'
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
         </div>
       )}
 
@@ -643,6 +852,7 @@ function ContractsTable({
             pagination={pagination}
             handlePageChange={handlePageChange}
             handleItemsPerPageChange={handleItemsPerPageChange}
+            isMobile={isMobile}
           />
         </div>
       )}

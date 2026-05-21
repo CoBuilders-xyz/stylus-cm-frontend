@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 // Create a context to pass the onClose function to children
 export const SidePanelContext = createContext<{ onClose: () => void }>({
@@ -22,14 +23,27 @@ const SidePanel: React.FC<SidePanelProps> = ({
   width = '400px', // Default width of 400px
   zIndex = 40, // Default z-index
 }) => {
+  const isMobile = useIsMobile();
+  
+  // On mobile, use full width
+  const panelWidth = isMobile ? '100%' : width;
+
   return (
     <SidePanelContext.Provider value={{ onClose }}>
+      {/* Mobile backdrop overlay */}
+      {isMobile && isOpen && (
+        <div
+          className='fixed inset-0 bg-black/50 z-30'
+          onClick={onClose}
+          style={{ marginTop: 'var(--header-height, 64px)' }}
+        />
+      )}
       <div
         className={`fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-auto ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
-          width,
+          width: panelWidth,
           zIndex,
           // Start below header, which has padding of 4 (p-4)
           marginTop: 'var(--header-height, 64px)',

@@ -475,7 +475,7 @@ export function BidNowSection({
         {/* Gas Price Warning */}
         {isGasPriceHigh && (
           <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center'>
-            <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
+            <AlertTriangle className='w-5 h-5 mr-2 text-red-300 flex-shrink-0' />
             <span className='text-sm'>
               Warning: Network fees are extremely high{' '}
               {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
@@ -484,8 +484,8 @@ export function BidNowSection({
           </div>
         )}
 
-        <div className='flex justify-between items-start'>
-          <div>
+        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3'>
+          <div className='flex-shrink-0'>
             <p className='font-bold'>Bid now</p>
             <p className='text-sm text-blue-200'>
               {isContractCached
@@ -493,9 +493,9 @@ export function BidNowSection({
                 : 'Higher bids extend cache duration'}
             </p>
           </div>
-          <div className='flex flex-col items-end gap-2'>
+          <div className='flex flex-col items-stretch sm:items-end gap-2'>
             <div className='flex items-start gap-2'>
-              <div className='flex flex-col w-full max-w-[200px]'>
+              <div className='flex flex-col flex-1 sm:flex-none sm:w-[200px]'>
                 <div className='relative'>
                   <Input
                     type='text'
@@ -526,7 +526,7 @@ export function BidNowSection({
                   </div>
                 )}
               </div>
-              <div className='self-start'>
+              <div className='self-start flex-shrink-0'>
                 <Button
                   onClick={handleSubmitBid}
                   disabled={isDisabled || !!inputError}
@@ -551,7 +551,7 @@ export function BidNowSection({
 
         {/* Suggested bid buttons */}
         {!isContractCached && showSuggestedButtons && suggestedBids && (
-          <div className='flex justify-between gap-2 mt-3'>
+          <div className='flex flex-wrap justify-between gap-2 mt-3'>
             <Button
               size='sm'
               className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
