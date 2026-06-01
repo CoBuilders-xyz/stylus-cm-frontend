@@ -39,12 +39,18 @@ export default function Header() {
 
   return (
     <>
-      <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed'>
+      <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed top-8'>
         {/* Left section - Logo and Navigation */}
         <div className='flex items-center space-x-4 text-xs'>
           <span className='flex items-center'>
-            <Link href='/cache-status'>
-              <Image src={logo} alt='logo' className='mr-2' />
+            <Link
+              href='/cache-status'
+              className='flex items-center gap-2 mr-2'
+            >
+              <Image src={logo} alt='Stylus Manager logo' />
+              <span className='hidden sm:inline text-sm font-semibold tracking-wide whitespace-nowrap'>
+                Stylus Manager
+              </span>
             </Link>
           </span>
 
@@ -163,7 +169,7 @@ export default function Header() {
       </div>
 
       {/* ConnectionBanner - always below header for all screen sizes */}
-      <div className='w-full fixed top-16 z-10'>
+      <div className='w-full fixed top-24 z-10'>
         <ConnectionBanner />
       </div>
     </>

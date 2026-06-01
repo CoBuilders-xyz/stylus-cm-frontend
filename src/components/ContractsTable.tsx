@@ -28,7 +28,15 @@ import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import {
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Info,
+  MoreHorizontal,
+  Zap,
+} from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
 import { formatEther } from 'viem';
@@ -37,6 +45,23 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import ActivationBadge from '@/components/ActivationBadge';
+import ActivationFilters, {
+  ActivationFilter,
+} from '@/components/ActivationFilters';
+import {
+  ActivationInfo,
+  getActivationInfo,
+  PROTOTYPE_ACTIVATION_TOAST,
+  setActivationInfo,
+} from '@/lib/prototype-mocks';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -131,12 +156,16 @@ const ContractRow = React.memo(
     onContractSelect,
     onAddContract,
     isAuthenticated,
+    activation,
+    onActivate,
   }: {
     contract: Contract;
     viewType: string;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
     onAddContract?: (contract: Contract) => void;
     isAuthenticated: boolean;
+    activation: ActivationInfo;
+    onActivate?: (contract: Contract) => void;
   }) => {
     const handleClick = () => {
       if (onContractSelect) {
@@ -150,6 +179,14 @@ const ContractRow = React.memo(
         onAddContract(contract);
       }
     };
+
+    const handleActivateClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onActivate) onActivate(contract);
+    };
+
+    const canActivate =
+      activation.status === 'expiring' || activation.status === 'inactive';
 
     return (
       <TableRow
@@ -250,6 +287,40 @@ const ContractRow = React.memo(
             </span>
           </div>
         </TableCell>
+        <TableCell className='py-6'>
+          <ActivationBadge info={activation} />
+        </TableCell>
+        {viewType === 'my-contracts' && (
+          <TableCell className='py-6'>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  className='p-2 rounded-md border border-white bg-transparent hover:bg-gray-900'
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align='end'
+                className='bg-[#1E1E1E] border border-[#2C2E30] text-white'
+              >
+                <DropdownMenuItem
+                  className={`cursor-pointer ${
+                    canActivate
+                      ? 'hover:bg-gray-800'
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  onClick={canActivate ? handleActivateClick : undefined}
+                  disabled={!canActivate}
+                >
+                  <Zap className='h-4 w-4 mr-2' />
+                  Activate
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </TableCell>
+        )}
         {viewType === 'explore-contracts' &&
           !contract.isSavedByUser &&
           isAuthenticated && (
@@ -398,12 +469,38 @@ function ContractsTable({
 
   const { isAuthenticated } = useAuthentication();
   const [searchInput, setSearchInput] = useState('');
+  const [activationFilter, setActivationFilter] =
+    useState<ActivationFilter>('all');
+  const [activationOverrides, setActivationOverrides] = useState<
+    Record<string, ActivationInfo>
+  >({});
+
+  const handleSimulateActivate = useCallback((contract: Contract) => {
+    const next: ActivationInfo = {
+      status: 'active',
+      secondsRemaining: 30 * 86_400,
+      lastActivatedAt: new Date().toISOString(),
+    };
+    setActivationInfo(contract, next);
+    setActivationOverrides((prev) => ({ ...prev, [contract.id]: next }));
+    toast.success(PROTOTYPE_ACTIVATION_TOAST);
+  }, []);
+
+  const resolveActivation = useCallback(
+    (contract: Contract): ActivationInfo => {
+      return activationOverrides[contract.id] ?? getActivationInfo(contract);
+    },
+    [activationOverrides]
+  );
 
   // Use provided contracts if available, otherwise use fetched contracts
-  const displayContracts = useMemo(
-    () => (initialContracts?.length ? initialContracts : contracts),
-    [initialContracts, contracts]
-  );
+  const displayContracts = useMemo(() => {
+    const source = initialContracts?.length ? initialContracts : contracts;
+    if (activationFilter === 'all') return source;
+    return source.filter(
+      (c) => resolveActivation(c).status === activationFilter
+    );
+  }, [initialContracts, contracts, activationFilter, resolveActivation]);
 
   // Handle page changes through the hook
   const handlePageChange = useCallback(
@@ -457,7 +554,7 @@ function ContractsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex justify-between mb-8 flex-shrink-0'>
+      <div className='flex justify-between items-start mb-4 flex-shrink-0 gap-4 flex-wrap'>
         <h1 className='text-xl font-bold text-white'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
@@ -496,6 +593,13 @@ function ContractsTable({
             </Button>
           </div>
         )}
+      </div>
+
+      <div className='mb-6 flex-shrink-0'>
+        <ActivationFilters
+          value={activationFilter}
+          onChange={setActivationFilter}
+        />
       </div>
 
       {isLoading && (
@@ -599,6 +703,12 @@ function ContractsTable({
                   >
                     Cache Status
                   </SortableTableHead>
+                  <TableHead className='font-medium text-base py-6'>
+                    Activation
+                  </TableHead>
+                  {viewType === 'my-contracts' && (
+                    <TableHead className='font-medium text-base py-6'></TableHead>
+                  )}
                   {viewType === 'explore-contracts' && (
                     <TableHead className='font-medium text-base py-6'></TableHead>
                   )}
@@ -614,12 +724,18 @@ function ContractsTable({
                       onContractSelect={onContractSelect}
                       onAddContract={onAddContract}
                       isAuthenticated={isAuthenticated}
+                      activation={resolveActivation(contract)}
+                      onActivate={
+                        viewType === 'my-contracts'
+                          ? handleSimulateActivate
+                          : undefined
+                      }
                     />
                   ))
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                      colSpan={10}
                       className='text-center py-12 bg-black'
                     >
                       <NoticeBanner

@@ -9,12 +9,14 @@ import { AlertSettingsProvider } from '../context/AlertSettingsProvider';
 import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvider';
 import { Toaster } from '@/components/ui/sonner';
 import Footer from '@/components/Footer';
+import PrototypeBanner from '@/components/PrototypeBanner';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Stylus Cache Manager',
-  description: 'For Managing Arbitrum Stylus Cache',
+  title: 'Stylus Manager',
+  description:
+    'Manage caching, activation, and lifecycle of your Stylus contracts on Arbitrum.',
   icons: {
     icon: '/favicon.svg',
   },
@@ -32,6 +34,7 @@ export default function RootLayout({
           <BlockchainSelectionProvider>
             <AuthenticationProvider>
               <AlertSettingsProvider>
+                <PrototypeBanner />
                 <Header />
                 {children}
                 <Footer />

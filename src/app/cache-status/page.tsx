@@ -7,7 +7,7 @@ import CacheManagerActivity from '@/components/CacheManagerActivity';
 export default function CacheStatusPage() {
   return (
     <div
-      className='min-h-screen xl:h-screen flex flex-col pt-16 overflow-auto xl:overflow-hidden'
+      className='min-h-screen xl:h-screen flex flex-col pt-24 overflow-auto xl:overflow-hidden'
       style={{
         background:
           'linear-gradient(180deg, #116AAE -193.97%, #072C48 152.16%)',

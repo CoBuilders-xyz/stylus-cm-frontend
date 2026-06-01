@@ -122,7 +122,7 @@ export const AuthenticationProvider: React.FC<{
 }> = ({ children }) => {
   const { address, isConnected } = useAccount();
   const [accessToken, setAccessToken] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { signMessageAsync } = useSignMessage();
 
@@ -250,9 +250,18 @@ export const AuthenticationProvider: React.FC<{
     }
   }, [address, isConnected, signMessageAsync, isAuthenticated]);
 
+  // Prototype mode: every visitor is treated as authenticated so reviewers can
+  // see the activation surface without connecting a wallet. The real auth
+  // machinery above still runs so the rest of the app keeps working if a
+  // wallet is connected.
   return (
     <AuthenticationContext.Provider
-      value={{ accessToken, isLoading, isAuthenticated, clearAuthAndReauth }}
+      value={{
+        accessToken: accessToken || 'prototype-mock-token',
+        isLoading: false,
+        isAuthenticated: true,
+        clearAuthAndReauth,
+      }}
     >
       {children}
     </AuthenticationContext.Provider>

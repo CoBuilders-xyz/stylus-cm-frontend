@@ -8,7 +8,9 @@ import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
-import { X, Info } from 'lucide-react';
+import { X, Info, AlertTriangle, Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import { PROTOTYPE_ACTIVATION_TOAST } from '@/lib/prototype-mocks';
 import { useBytecode, useReadContract } from 'wagmi';
 import { isAddress } from 'viem';
 import {
@@ -50,6 +52,7 @@ export default function AddContract({
     type: 'loading' | 'success' | 'warning' | 'error';
   } | null>(null);
   const [isWasmContract, setIsWasmContract] = useState(false);
+  const [simulatedActivated, setSimulatedActivated] = useState(false);
 
   // Get bytecode for the contract address if it's a valid address
   const {
@@ -170,11 +173,20 @@ export default function AddContract({
           typeof timeLeftSeconds === 'bigint' &&
           timeLeftSeconds === BigInt(0)
         ) {
+          if (simulatedActivated) {
+            setValidationState({
+              message: 'Valid WASM contract (activation simulated).',
+              type: 'success',
+            });
+            setAddressError(null);
+            return;
+          }
           setValidationState({
             message: 'WASM contract has expired and needs reactivation',
-            type: 'error',
+            type: 'warning',
           });
-          setAddressError('WASM contract has expired and needs reactivation');
+          // Allow form submission even when expired so the user can still add it
+          setAddressError(null);
           return;
         }
 
@@ -208,6 +220,7 @@ export default function AddContract({
     timeLeftSeconds,
     isCheckingWasmActive,
     wasmActiveError,
+    simulatedActivated,
   ]);
 
   // Function to validate Ethereum address
@@ -237,6 +250,7 @@ export default function AddContract({
     // Clear validation states when user types
     setValidationState(null);
     setIsWasmContract(false); // Reset WASM status on address change
+    setSimulatedActivated(false);
 
     // Validate address on every change for immediate feedback
     if (newAddress.trim()) {
@@ -247,6 +261,15 @@ export default function AddContract({
     }
   };
 
+  const handleSimulateActivate = () => {
+    setSimulatedActivated(true);
+    toast.success(PROTOTYPE_ACTIVATION_TOAST);
+  };
+
+  const isExpiredState =
+    validationState?.type === 'warning' &&
+    validationState?.message?.includes('expired');
+
   // Handle name input change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContractName(e.target.value);
@@ -254,11 +277,10 @@ export default function AddContract({
 
   // Move to the next step
   const handleNextStep = () => {
-    if (
-      validateAddress(contractAddress) &&
-      !addressError &&
-      validationState?.type === 'success'
-    ) {
+    const canProceed =
+      validationState?.type === 'success' ||
+      validationState?.type === 'warning';
+    if (validateAddress(contractAddress) && !addressError && canProceed) {
       setStep(2);
     }
   };
@@ -385,7 +407,7 @@ export default function AddContract({
               {addressError && (
                 <p className='text-red-500 text-sm mt-1'>{addressError}</p>
               )}
-              {validationState && (
+              {validationState && !isExpiredState && (
                 <p
                   className={`text-sm mt-1 ${
                     validationState.type === 'loading'
@@ -399,6 +421,31 @@ export default function AddContract({
                 >
                   {validationState.message}
                 </p>
+              )}
+              {isExpiredState && (
+                <div className='mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 p-4'>
+                  <div className='flex items-start gap-2'>
+                    <AlertTriangle className='h-4 w-4 text-amber-300 mt-0.5 shrink-0' />
+                    <div className='flex-1'>
+                      <p className='text-sm font-medium text-amber-200'>
+                        WASM contract has expired and needs reactivation
+                      </p>
+                      <p className='text-xs text-amber-100/80 mt-1'>
+                        Stylus programs expire after a fixed period. You can
+                        still add this contract, or run a one-click reactivation
+                        first.
+                      </p>
+                      <Button
+                        type='button'
+                        onClick={handleSimulateActivate}
+                        className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2'
+                      >
+                        <Zap className='h-4 w-4' />
+                        Activate now
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 

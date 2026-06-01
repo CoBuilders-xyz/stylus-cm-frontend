@@ -1,5 +1,6 @@
 import { ApiClient } from './api';
 import { Blockchain } from './contractService';
+import { MOCK_BLOCKCHAINS } from '@/lib/prototype-mocks';
 
 /**
  * Blockchain service for handling blockchain-related API requests
@@ -22,18 +23,10 @@ export class BlockchainService {
    * @returns Promise with array of blockchains
    */
   async getBlockchains(): Promise<Blockchain[]> {
-    // Use cached value if available
-    if (BlockchainService.cachedBlockchains) {
-      return BlockchainService.cachedBlockchains;
+    if (!BlockchainService.cachedBlockchains) {
+      BlockchainService.cachedBlockchains = MOCK_BLOCKCHAINS;
     }
-
-    // Fetch blockchains from API
-    const blockchains = await this.apiClient.get<Blockchain[]>('/blockchains');
-
-    // Cache the result
-    BlockchainService.cachedBlockchains = blockchains;
-
-    return blockchains;
+    return Promise.resolve(BlockchainService.cachedBlockchains);
   }
 
   /**

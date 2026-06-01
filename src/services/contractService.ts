@@ -1,5 +1,13 @@
 import { ApiClient } from './api';
 import { AlertType } from '@/types/alerts';
+import type { ActivationInfo } from '@/lib/prototype-mocks';
+import {
+  MOCK_BLOCKCHAINS,
+  mockContracts,
+  mockUserContracts,
+  getMockContractById,
+  getMockUserContractById,
+} from '@/lib/prototype-mocks';
 
 /**
  * Blockchain data interface
@@ -98,6 +106,7 @@ export interface Contract {
   userContractId?: string; // Optional user contract ID
   isSavedByUser?: boolean; // Flag to indicate if the contract is already saved by the user
   savedContractName?: string | null; // Name of the saved contract
+  activation?: ActivationInfo; // Prototype-only: activation state metadata
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
@@ -238,31 +247,38 @@ export class ContractService {
   async getExploreContracts(
     page: number = 1,
     limit: number = 10,
-    sortBy: string[] = ['contract.lastBid'],
-    sortOrder: 'ASC' | 'DESC' | null = 'DESC',
+    _sortBy: string[] = ['contract.lastBid'],
+    _sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
   ): Promise<PaginatedResponse<Contract>> {
-    if (!this.currentBlockchainId) {
-      throw new Error('No blockchain ID available for getExploreContracts');
-    }
-
-    let url = `/contracts?blockchainId=${this.currentBlockchainId}&page=${page}&limit=${limit}`;
-
-    // Add sorting parameters if provided
-    if (sortBy.length > 0) {
-      url += `&sortBy=${sortBy.join(',')}`;
-    }
-
-    if (sortOrder) {
-      url += `&sortDirection=${sortOrder}`;
-    }
-
-    // Add search parameter if provided
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`;
-    }
-
-    return this.apiClient.get<PaginatedResponse<Contract>>(url);
+    void _sortBy;
+    void _sortOrder;
+    const filtered = search
+      ? mockContracts.filter(
+          (c) =>
+            c.address.toLowerCase().includes(search.toLowerCase()) ||
+            (c.name || '').toLowerCase().includes(search.toLowerCase())
+        )
+      : mockContracts;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit).map((c) => ({
+      ...c,
+      isSavedByUser: true,
+      savedContractName: c.name || c.savedContractName || null,
+    }));
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    return Promise.resolve({
+      data,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
   }
 
   /**
@@ -277,31 +293,34 @@ export class ContractService {
   async getMyContracts(
     page: number = 1,
     limit: number = 10,
-    sortBy: string[] = ['contract.lastBid'],
-    sortOrder: 'ASC' | 'DESC' | null = 'DESC',
+    _sortBy: string[] = ['contract.lastBid'],
+    _sortOrder: 'ASC' | 'DESC' | null = 'DESC',
     search?: string
   ): Promise<PaginatedResponse<UserContract>> {
-    if (!this.currentBlockchainId) {
-      throw new Error('No blockchain ID available for getMyContracts');
-    }
-
-    let url = `/user-contracts?blockchainId=${this.currentBlockchainId}&page=${page}&limit=${limit}`;
-
-    // Add sorting parameters if provided
-    if (sortBy.length > 0) {
-      url += `&sortBy=${sortBy.join(',')}`;
-    }
-
-    if (sortOrder) {
-      url += `&sortDirection=${sortOrder}`;
-    }
-
-    // Add search parameter if provided
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`;
-    }
-
-    return this.apiClient.get<PaginatedResponse<UserContract>>(url);
+    void _sortBy;
+    void _sortOrder;
+    const filtered = search
+      ? mockUserContracts.filter(
+          (uc) =>
+            uc.address.toLowerCase().includes(search.toLowerCase()) ||
+            (uc.name || '').toLowerCase().includes(search.toLowerCase())
+        )
+      : mockUserContracts;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit);
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    return Promise.resolve({
+      data,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
   }
 
   /**
@@ -310,7 +329,12 @@ export class ContractService {
    * @returns Promise with the user contract
    */
   async getUserContract(id: string): Promise<UserContract> {
-    return this.apiClient.get<UserContract>(`/user-contracts/${id}`);
+    const uc = getMockUserContractById(id);
+    if (!uc) {
+      const first = mockUserContracts[0];
+      return Promise.resolve(first);
+    }
+    return Promise.resolve(uc);
   }
 
   /**
@@ -323,9 +347,16 @@ export class ContractService {
     id: string,
     name: string
   ): Promise<UserContract> {
-    return this.apiClient.patch<UserContract>(`/user-contracts/${id}/name`, {
-      name,
-    });
+    const uc = getMockUserContractById(id);
+    if (uc) {
+      uc.name = name;
+      if (uc.contract) {
+        uc.contract.name = name;
+        uc.contract.savedContractName = name;
+      }
+      return Promise.resolve(uc);
+    }
+    return Promise.resolve(mockUserContracts[0]);
   }
 
   /**
@@ -334,7 +365,8 @@ export class ContractService {
    * @returns Promise that resolves when the contract is deleted
    */
   async deleteUserContract(id: string): Promise<void> {
-    return this.apiClient.delete<void>(`/user-contracts/${id}`);
+    void id;
+    return Promise.resolve();
   }
 
   /**
@@ -347,17 +379,24 @@ export class ContractService {
     address: string,
     blockchainId?: string
   ): Promise<SuggestedBidsResponse> {
-    const targetBlockchainId = blockchainId || this.currentBlockchainId;
-
-    if (!targetBlockchainId) {
-      throw new Error(
-        'No blockchain ID available for getSuggestedBidsByAddress'
-      );
-    }
-
-    return this.apiClient.get<SuggestedBidsResponse>(
-      `/contracts/suggest-bids/by-address/${address}?blockchainId=${targetBlockchainId}`
-    );
+    void address;
+    void blockchainId;
+    const fallback = mockContracts[0]?.evictionRisk;
+    return Promise.resolve({
+      suggestedBids: fallback?.suggestedBids ?? {
+        highRisk: '3000000000000000',
+        midRisk: '4500000000000000',
+        lowRisk: '6000000000000000',
+      },
+      cacheStats: fallback?.cacheStats ?? {
+        utilization: 75,
+        evictionRate: 0.05,
+        medianBidPerByte: '1500000',
+        competitiveness: 60,
+        cacheSizeBytes: '8388608',
+        usedCacheSizeBytes: '6291456',
+      },
+    });
   }
 
   /**
@@ -372,16 +411,37 @@ export class ContractService {
     blockchainId?: string,
     name?: string
   ): Promise<UserContract> {
-    const targetBlockchainId = blockchainId || this.currentBlockchainId;
-
-    if (!targetBlockchainId) {
-      throw new Error('No blockchain ID available for createContract');
+    void blockchainId;
+    const existing = mockUserContracts.find(
+      (uc) => uc.address.toLowerCase() === address.toLowerCase()
+    );
+    if (existing) {
+      if (name) {
+        existing.name = name;
+        if (existing.contract) existing.contract.name = name;
+      }
+      return Promise.resolve(existing);
     }
-
-    return this.apiClient.post<UserContract>('/user-contracts', {
+    const template = mockUserContracts[0];
+    const newContract: UserContract = {
+      ...template,
+      id: `mock-new-${Date.now()}`,
       address,
-      blockchainId: targetBlockchainId,
-      name,
-    });
+      name: name || 'New Contract',
+      contract: {
+        ...template.contract,
+        id: `mock-new-${Date.now()}`,
+        address,
+        name: name || 'New Contract',
+        savedContractName: name || 'New Contract',
+      },
+    };
+    mockUserContracts.push(newContract);
+    mockContracts.push(newContract.contract);
+    return Promise.resolve(newContract);
   }
 }
+
+// Re-exported helpers from the mock layer so callers can access them without
+// importing from the prototype mocks module directly.
+export { getMockContractById, MOCK_BLOCKCHAINS };
