@@ -518,17 +518,19 @@ export default function AlertsSettings({
         />
 
         {/* Header content */}
-        <div className='flex justify-between items-center p-6 relative z-10'>
-          <div>
-            <h2 className='text-2xl font-bold text-white'>
+        <div className='flex justify-between items-center p-6 relative z-10 gap-3'>
+          <div className='min-w-0 flex-1'>
+            <h2 className='text-xl sm:text-2xl font-bold text-white'>
               Set Contract Alerts
             </h2>
-            <div className='text-white/80 mt-1'>{contractAddress}</div>
+            <div className='text-white/80 mt-1 font-mono text-xs sm:text-sm truncate'>
+              {contractAddress}
+            </div>
           </div>
           <Button
             size='icon'
             onClick={onClose}
-            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
+            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md shrink-0'
           >
             <X className='h-6 w-6' />
           </Button>

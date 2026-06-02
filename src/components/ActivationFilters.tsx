@@ -1,31 +1,45 @@
 'use client';
 
 export type ActivationFilter = 'all' | 'active' | 'expiring' | 'inactive';
+export type CacheFilter = 'all' | 'cached' | 'uncached';
 
-const OPTIONS: {
-  value: ActivationFilter;
+interface FilterOption<T extends string> {
+  value: T;
   label: string;
   dot?: string;
-}[] = [
+}
+
+const ACTIVATION_OPTIONS: FilterOption<ActivationFilter>[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active', dot: 'bg-green-500' },
   { value: 'expiring', label: 'Expiring', dot: 'bg-amber-400' },
   { value: 'inactive', label: 'Inactive', dot: 'bg-red-500' },
 ];
 
-interface Props {
-  value: ActivationFilter;
-  onChange: (v: ActivationFilter) => void;
-}
+const CACHE_OPTIONS: FilterOption<CacheFilter>[] = [
+  { value: 'all', label: 'All' },
+  { value: 'cached', label: 'Cached', dot: 'bg-emerald-500' },
+  { value: 'uncached', label: 'Not Cached', dot: 'bg-gray-500' },
+];
 
-export default function ActivationFilters({ value, onChange }: Props) {
+function PillFilterGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: FilterOption<T>[];
+  onChange: (v: T) => void;
+}) {
   return (
     <div className='flex items-center gap-1.5 flex-wrap'>
       <span className='text-[11px] uppercase tracking-wider text-gray-500 mr-1'>
-        Activation
+        {label}
       </span>
       <div className='inline-flex items-center rounded-full border border-gray-700 bg-black/30 p-0.5 backdrop-blur'>
-        {OPTIONS.map((opt) => {
+        {options.map((opt) => {
           const selected = value === opt.value;
           return (
             <button
@@ -49,5 +63,37 @@ export default function ActivationFilters({ value, onChange }: Props) {
         })}
       </div>
     </div>
+  );
+}
+
+interface ActivationProps {
+  value: ActivationFilter;
+  onChange: (v: ActivationFilter) => void;
+}
+
+export default function ActivationFilters({ value, onChange }: ActivationProps) {
+  return (
+    <PillFilterGroup
+      label='Activation'
+      value={value}
+      options={ACTIVATION_OPTIONS}
+      onChange={onChange}
+    />
+  );
+}
+
+interface CacheProps {
+  value: CacheFilter;
+  onChange: (v: CacheFilter) => void;
+}
+
+export function CacheFilters({ value, onChange }: CacheProps) {
+  return (
+    <PillFilterGroup
+      label='Cache'
+      value={value}
+      options={CACHE_OPTIONS}
+      onChange={onChange}
+    />
   );
 }

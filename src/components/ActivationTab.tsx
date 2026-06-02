@@ -204,8 +204,8 @@ export default function ActivationTab({
             No activation events recorded for this contract yet.
           </p>
         ) : (
-          <div className='overflow-x-auto -mx-2'>
-            <table className='w-full text-sm'>
+          <div className='-mx-6 px-6 overflow-x-auto'>
+            <table className='min-w-[560px] w-full text-sm'>
               <thead>
                 <tr className='border-b border-[#2C2E30]'>
                   <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>

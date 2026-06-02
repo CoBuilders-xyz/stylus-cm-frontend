@@ -55,6 +55,8 @@ import { toast } from 'sonner';
 import ActivationBadge from '@/components/ActivationBadge';
 import ActivationFilters, {
   ActivationFilter,
+  CacheFilters,
+  CacheFilter,
 } from '@/components/ActivationFilters';
 import ContractMobileCard from '@/components/ContractMobileCard';
 import {
@@ -498,6 +500,7 @@ function ContractsTable({
   const [searchInput, setSearchInput] = useState('');
   const [activationFilter, setActivationFilter] =
     useState<ActivationFilter>('all');
+  const [cacheFilter, setCacheFilter] = useState<CacheFilter>('all');
   const [activationOverrides, setActivationOverrides] = useState<
     Record<string, ActivationInfo>
   >({});
@@ -523,11 +526,27 @@ function ContractsTable({
   // Use provided contracts if available, otherwise use fetched contracts
   const displayContracts = useMemo(() => {
     const source = initialContracts?.length ? initialContracts : contracts;
-    if (activationFilter === 'all') return source;
-    return source.filter(
-      (c) => resolveActivation(c).status === activationFilter
-    );
-  }, [initialContracts, contracts, activationFilter, resolveActivation]);
+    return source.filter((c) => {
+      if (
+        activationFilter !== 'all' &&
+        resolveActivation(c).status !== activationFilter
+      ) {
+        return false;
+      }
+      if (cacheFilter !== 'all') {
+        const isCached = !!c.bytecode?.isCached;
+        if (cacheFilter === 'cached' && !isCached) return false;
+        if (cacheFilter === 'uncached' && isCached) return false;
+      }
+      return true;
+    });
+  }, [
+    initialContracts,
+    contracts,
+    activationFilter,
+    cacheFilter,
+    resolveActivation,
+  ]);
 
   // Handle page changes through the hook
   const handlePageChange = useCallback(
@@ -622,11 +641,12 @@ function ContractsTable({
         )}
       </div>
 
-      <div className='mb-6 flex-shrink-0'>
+      <div className='mb-6 flex-shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5'>
         <ActivationFilters
           value={activationFilter}
           onChange={setActivationFilter}
         />
+        <CacheFilters value={cacheFilter} onChange={setCacheFilter} />
       </div>
 
       {isLoading && (
