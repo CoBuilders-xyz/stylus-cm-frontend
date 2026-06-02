@@ -4,13 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { Abi } from 'viem';
-import {
-  AlertTriangle,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Info,
-} from 'lucide-react';
+import { AlertTriangle, Loader2, Info } from 'lucide-react';
+import * as SwitchPrimitive from '@radix-ui/react-switch';
+import { cn } from '@/lib/utils';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,8 +48,6 @@ export function AutomatedBiddingSection({
   const [fundingError, setFundingError] = useState<string | null>(null);
   const [disclaimerChecked, setDisclaimerChecked] = useState(false);
 
-  // Separate state for controlling panel visibility
-  const [showAutomationPanel, setShowAutomationPanel] = useState(false);
   const [contractExists, setContractExists] = useState(false);
   const [originalMaxBid, setOriginalMaxBid] = useState('0');
 
@@ -535,22 +529,31 @@ export function AutomatedBiddingSection({
             intervention.
           </p>
         </div>
-        <button
-          onClick={() => setShowAutomationPanel(!showAutomationPanel)}
-          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors'
+        <SwitchPrimitive.Root
+          checked={automatedBidding}
+          onCheckedChange={() => {
+            if (contractExists) {
+              handleToggleAutomation();
+            } else {
+              setAutomatedBidding((v) => !v);
+            }
+          }}
           disabled={isTransactionInProgress}
-          aria-label={
-            showAutomationPanel
-              ? 'Collapse automated bidding settings'
-              : 'Expand automated bidding settings'
-          }
-        >
-          {showAutomationPanel ? (
-            <ChevronUp className='w-5 h-5 text-gray-300' />
-          ) : (
-            <ChevronDown className='w-5 h-5 text-gray-300' />
+          aria-label='Toggle automated bidding'
+          className={cn(
+            'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+            'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+            'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
-        </button>
+        >
+          <SwitchPrimitive.Thumb
+            className={cn(
+              'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+              'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+            )}
+          />
+        </SwitchPrimitive.Root>
       </div>
 
       {/* Display user balance */}
@@ -577,51 +580,18 @@ export function AutomatedBiddingSection({
                 {automatedBidding ? 'Enabled' : 'Disabled'}
               </span>
             </div>
-            <div className='flex items-center px-2'>
-              <Button
-                onClick={handleToggleAutomation}
-                className='bg-transparent border border-gray-600 text-xs text-white hover:bg-gray-800 flex items-center px-2 mx-2 py-1 h-6'
-                disabled={isTransactionInProgress || isSuccess}
-              >
-                {isTransactionInProgress ? (
-                  <div className='flex items-center'>
-                    <Loader2 className='h-3 w-3 animate-spin' />
-                  </div>
-                ) : automatedBidding ? (
-                  'Disable'
-                ) : (
-                  'Enable'
-                )}
-              </Button>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className='w-4 h-4 cursor-help text-gray-400' />
-                </TooltipTrigger>
-                <TooltipContent>
-                  {automatedBidding ? (
-                    <p className='max-w-xs'>
-                      <strong>Disable automation for this contract.</strong>
-                      <br />
-                      It will no longer be considered in upcoming automated
-                      bidding rounds.
-                    </p>
-                  ) : (
-                    <p className='max-w-xs'>
-                      <strong>Enable automation for this contract.</strong>
-                      <br />
-                      It will be included in the next automated bidding round.
-                    </p>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            </div>
           </div>
         )}
       </div>
 
-      {/* Form with all inputs including the toggle - shown only when panel is open */}
-      {showAutomationPanel && (
-        <div className='mt-4 relative z-10'>
+      {/* Form with all inputs gated by the master switch */}
+      <div
+        className={cn(
+          'mt-4',
+          !automatedBidding && 'opacity-50 pointer-events-none select-none'
+        )}
+        aria-disabled={!automatedBidding}
+      >
           <div className='grid grid-cols-[auto_1fr_auto] gap-y-5'>
             {/* Row 1: Automation Funding - only show for new contracts */}
             {!contractExists && (
@@ -815,7 +785,6 @@ export function AutomatedBiddingSection({
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }

@@ -36,7 +36,6 @@ import EditableContractName, {
 } from './EditableContractName';
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
-import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -48,6 +47,7 @@ import {
 import StatusSummaryRow from '@/components/StatusSummaryRow';
 import ActivationTab from '@/components/ActivationTab';
 import ContractHistoryTab from '@/components/ContractHistoryTab';
+import CacheHero from '@/components/CacheHero';
 import {
   ActivationInfo,
   getActivationInfo,
@@ -619,13 +619,11 @@ export default function ContractDetails({
                     </TabsList>
 
                     <TabsContent value='cache'>
-                      <ContractStatus
-                        isLoading={isLoadingContract}
-                        isCached={contractData?.bytecode.isCached}
+                      <CacheHero
+                        isCached={!!contractData?.bytecode.isCached}
                         bidBlockTimestamp={contractData?.bidBlockTimestamp}
                         effectiveBid={contractData?.effectiveBid}
                         lastBid={contractData?.lastBid}
-                        viewType='my-contracts'
                       />
 
                       <ContractInfo
@@ -723,13 +721,11 @@ export default function ContractDetails({
                     </TabsList>
 
                     <TabsContent value='cache'>
-                      <ContractStatus
-                        isLoading={isLoadingContract}
-                        isCached={contractData?.bytecode.isCached}
+                      <CacheHero
+                        isCached={!!contractData?.bytecode.isCached}
                         bidBlockTimestamp={contractData?.bidBlockTimestamp}
                         effectiveBid={contractData?.effectiveBid}
                         lastBid={contractData?.lastBid}
-                        viewType='explore-contracts'
                       />
                       <ContractInfo
                         contractData={contractData}
