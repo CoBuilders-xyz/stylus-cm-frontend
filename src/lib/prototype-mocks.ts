@@ -590,6 +590,20 @@ export function activationLabel(info: ActivationInfo): string {
   return `Active · ${humanizeActivationTime(info)}`;
 }
 
+export function activationStatusLabel(info: ActivationInfo): string {
+  if (info.status === 'inactive') return 'Inactive';
+  if (info.status === 'expiring') return 'Expiring';
+  return 'Active';
+}
+
+export function activationSubLabel(info: ActivationInfo): string {
+  if (info.status === 'inactive') return 'Reactivation required';
+  const remaining = humanizeActivationTime(info);
+  // strip the leading "in "
+  const tail = remaining.startsWith('in ') ? remaining.slice(3) : remaining;
+  return `expires in ${tail}`;
+}
+
 export function activationDotClass(status: ActivationStatus): string {
   switch (status) {
     case 'active':

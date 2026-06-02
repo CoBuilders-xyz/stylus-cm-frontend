@@ -19,7 +19,8 @@ import {
   PROTOTYPE_ACTIVATION_TOAST,
   PROTOTYPE_AUTO_ACTIVATION_TOAST,
   activationDotClass,
-  activationLabel,
+  activationStatusLabel,
+  activationSubLabel,
 } from '@/lib/prototype-mocks';
 import { formatDate } from '@/utils/formatting';
 
@@ -63,20 +64,31 @@ export default function ActivationTab({
       <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
         <div className='flex items-start justify-between gap-4 flex-wrap'>
           <div className='flex items-center gap-3'>
-            <span
-              className={`inline-block h-3 w-3 rounded-full ${activationDotClass(
-                activation.status
-              )}`}
-            />
+            <span className='relative mt-1 flex shrink-0 items-center justify-center'>
+              {(activation.status === 'active' ||
+                activation.status === 'expiring') && (
+                <span
+                  aria-hidden
+                  className={`absolute inline-flex h-4 w-4 rounded-full opacity-50 animate-ping ${activationDotClass(
+                    activation.status
+                  )}`}
+                />
+              )}
+              <span
+                className={`relative inline-block h-3 w-3 rounded-full ${activationDotClass(
+                  activation.status
+                )}`}
+              />
+            </span>
             <div>
               <div className='text-xs uppercase tracking-wide text-gray-400'>
                 Activation
               </div>
-              <div className='text-2xl font-bold capitalize'>
-                {activation.status}
+              <div className='text-2xl font-bold'>
+                {activationStatusLabel(activation)}
               </div>
-              <div className='text-sm text-gray-300 mt-1'>
-                {activationLabel(activation)}
+              <div className='text-sm text-gray-400 mt-1'>
+                {activationSubLabel(activation)}
               </div>
             </div>
           </div>
