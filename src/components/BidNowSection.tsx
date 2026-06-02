@@ -470,7 +470,7 @@ export function BidNowSection({
           </div>
         )}
 
-        <div className='flex flex-col @md/panel:flex-row @md/panel:justify-between @md/panel:items-start gap-4'>
+        <div className='flex flex-col gap-3'>
           <div>
             <h3 className='text-lg font-medium'>Bid now</h3>
             <p className='text-gray-400 text-sm'>
@@ -479,63 +479,55 @@ export function BidNowSection({
                 : 'Higher bids extend cache duration.'}
             </p>
           </div>
-          <div className='flex flex-col items-stretch @md/panel:items-end gap-2'>
-            <div className='flex items-start gap-2'>
-              <div className='flex flex-col flex-1 @md/panel:flex-none @md/panel:w-[200px]'>
-                <div className='relative'>
-                  <Input
-                    type='text'
-                    placeholder='Bid amount'
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    className={`pr-12 bg-[#1A1919] border text-white rounded-md ${
-                      isDisabled
-                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
-                        : ''
-                    } ${inputError ? 'border-red-500' : 'border-gray-700'}`}
-                    disabled={isDisabled}
-                    onClick={openSuggestedButtons}
-                  />
-                  <div
-                    className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-sm ${
-                      isDisabled ? 'text-gray-500' : 'text-gray-400'
-                    }`}
-                  >
-                    ETH
-                  </div>
-                </div>
-                {inputError && (
-                  <div className='text-red-400 text-xs text-left mt-1'>
-                    {inputError}
-                  </div>
-                )}
-              </div>
-              <div className='self-start'>
-                <Button
-                  onClick={handleSubmitBid}
-                  disabled={isDisabled || !!inputError}
-                  className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-xs flex items-center disabled:opacity-50'
-                >
-                  {isPlacingBid ? (
-                    <div className='flex items-center'>
-                      <Loader2 className='h-4 w-4 animate-spin' />
-                    </div>
-                  ) : isSuccess && !hasReloaded ? (
-                    <div className='flex items-center'>
-                      <Loader2 className='h-4 w-4 animate-spin' />
-                    </div>
-                  ) : (
-                    'Place Bid'
-                  )}
-                </Button>
+          <div className='flex flex-col gap-2 min-w-0'>
+            <div className='relative w-full min-w-0'>
+              <Input
+                type='text'
+                placeholder='Bid amount'
+                value={bidAmount}
+                onChange={(e) => setBidAmount(e.target.value)}
+                className={`pr-12 bg-[#1A1919] border text-white rounded-md w-full ${
+                  isDisabled
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                    : ''
+                } ${inputError ? 'border-red-500' : 'border-gray-700'}`}
+                disabled={isDisabled}
+                onClick={openSuggestedButtons}
+              />
+              <div
+                className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-sm ${
+                  isDisabled ? 'text-gray-500' : 'text-gray-400'
+                }`}
+              >
+                ETH
               </div>
             </div>
+            {inputError && (
+              <div className='text-red-400 text-xs text-left'>{inputError}</div>
+            )}
+            <Button
+              onClick={handleSubmitBid}
+              disabled={isDisabled || !!inputError}
+              className='w-full bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-sm flex items-center justify-center disabled:opacity-50'
+            >
+              {isPlacingBid ? (
+                <div className='flex items-center'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                </div>
+              ) : isSuccess && !hasReloaded ? (
+                <div className='flex items-center'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                </div>
+              ) : (
+                'Place Bid'
+              )}
+            </Button>
           </div>
         </div>
 
         {/* Suggested bid buttons */}
         {!isContractCached && showSuggestedButtons && suggestedBids && (
-          <div className='flex justify-between gap-2 mt-3'>
+          <div className='flex flex-wrap items-center gap-2 mt-3'>
             <Button
               size='sm'
               className='bg-transparent border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 hover:text-white flex items-center'

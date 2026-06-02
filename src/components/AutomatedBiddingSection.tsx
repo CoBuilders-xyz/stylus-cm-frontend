@@ -592,7 +592,7 @@ export function AutomatedBiddingSection({
         )}
         aria-disabled={!automatedBidding}
       >
-          <div className='grid grid-cols-1 @md/panel:grid-cols-[auto_1fr_auto] gap-y-3 @md/panel:gap-y-5'>
+          <div className='flex flex-col gap-3'>
             {/* Row 1: Automation Funding - only show for new contracts */}
             {!contractExists && (
               <>
@@ -617,8 +617,8 @@ export function AutomatedBiddingSection({
                     </Tooltip>
                   </div>
                 </div>
-                <div className='flex @md/panel:justify-end'>
-                  <div className='flex flex-col w-full @md/panel:max-w-[200px]'>
+                <div className='flex w-full'>
+                  <div className='flex flex-col w-full min-w-0'>
                     <div className='relative'>
                       <Input
                         type='text'
@@ -674,8 +674,8 @@ export function AutomatedBiddingSection({
                 </Tooltip>
               </div>
             </div>
-            <div className='flex @md/panel:justify-end'>
-              <div className='flex flex-col w-full @md/panel:max-w-[200px]'>
+            <div className='flex w-full'>
+              <div className='flex flex-col w-full min-w-0'>
                 <div className='relative'>
                   <Input
                     type='text'
@@ -707,7 +707,7 @@ export function AutomatedBiddingSection({
 
           {/* Disclaimer and Set Automation button for new contracts */}
           {!contractExists && (
-            <div className='flex items-start justify-between space-x-4 mt-6'>
+            <div className='flex flex-col gap-3 mt-6'>
               <div className='flex items-start space-x-2'>
                 <Checkbox
                   id='disclaimer'
@@ -729,7 +729,7 @@ export function AutomatedBiddingSection({
               </div>
               <Button
                 onClick={handleSetAutomation}
-                className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-xs flex items-center shrink-0 disabled:opacity-50'
+                className='w-full bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-sm flex items-center justify-center disabled:opacity-50'
                 disabled={
                   isTransactionInProgress || isSuccess || !disclaimerChecked
                 }
@@ -747,7 +747,7 @@ export function AutomatedBiddingSection({
 
           {/* Update button for existing contracts */}
           {contractExists && (
-            <div className='flex items-start justify-between space-x-4 mt-6'>
+            <div className='flex flex-col gap-3 mt-6'>
               <div className='flex items-start space-x-2'>
                 <Checkbox
                   id='disclaimer'
@@ -769,7 +769,7 @@ export function AutomatedBiddingSection({
               </div>
               <Button
                 onClick={handleUpdateAutomation}
-                className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-xs flex items-center shrink-0 disabled:opacity-50'
+                className='w-full bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-sm flex items-center justify-center disabled:opacity-50'
                 disabled={
                   isTransactionInProgress || isSuccess || !disclaimerChecked
                 }
