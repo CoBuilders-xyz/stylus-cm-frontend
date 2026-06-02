@@ -14,8 +14,9 @@ interface Props {
   isCached: boolean;
   lastCachedAt?: string;
   activation: ActivationInfo;
-  alertsCount: number;
+  alertsCount?: number;
   onConfigureAlerts?: () => void;
+  showAlerts?: boolean;
 }
 
 function Card({
@@ -42,11 +43,16 @@ export default function StatusSummaryRow({
   isCached,
   lastCachedAt,
   activation,
-  alertsCount,
+  alertsCount = 0,
   onConfigureAlerts,
+  showAlerts = true,
 }: Props) {
   return (
-    <div className='grid grid-cols-1 md:grid-cols-3 gap-3 mb-6'>
+    <div
+      className={`grid grid-cols-1 ${
+        showAlerts ? 'md:grid-cols-3' : 'md:grid-cols-2'
+      } gap-3 mb-6`}
+    >
       <Card icon={Database} label='Cache Status'>
         <div className='text-xl font-bold mt-0.5'>
           {isCached ? 'Cached' : 'Not Cached'}
@@ -94,18 +100,20 @@ export default function StatusSummaryRow({
         )}
       </Card>
 
-      <Card icon={BellRing} label='Alerts'>
-        <div className='flex items-baseline gap-2 mt-0.5'>
-          <span className='text-xl font-bold'>{alertsCount}</span>
-          <span className='text-xs text-gray-400'>active</span>
-        </div>
-        <button
-          className='mt-auto self-start text-xs text-[#2D99DD] hover:text-[#5ab2e5] font-medium'
-          onClick={onConfigureAlerts}
-        >
-          Configure →
-        </button>
-      </Card>
+      {showAlerts && (
+        <Card icon={BellRing} label='Alerts'>
+          <div className='flex items-baseline gap-2 mt-0.5'>
+            <span className='text-xl font-bold'>{alertsCount}</span>
+            <span className='text-xs text-gray-400'>active</span>
+          </div>
+          <button
+            className='mt-auto self-start text-xs text-[#2D99DD] hover:text-[#5ab2e5] font-medium'
+            onClick={onConfigureAlerts}
+          >
+            Configure →
+          </button>
+        </Card>
+      )}
     </div>
   );
 }

@@ -692,27 +692,69 @@ export default function ContractDetails({
             })()
           ) : (
             /* Explore Contracts View */
-            <>
-              {/* Main statistics in a 2-column grid layout */}
-              <ContractStatus
-                isLoading={isLoadingContract}
-                isCached={contractData?.bytecode.isCached}
-                bidBlockTimestamp={contractData?.bidBlockTimestamp}
-                effectiveBid={contractData?.effectiveBid}
-                lastBid={contractData?.lastBid}
-                viewType='explore-contracts'
-              />
+            (() => {
+              const exploreActivation = getActivationInfo(contractData);
+              const exploreActivationHistory = getMockActivationHistory(
+                contractData.id
+              );
+              return (
+                <>
+                  <StatusSummaryRow
+                    isCached={!!contractData.bytecode.isCached}
+                    lastCachedAt={contractData.bidBlockTimestamp}
+                    activation={exploreActivation}
+                    showAlerts={false}
+                  />
 
-              {/* Replace the flex items with the ContractDetailsTable */}
-              <ContractInfo
-                contractData={contractData}
-                onManageAlerts={handleContractAlerts}
-                isLoading={isLoadingContract}
-                viewType='explore-contracts'
-              />
+                  <Tabs defaultValue='cache' className='w-full'>
+                    <TabsList className='bg-[#0f0f0f] border border-[#2C2E30] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+                      <TabsTrigger
+                        value='cache'
+                        className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                      >
+                        Cache
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value='activation'
+                        className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                      >
+                        Activation
+                      </TabsTrigger>
+                    </TabsList>
 
-              {/* Add to My Contracts Section */}
-              <div className='px-6 text-center'>
+                    <TabsContent value='cache'>
+                      <ContractStatus
+                        isLoading={isLoadingContract}
+                        isCached={contractData?.bytecode.isCached}
+                        bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                        effectiveBid={contractData?.effectiveBid}
+                        lastBid={contractData?.lastBid}
+                        viewType='explore-contracts'
+                      />
+                      <ContractInfo
+                        contractData={contractData}
+                        onManageAlerts={handleContractAlerts}
+                        isLoading={isLoadingContract}
+                        viewType='explore-contracts'
+                      />
+                    </TabsContent>
+
+                    <TabsContent value='activation'>
+                      <ActivationTab
+                        activation={exploreActivation}
+                        history={exploreActivationHistory}
+                        chainId={currentBlockchain?.chainId}
+                        readOnly
+                      />
+                      <p className='mt-3 text-xs text-gray-500'>
+                        Add this contract to your list to enable one-click
+                        reactivation and auto-activation.
+                      </p>
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Add to My Contracts Section */}
+                  <div className='px-6 text-center mt-8'>
                 {!contractData.isSavedByUser ? (
                   <>
                     <div className='flex justify-center'>
@@ -750,7 +792,9 @@ export default function ContractDetails({
                   </>
                 )}
               </div>
-            </>
+                </>
+              );
+            })()
           )}
         </div>
       </ScrollArea>

@@ -29,7 +29,8 @@ interface Props {
   activation: ActivationInfo;
   history: ActivationEvent[];
   chainId?: number;
-  onActivate: () => void;
+  onActivate?: () => void;
+  readOnly?: boolean;
 }
 
 const explorerTx = (chainId: number | undefined, hash: string) => {
@@ -46,6 +47,7 @@ export default function ActivationTab({
   history,
   chainId,
   onActivate,
+  readOnly = false,
 }: Props) {
   const [autoEnabled, setAutoEnabled] = useState(
     MOCK_AUTO_ACTIVATION_DEFAULT.enabled
@@ -106,36 +108,38 @@ export default function ActivationTab({
             </div>
           </div>
 
-          {isActive ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    disabled
-                    className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
-                  >
-                    <Zap className='h-4 w-4' />
-                    Activate now
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>Already active</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              onClick={() => {
-                onActivate();
-                toast.success(PROTOTYPE_ACTIVATION_TOAST);
-              }}
-              className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20'
-            >
-              <Zap className='h-4 w-4' />
-              Activate now
-            </Button>
-          )}
+          {!readOnly &&
+            (isActive ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      disabled
+                      className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
+                    >
+                      <Zap className='h-4 w-4' />
+                      Activate now
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Already active</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                onClick={() => {
+                  onActivate?.();
+                  toast.success(PROTOTYPE_ACTIVATION_TOAST);
+                }}
+                className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20'
+              >
+                <Zap className='h-4 w-4' />
+                Activate now
+              </Button>
+            ))}
         </div>
       </div>
 
+      {!readOnly && (
       <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
         <div className='flex items-center justify-between'>
           <div>
@@ -191,6 +195,7 @@ export default function ActivationTab({
           </Button>
         </div>
       </div>
+      )}
 
       <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
         <h3 className='text-lg font-medium mb-3'>Activation history</h3>
