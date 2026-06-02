@@ -156,7 +156,13 @@ export default function AlertsPage() {
   );
 
   return (
-    <div className='min-h-[calc(100vh-104px)] pt-26 px-4 sm:px-10 pb-16 text-white'>
+    <div
+      className='px-4 sm:px-10 pb-16 text-white'
+      style={{
+        minHeight: 'calc(100dvh - var(--app-chrome-h, 96px))',
+        paddingTop: 'calc(var(--app-chrome-h, 96px) + 1.5rem)',
+      }}
+    >
       <div className='max-w-6xl mx-auto'>
         <div className='mb-6 flex items-center gap-3'>
           <Bell className='h-5 w-5' />

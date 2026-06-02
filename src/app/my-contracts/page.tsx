@@ -9,6 +9,7 @@ import AlertsSettings from '@/components/AlertsSettings';
 import { Contract, Alert } from '@/services/contractService';
 import { Alert as AlertServiceAlert } from '@/services/alertService';
 import { useContractService } from '@/hooks/useContractService';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 export default function MyContractsPage() {
   const contractService = useContractService();
@@ -34,6 +35,7 @@ export default function MyContractsPage() {
     AlertServiceAlert[]
   >([]);
 
+  const isDesktop = useMediaQuery('(min-width: 768px)');
   const panelWidth = '53%';
 
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
@@ -106,12 +108,20 @@ export default function MyContractsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-104px)] pt-26 flex flex-col'>
+    <div
+      className='flex flex-col'
+      style={{
+        height: 'calc(100dvh - var(--app-chrome-h, 96px))',
+        paddingTop: 'var(--app-chrome-h, 96px)',
+      }}
+    >
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
-        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
+        style={{
+          paddingRight: isDesktop && isPanelOpen ? panelWidth : '0',
+        }}
       >
-        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='p-4 sm:p-6 md:p-10 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='my-contracts'

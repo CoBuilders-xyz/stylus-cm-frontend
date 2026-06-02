@@ -277,7 +277,7 @@ const EventTypeFilter = React.memo(
             )
           }
         >
-          <SelectTrigger className='w-[180px] bg-black text-white border-gray-500 focus:border-white'>
+          <SelectTrigger className='w-full sm:w-[180px] bg-black text-white border-gray-500 focus:border-white'>
             <SelectValue placeholder='All Events' />
           </SelectTrigger>
           <SelectContent className='bg-black text-white border-gray-500'>
@@ -460,18 +460,18 @@ function BlockchainEventsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex justify-between items-center mb-8 flex-shrink-0'>
+      <div className='flex justify-between items-start mb-6 flex-shrink-0 gap-3 flex-wrap'>
         <h1 className='text-xl font-bold text-white'>Cache Events</h1>
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap'>
           <EventTypeFilter
             currentFilter={eventTypeFilter}
             onFilterChange={setEventTypeFilter}
           />
-          <div className='relative'>
+          <div className='relative flex-1 sm:flex-none min-w-0 sm:w-80'>
             <input
               type='text'
               placeholder='Search by contract address...'
-              className='p-2 pl-10 bg-black rounded-md w-80 border border-gray-500 focus:outline-none focus:border-white'
+              className='p-2 pl-10 bg-black rounded-md w-full border border-gray-500 focus:outline-none focus:border-white'
               value={searchInput}
               onChange={handleSearchInputChange}
               onKeyDown={handleKeyDown}

@@ -6,6 +6,10 @@
 :root {
   --background: #000000;
   --foreground: #171717;
+  /* Total height of the fixed top chrome (prototype banner + header).
+     32px banner + 64px header = 96px. Used by page-level layouts and the
+     side panel so they don't render under the chrome. */
+  --app-chrome-h: 96px;
 }
 
 @theme inline {
@@ -120,6 +124,11 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body {
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;

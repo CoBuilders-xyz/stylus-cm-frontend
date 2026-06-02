@@ -56,6 +56,7 @@ import ActivationBadge from '@/components/ActivationBadge';
 import ActivationFilters, {
   ActivationFilter,
 } from '@/components/ActivationFilters';
+import ContractMobileCard from '@/components/ContractMobileCard';
 import {
   ActivationInfo,
   getActivationInfo,
@@ -362,82 +363,108 @@ const Pagination = React.memo(
     handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   }) => {
     return (
-      <div className='flex items-center justify-between mt-4 text-sm text-white'>
-        <div className='flex items-center space-x-2'>
-          <span>Show</span>
-          <select
-            className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
-            value={pagination.limit}
-            onChange={handleItemsPerPageChange}
+      <>
+        {/* Mobile: compact Prev / page-of / Next */}
+        <div className='md:hidden flex items-center justify-between mt-4 text-sm text-white gap-3'>
+          <Button
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPreviousPage}
+            className='min-h-[40px] px-4 bg-black border border-gray-700 text-white rounded-md disabled:opacity-50'
           >
-            <option value='5'>5</option>
-            <option value='10'>10</option>
-          </select>
-          <span>entries</span>
-        </div>
-
-        <div className='flex items-center space-x-2'>
-          <span>
+            ◀ Prev
+          </Button>
+          <span className='text-xs text-gray-400 tabular-nums'>
             {pagination.totalItems > 0
-              ? `Page ${pagination.page} of ${pagination.totalPages}`
+              ? `Page ${pagination.page} / ${pagination.totalPages}`
               : 'No results'}
           </span>
-          <div className='flex space-x-1'>
-            <Button
-              onClick={() => handlePageChange(1)}
-              disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+          <Button
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+            className='min-h-[40px] px-4 bg-black border border-gray-700 text-white rounded-md disabled:opacity-50'
+          >
+            Next ▶
+          </Button>
+        </div>
+
+        {/* Desktop: full pagination */}
+        <div className='hidden md:flex items-center justify-between mt-4 text-sm text-white'>
+          <div className='flex items-center space-x-2'>
+            <span>Show</span>
+            <select
+              className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
+              value={pagination.limit}
+              onChange={handleItemsPerPageChange}
             >
-              First
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              ◀
-            </Button>
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter(
-                (page) =>
-                  Math.abs(page - pagination.page) < 3 ||
-                  page === 1 ||
-                  page === pagination.totalPages
-              )
-              .map((page, idx, arr) => (
-                <React.Fragment key={page}>
-                  {idx > 0 && arr[idx - 1] !== page - 1 && (
-                    <span className='px-2 py-1'>...</span>
-                  )}
-                  <Button
-                    onClick={() => handlePageChange(page)}
-                    className={`px-2 py-1 rounded-md ${
-                      pagination.page === page
-                        ? 'bg-black text-white'
-                        : 'bg-black text-white'
-                    }`}
-                  >
-                    {page}
-                  </Button>
-                </React.Fragment>
-              ))}
-            <Button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              ▶
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.totalPages)}
-              disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              Last
-            </Button>
+              <option value='5'>5</option>
+              <option value='10'>10</option>
+            </select>
+            <span>entries</span>
+          </div>
+
+          <div className='flex items-center space-x-2'>
+            <span>
+              {pagination.totalItems > 0
+                ? `Page ${pagination.page} of ${pagination.totalPages}`
+                : 'No results'}
+            </span>
+            <div className='flex space-x-1'>
+              <Button
+                onClick={() => handlePageChange(1)}
+                disabled={!pagination.hasPreviousPage}
+                className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              >
+                First
+              </Button>
+              <Button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPreviousPage}
+                className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              >
+                ◀
+              </Button>
+              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                .filter(
+                  (page) =>
+                    Math.abs(page - pagination.page) < 3 ||
+                    page === 1 ||
+                    page === pagination.totalPages
+                )
+                .map((page, idx, arr) => (
+                  <React.Fragment key={page}>
+                    {idx > 0 && arr[idx - 1] !== page - 1 && (
+                      <span className='px-2 py-1'>...</span>
+                    )}
+                    <Button
+                      onClick={() => handlePageChange(page)}
+                      className={`px-2 py-1 rounded-md ${
+                        pagination.page === page
+                          ? 'bg-black text-white'
+                          : 'bg-black text-white'
+                      }`}
+                    >
+                      {page}
+                    </Button>
+                  </React.Fragment>
+                ))}
+              <Button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNextPage}
+                className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              >
+                ▶
+              </Button>
+              <Button
+                onClick={() => handlePageChange(pagination.totalPages)}
+                disabled={!pagination.hasNextPage}
+                className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              >
+                Last
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 );
@@ -554,7 +581,7 @@ function ContractsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex justify-between items-start mb-4 flex-shrink-0 gap-4 flex-wrap'>
+      <div className='flex justify-between items-start mb-4 flex-shrink-0 gap-3 flex-wrap'>
         <h1 className='text-xl font-bold text-white'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
@@ -567,12 +594,12 @@ function ContractsTable({
             <span>Add Contract</span>
           </Button>
         ) : (
-          <div className='flex items-center gap-3'>
-            <div className='relative'>
+          <div className='flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap'>
+            <div className='relative flex-1 sm:flex-none min-w-0 sm:w-60'>
               <input
                 type='text'
                 placeholder='Search contracts...'
-                className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
+                className='p-2 pl-10 bg-black rounded-md w-full border border-gray-500 focus:outline-none focus:border-white'
                 value={searchInput}
                 onChange={handleSearchInputChange}
                 onKeyDown={handleKeyDown}
@@ -585,11 +612,11 @@ function ContractsTable({
               </Button>
             </div>
             <Button
-              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2 shrink-0'
               onClick={onAddNewContract}
             >
               <span>+</span>
-              <span>Add Contract</span>
+              <span>Add</span>
             </Button>
           </div>
         )}
@@ -618,9 +645,44 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
+          {/* Mobile / tablet stacked card layout */}
+          <div className='md:hidden flex-1 overflow-y-auto -mx-1 px-1'>
+            {displayContracts.length > 0 ? (
+              <div className='flex flex-col gap-3 pb-4'>
+                {displayContracts.map((contract) => (
+                  <ContractMobileCard
+                    key={contract.address}
+                    contract={contract}
+                    viewType={
+                      viewType as 'my-contracts' | 'explore-contracts'
+                    }
+                    activation={resolveActivation(contract)}
+                    isAuthenticated={isAuthenticated}
+                    onContractSelect={onContractSelect}
+                    onAddContract={onAddContract}
+                    onActivate={
+                      viewType === 'my-contracts'
+                        ? handleSimulateActivate
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className='py-8'>
+                <NoticeBanner
+                  image={noContractsFoundImage}
+                  title='No Contracts Found'
+                  description='No contracts found.'
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Desktop table layout */}
           <ScrollArea
             orientation='both'
-            className='h-[calc(100vh-350px)] min-h-[400px]'
+            className='hidden md:flex h-[calc(100vh-350px)] min-h-[400px]'
           >
             <Table className='min-w-[1100px]'>
               <TableHeader className='bg-black text-white sticky top-0 z-10'>

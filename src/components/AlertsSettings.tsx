@@ -425,7 +425,7 @@ export default function AlertsSettings({
     };
 
     return (
-      <div className='grid grid-cols-2 gap-4'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
         {allChannels.map((channel) => {
           const config = channelConfig[channel];
           if (!config) return null;
@@ -950,7 +950,7 @@ function ActivationAlertCard({
       {enabled && (
         <div className='mt-4 space-y-4'>
           {extra}
-          <div className='grid grid-cols-2 gap-4'>
+          <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
             {channelKeys.map((c) => {
               const isConfigured = availableChannels.includes(c);
               return (

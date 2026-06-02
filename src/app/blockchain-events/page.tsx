@@ -86,7 +86,13 @@ export default function BlockchainEventsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-104px)] pt-26 flex flex-col'>
+    <div
+      className='flex flex-col'
+      style={{
+        height: 'calc(100dvh - var(--app-chrome-h, 96px))',
+        paddingTop: 'var(--app-chrome-h, 96px)',
+      }}
+    >
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
         style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}

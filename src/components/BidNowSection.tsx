@@ -470,7 +470,7 @@ export function BidNowSection({
           </div>
         )}
 
-        <div className='flex justify-between items-start gap-4 flex-wrap'>
+        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4'>
           <div>
             <h3 className='text-lg font-medium'>Bid now</h3>
             <p className='text-gray-400 text-sm'>
@@ -479,9 +479,9 @@ export function BidNowSection({
                 : 'Higher bids extend cache duration.'}
             </p>
           </div>
-          <div className='flex flex-col items-end gap-2'>
+          <div className='flex flex-col items-stretch sm:items-end gap-2'>
             <div className='flex items-start gap-2'>
-              <div className='flex flex-col w-full max-w-[200px]'>
+              <div className='flex flex-col flex-1 sm:flex-none sm:w-[200px]'>
                 <div className='relative'>
                   <Input
                     type='text'
