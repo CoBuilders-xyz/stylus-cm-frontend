@@ -592,7 +592,7 @@ export function AutomatedBiddingSection({
         )}
         aria-disabled={!automatedBidding}
       >
-          <div className='grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-y-3 sm:gap-y-5'>
+          <div className='grid grid-cols-1 @md/panel:grid-cols-[auto_1fr_auto] gap-y-3 @md/panel:gap-y-5'>
             {/* Row 1: Automation Funding - only show for new contracts */}
             {!contractExists && (
               <>
@@ -617,8 +617,8 @@ export function AutomatedBiddingSection({
                     </Tooltip>
                   </div>
                 </div>
-                <div className='flex sm:justify-end'>
-                  <div className='flex flex-col w-full sm:max-w-[200px]'>
+                <div className='flex @md/panel:justify-end'>
+                  <div className='flex flex-col w-full @md/panel:max-w-[200px]'>
                     <div className='relative'>
                       <Input
                         type='text'
@@ -674,8 +674,8 @@ export function AutomatedBiddingSection({
                 </Tooltip>
               </div>
             </div>
-            <div className='flex sm:justify-end'>
-              <div className='flex flex-col w-full sm:max-w-[200px]'>
+            <div className='flex @md/panel:justify-end'>
+              <div className='flex flex-col w-full @md/panel:max-w-[200px]'>
                 <div className='relative'>
                   <Input
                     type='text'

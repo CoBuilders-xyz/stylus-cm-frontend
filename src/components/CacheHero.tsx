@@ -36,7 +36,7 @@ export default function CacheHero({
     <div
       className={`relative overflow-hidden rounded-lg border border-[#2C2E30] bg-gradient-to-br ${gradient} p-6 mb-6`}
     >
-      <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6'>
+      <div className='flex flex-col @md/panel:flex-row @md/panel:items-start @md/panel:justify-between gap-4 @md/panel:gap-6'>
         <div className='flex items-center gap-4 min-w-0'>
           <span className='relative flex shrink-0 items-center justify-center'>
             {isCached && (
@@ -53,18 +53,20 @@ export default function CacheHero({
             <div className='text-[11px] uppercase tracking-wider text-gray-500 font-medium'>
               Cache Status
             </div>
-            <div className={`text-2xl sm:text-3xl font-bold ${textClass}`}>
+            <div
+              className={`text-2xl @md/panel:text-3xl font-bold ${textClass}`}
+            >
               {statusLabel}
             </div>
             <div className='text-sm text-gray-400 mt-0.5 truncate'>{sub}</div>
           </div>
         </div>
 
-        <div className='sm:text-right border-t border-[#2C2E30] sm:border-0 pt-3 sm:pt-0'>
+        <div className='@md/panel:text-right border-t border-[#2C2E30] @md/panel:border-0 pt-3 @md/panel:pt-0'>
           <div className='text-[11px] uppercase tracking-wider text-gray-500 font-medium'>
             Effective Bid
           </div>
-          <div className='text-2xl sm:text-3xl font-bold text-white tabular-nums'>
+          <div className='text-2xl @md/panel:text-3xl font-bold text-white tabular-nums'>
             {eff ? `${eff} ETH` : '—'}
           </div>
           {bid && (

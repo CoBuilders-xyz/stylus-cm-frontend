@@ -204,8 +204,86 @@ export default function ActivationTab({
             No activation events recorded for this contract yet.
           </p>
         ) : (
-          <div className='-mx-6 px-6 overflow-x-auto'>
-            <table className='min-w-[560px] w-full text-sm'>
+          <>
+            {/* Narrow-container card stack */}
+            <ul className='@lg/panel:hidden flex flex-col gap-2'>
+              {history.map((evt) => {
+                const url = explorerTx(chainId, evt.txHash);
+                return (
+                  <li
+                    key={evt.id}
+                    className='rounded-md border border-[#1f1f1f] p-3 text-sm'
+                  >
+                    <div className='flex items-center justify-between gap-3 mb-2'>
+                      <span
+                        className={`inline-flex items-center gap-2 text-xs ${
+                          evt.status === 'success'
+                            ? 'text-green-400'
+                            : 'text-red-400'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${
+                            evt.status === 'success'
+                              ? 'bg-green-500'
+                              : 'bg-red-500'
+                          }`}
+                        />
+                        <span className='capitalize'>{evt.status}</span>
+                      </span>
+                      <span className='text-xs text-gray-400 whitespace-nowrap'>
+                        {formatDate(evt.date)}
+                      </span>
+                    </div>
+                    {evt.note && (
+                      <div className='text-[11px] text-gray-500 mb-2'>
+                        {evt.note}
+                      </div>
+                    )}
+                    <div className='grid grid-cols-2 gap-2 text-xs mb-2'>
+                      <div>
+                        <div className='text-[10px] uppercase tracking-wider text-gray-500'>
+                          Value
+                        </div>
+                        <div className='text-gray-200 tabular-nums'>
+                          {evt.valueConsumedEth} ETH
+                        </div>
+                      </div>
+                      <div>
+                        <div className='text-[10px] uppercase tracking-wider text-gray-500'>
+                          Gas
+                        </div>
+                        <div className='text-gray-200 tabular-nums'>
+                          {Number(evt.gasUsed).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className='text-[10px] uppercase tracking-wider text-gray-500'>
+                      Tx hash
+                    </div>
+                    {url ? (
+                      <a
+                        href={url}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='font-mono text-xs text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
+                      >
+                        {truncate(evt.txHash)}
+                        <ExternalLink className='h-3 w-3' />
+                      </a>
+                    ) : (
+                      <span className='font-mono text-xs text-gray-300'>
+                        {truncate(evt.txHash)}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Wide-container full table */}
+            <div className='hidden @lg/panel:block -mx-6 px-6 overflow-x-auto'>
+              <table className='min-w-[560px] w-full text-sm'>
               <thead>
                 <tr className='border-b border-[#2C2E30]'>
                   <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
@@ -285,7 +363,8 @@ export default function ActivationTab({
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

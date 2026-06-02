@@ -55,7 +55,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
                 aria-hidden
                 className='mx-auto mt-2 mb-1 h-1.5 w-12 shrink-0 rounded-full bg-gray-700'
               />
-              <div className='flex-1 overflow-y-auto'>
+              <div className='@container/panel flex-1 overflow-y-auto'>
                 {children || (
                   <div className='flex flex-col items-center justify-center h-80 text-gray-400 p-6'>
                     <p>Select a contract to view details</p>
@@ -82,7 +82,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
           height: 'calc(100vh - var(--app-chrome-h, 96px))',
         }}
       >
-        <div className='overflow-y-auto h-full'>
+        <div className='@container/panel overflow-y-auto h-full'>
           {children || (
             <div className='flex flex-col items-center justify-center h-80 text-gray-400 p-6'>
               <p>Select a contract to view details</p>
