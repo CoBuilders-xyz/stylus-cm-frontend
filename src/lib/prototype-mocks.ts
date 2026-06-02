@@ -590,6 +590,27 @@ export function activationLabel(info: ActivationInfo): string {
   return `Active · ${humanizeActivationTime(info)}`;
 }
 
+export function formatRelativeTime(isoDate: string): string {
+  const date = new Date(isoDate).getTime();
+  if (Number.isNaN(date)) return isoDate;
+  const diff = Math.floor((Date.now() - date) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < HOUR) {
+    const m = Math.floor(diff / 60);
+    return `${m} min${m === 1 ? '' : 's'} ago`;
+  }
+  if (diff < DAY) {
+    const h = Math.floor(diff / HOUR);
+    return `${h} hour${h === 1 ? '' : 's'} ago`;
+  }
+  const d = Math.floor(diff / DAY);
+  if (d < 30) return `${d} day${d === 1 ? '' : 's'} ago`;
+  const months = Math.floor(d / 30);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years === 1 ? '' : 's'} ago`;
+}
+
 export function activationStatusLabel(info: ActivationInfo): string {
   if (info.status === 'inactive') return 'Inactive';
   if (info.status === 'expiring') return 'Expiring';

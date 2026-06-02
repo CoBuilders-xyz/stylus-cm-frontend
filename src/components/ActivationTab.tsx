@@ -21,6 +21,7 @@ import {
   activationDotClass,
   activationStatusLabel,
   activationSubLabel,
+  activationTextClass,
 } from '@/lib/prototype-mocks';
 import { formatDate } from '@/utils/formatting';
 
@@ -61,33 +62,45 @@ export default function ActivationTab({
 
   return (
     <div className='space-y-6'>
-      <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
+      <div
+        className={`relative overflow-hidden rounded-lg border border-[#2C2E30] bg-gradient-to-br p-6 ${
+          activation.status === 'active'
+            ? 'from-green-500/5 to-transparent'
+            : activation.status === 'expiring'
+              ? 'from-amber-500/8 to-transparent'
+              : 'from-red-500/8 to-transparent'
+        }`}
+      >
         <div className='flex items-start justify-between gap-4 flex-wrap'>
-          <div className='flex items-center gap-3'>
-            <span className='relative mt-1 flex shrink-0 items-center justify-center'>
+          <div className='flex items-center gap-4'>
+            <span className='relative flex shrink-0 items-center justify-center'>
               {(activation.status === 'active' ||
                 activation.status === 'expiring') && (
                 <span
                   aria-hidden
-                  className={`absolute inline-flex h-4 w-4 rounded-full opacity-50 animate-ping ${activationDotClass(
+                  className={`absolute inline-flex h-5 w-5 rounded-full opacity-50 animate-ping ${activationDotClass(
                     activation.status
                   )}`}
                 />
               )}
               <span
-                className={`relative inline-block h-3 w-3 rounded-full ${activationDotClass(
+                className={`relative inline-block h-3.5 w-3.5 rounded-full ${activationDotClass(
                   activation.status
                 )}`}
               />
             </span>
             <div>
-              <div className='text-xs uppercase tracking-wide text-gray-400'>
+              <div className='text-[11px] uppercase tracking-wider text-gray-500 font-medium'>
                 Activation
               </div>
-              <div className='text-2xl font-bold'>
+              <div
+                className={`text-3xl font-bold ${activationTextClass(
+                  activation.status
+                )}`}
+              >
                 {activationStatusLabel(activation)}
               </div>
-              <div className='text-sm text-gray-400 mt-1'>
+              <div className='text-sm text-gray-400 mt-0.5'>
                 {activationSubLabel(activation)}
               </div>
             </div>
@@ -99,7 +112,7 @@ export default function ActivationTab({
                 <span>
                   <Button
                     disabled
-                    className='bg-gray-700 text-white opacity-60 cursor-not-allowed flex items-center gap-2'
+                    className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
                   >
                     <Zap className='h-4 w-4' />
                     Activate now
@@ -114,7 +127,7 @@ export default function ActivationTab({
                 onActivate();
                 toast.success(PROTOTYPE_ACTIVATION_TOAST);
               }}
-              className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2'
+              className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20'
             >
               <Zap className='h-4 w-4' />
               Activate now
@@ -186,17 +199,25 @@ export default function ActivationTab({
             No activation events recorded for this contract yet.
           </p>
         ) : (
-          <div className='overflow-x-auto'>
+          <div className='overflow-x-auto -mx-2'>
             <table className='w-full text-sm'>
-              <thead className='text-gray-400'>
+              <thead>
                 <tr className='border-b border-[#2C2E30]'>
-                  <th className='text-left py-2 pr-4 font-medium'>Date</th>
-                  <th className='text-left py-2 pr-4 font-medium'>Status</th>
-                  <th className='text-left py-2 pr-4 font-medium'>Tx hash</th>
-                  <th className='text-left py-2 pr-4 font-medium'>
-                    Value consumed
+                  <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
+                    Date
                   </th>
-                  <th className='text-left py-2 pr-4 font-medium'>Gas used</th>
+                  <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
+                    Status
+                  </th>
+                  <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
+                    Tx hash
+                  </th>
+                  <th className='text-right py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
+                    Value
+                  </th>
+                  <th className='text-right py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
+                    Gas
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -205,12 +226,12 @@ export default function ActivationTab({
                   return (
                     <tr
                       key={evt.id}
-                      className='border-b border-[#2C2E30] last:border-0'
+                      className='border-b border-[#1f1f1f] last:border-0 hover:bg-white/[0.02] transition-colors'
                     >
-                      <td className='py-2 pr-4 whitespace-nowrap'>
+                      <td className='py-3 px-2 whitespace-nowrap text-gray-300'>
                         {formatDate(evt.date)}
                       </td>
-                      <td className='py-2 pr-4'>
+                      <td className='py-3 px-2'>
                         <span
                           className={`inline-flex items-center gap-2 ${
                             evt.status === 'success'
@@ -225,7 +246,7 @@ export default function ActivationTab({
                                 : 'bg-red-500'
                             }`}
                           />
-                          {evt.status}
+                          <span className='capitalize'>{evt.status}</span>
                         </span>
                         {evt.note && (
                           <div className='text-[10px] text-gray-500 mt-0.5'>
@@ -233,13 +254,13 @@ export default function ActivationTab({
                           </div>
                         )}
                       </td>
-                      <td className='py-2 pr-4 font-mono text-xs'>
+                      <td className='py-3 px-2 font-mono text-xs'>
                         {url ? (
                           <a
                             href={url}
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-blue-400 hover:text-blue-300 inline-flex items-center gap-1'
+                            className='text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
                           >
                             {truncate(evt.txHash)}
                             <ExternalLink className='h-3 w-3' />
@@ -248,8 +269,12 @@ export default function ActivationTab({
                           truncate(evt.txHash)
                         )}
                       </td>
-                      <td className='py-2 pr-4'>{evt.valueConsumedEth} ETH</td>
-                      <td className='py-2 pr-4'>{evt.gasUsed}</td>
+                      <td className='py-3 px-2 text-right tabular-nums text-gray-300'>
+                        {evt.valueConsumedEth} ETH
+                      </td>
+                      <td className='py-3 px-2 text-right tabular-nums text-gray-400'>
+                        {Number(evt.gasUsed).toLocaleString()}
+                      </td>
                     </tr>
                   );
                 })}

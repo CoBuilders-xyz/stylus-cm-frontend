@@ -1,12 +1,13 @@
 'use client';
 
-import { BellRing } from 'lucide-react';
-import { formatDate } from '@/utils/formatting';
+import { BellRing, Database, Zap } from 'lucide-react';
 import {
   ActivationInfo,
   activationDotClass,
   activationStatusLabel,
   activationSubLabel,
+  activationTextClass,
+  formatRelativeTime,
 } from '@/lib/prototype-mocks';
 
 interface Props {
@@ -17,6 +18,26 @@ interface Props {
   onConfigureAlerts?: () => void;
 }
 
+function Card({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='rounded-lg border border-[#2C2E30] bg-[#0F0F0F] p-4 flex flex-col gap-1'>
+      <div className='flex items-center gap-2 text-gray-400 text-[11px] uppercase tracking-wider'>
+        <Icon className='h-3.5 w-3.5' />
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function StatusSummaryRow({
   isCached,
   lastCachedAt,
@@ -25,61 +46,66 @@ export default function StatusSummaryRow({
   onConfigureAlerts,
 }: Props) {
   return (
-    <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
-      <div className='border border-[#2C2E30] rounded-md p-4'>
-        <div className='text-gray-400 text-xs uppercase tracking-wide'>
-          Cache Status
-        </div>
-        <div className='text-xl font-bold mt-1'>
+    <div className='grid grid-cols-1 md:grid-cols-3 gap-3 mb-6'>
+      <Card icon={Database} label='Cache Status'>
+        <div className='text-xl font-bold mt-0.5'>
           {isCached ? 'Cached' : 'Not Cached'}
         </div>
         {lastCachedAt && (
-          <div className='text-xs text-gray-400 mt-1'>
-            Last cached {formatDate(lastCachedAt)}
+          <div className='text-xs text-gray-500'>
+            Last cached {formatRelativeTime(lastCachedAt)}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className='border border-[#2C2E30] rounded-md p-4'>
-        <div className='text-gray-400 text-xs uppercase tracking-wide'>
-          Activation Status
-        </div>
-        <div className='flex items-center gap-2 mt-1'>
+      <Card icon={Zap} label='Activation Status'>
+        <div className='flex items-center gap-2 mt-0.5'>
+          <span className='relative flex items-center justify-center'>
+            {(activation.status === 'active' ||
+              activation.status === 'expiring') && (
+              <span
+                aria-hidden
+                className={`absolute inline-flex h-3 w-3 rounded-full opacity-50 animate-ping ${activationDotClass(
+                  activation.status
+                )}`}
+              />
+            )}
+            <span
+              className={`relative inline-block h-2.5 w-2.5 rounded-full ${activationDotClass(
+                activation.status
+              )}`}
+            />
+          </span>
           <span
-            className={`inline-block h-2.5 w-2.5 rounded-full ${activationDotClass(
+            className={`text-xl font-bold ${activationTextClass(
               activation.status
             )}`}
-          />
-          <span className='text-xl font-bold'>
+          >
             {activationStatusLabel(activation)}
           </span>
         </div>
-        <div className='text-xs text-gray-400 mt-1'>
+        <div className='text-xs text-gray-400'>
           {activationSubLabel(activation)}
         </div>
         {activation.lastActivatedAt && (
-          <div className='text-xs text-gray-500 mt-1'>
-            Last activated {formatDate(activation.lastActivatedAt)}
+          <div className='text-xs text-gray-500'>
+            Last activated {formatRelativeTime(activation.lastActivatedAt)}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className='border border-[#2C2E30] rounded-md p-4'>
-        <div className='text-gray-400 text-xs uppercase tracking-wide'>
-          Alerts
-        </div>
-        <div className='flex items-center gap-2 mt-1'>
-          <BellRing className='h-4 w-4 text-gray-300' />
+      <Card icon={BellRing} label='Alerts'>
+        <div className='flex items-baseline gap-2 mt-0.5'>
           <span className='text-xl font-bold'>{alertsCount}</span>
           <span className='text-xs text-gray-400'>active</span>
         </div>
         <button
-          className='mt-2 text-xs text-blue-400 hover:text-blue-300 underline'
+          className='mt-auto self-start text-xs text-[#2D99DD] hover:text-[#5ab2e5] font-medium'
           onClick={onConfigureAlerts}
         >
-          Configure
+          Configure →
         </button>
-      </div>
+      </Card>
     </div>
   );
 }
