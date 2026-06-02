@@ -89,6 +89,34 @@ export default function AlertsSettings({
   const [bidSafetySlackEnabled, setBidSafetySlackEnabled] = useState(false);
   const [bidSafetyWebhookEnabled, setBidSafetyWebhookEnabled] = useState(false);
 
+  // Prototype-only activation alerts. Not persisted to the backend; the Save
+  // button just fires a sonner toast.
+  const [approachingExpEnabled, setApproachingExpEnabled] = useState(true);
+  const [approachingExpThreshold, setApproachingExpThreshold] = useState(7);
+  const [approachingExpChannels, setApproachingExpChannels] = useState({
+    telegram: true,
+    slack: false,
+    webhook: false,
+  });
+  const [expiredEnabled, setExpiredEnabled] = useState(false);
+  const [expiredChannels, setExpiredChannels] = useState({
+    telegram: false,
+    slack: false,
+    webhook: false,
+  });
+  const [autoSucceededEnabled, setAutoSucceededEnabled] = useState(false);
+  const [autoSucceededChannels, setAutoSucceededChannels] = useState({
+    telegram: false,
+    slack: false,
+    webhook: false,
+  });
+  const [autoFailedEnabled, setAutoFailedEnabled] = useState(true);
+  const [autoFailedChannels, setAutoFailedChannels] = useState({
+    telegram: true,
+    slack: true,
+    webhook: false,
+  });
+
   // Set initial alert states based on provided alerts
   useEffect(() => {
     if (initialAlerts && initialAlerts.length > 0) {
@@ -565,6 +593,106 @@ export default function AlertsSettings({
               'opacity-50 pointer-events-none'
           )}
         >
+          {/* Activation alerts section */}
+          <div className='space-y-3'>
+            <h3 className='text-[11px] uppercase tracking-wider text-gray-500 font-medium px-1'>
+              Activation
+            </h3>
+
+            <ActivationAlertCard
+              title='Approaching expiration'
+              description='Notify before the program expires.'
+              enabled={approachingExpEnabled}
+              onToggle={(v) => {
+                setApproachingExpEnabled(v);
+                if (v)
+                  setApproachingExpChannels({
+                    telegram: true,
+                    slack: true,
+                    webhook: true,
+                  });
+              }}
+              channels={approachingExpChannels}
+              onChannelsChange={setApproachingExpChannels}
+              availableChannels={getAvailableChannels()}
+              extra={
+                <div className='flex items-center gap-2'>
+                  <label className='text-xs text-gray-400'>
+                    Threshold (days)
+                  </label>
+                  <Input
+                    type='number'
+                    min={1}
+                    max={30}
+                    value={approachingExpThreshold}
+                    onChange={(e) =>
+                      setApproachingExpThreshold(Number(e.target.value) || 7)
+                    }
+                    className='w-20 bg-[#1A1919] text-white border border-gray-700'
+                  />
+                </div>
+              }
+            />
+
+            <ActivationAlertCard
+              title='Expired'
+              description='Alert when the program has expired.'
+              enabled={expiredEnabled}
+              onToggle={(v) => {
+                setExpiredEnabled(v);
+                if (v)
+                  setExpiredChannels({
+                    telegram: true,
+                    slack: true,
+                    webhook: true,
+                  });
+              }}
+              channels={expiredChannels}
+              onChannelsChange={setExpiredChannels}
+              availableChannels={getAvailableChannels()}
+            />
+
+            <ActivationAlertCard
+              title='Auto-activation succeeded'
+              description='Confirmation when automatic activation succeeds.'
+              enabled={autoSucceededEnabled}
+              onToggle={(v) => {
+                setAutoSucceededEnabled(v);
+                if (v)
+                  setAutoSucceededChannels({
+                    telegram: true,
+                    slack: true,
+                    webhook: true,
+                  });
+              }}
+              channels={autoSucceededChannels}
+              onChannelsChange={setAutoSucceededChannels}
+              availableChannels={getAvailableChannels()}
+            />
+
+            <ActivationAlertCard
+              title='Auto-activation failed'
+              description='Alert when an automatic activation reverts.'
+              enabled={autoFailedEnabled}
+              onToggle={(v) => {
+                setAutoFailedEnabled(v);
+                if (v)
+                  setAutoFailedChannels({
+                    telegram: true,
+                    slack: true,
+                    webhook: true,
+                  });
+              }}
+              channels={autoFailedChannels}
+              onChannelsChange={setAutoFailedChannels}
+              availableChannels={getAvailableChannels()}
+            />
+          </div>
+
+          <h3 className='text-[11px] uppercase tracking-wider text-gray-500 font-medium px-1'>
+            Cache
+          </h3>
+
           {/* Eviction Alerts */}
           <div className='rounded-lg bg-black p-6'>
             <div className='flex items-center justify-between mb-2'>
@@ -763,6 +891,100 @@ export default function AlertsSettings({
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+type ChannelMap = { telegram: boolean; slack: boolean; webhook: boolean };
+
+function ActivationAlertCard({
+  title,
+  description,
+  enabled,
+  onToggle,
+  channels,
+  onChannelsChange,
+  availableChannels,
+  extra,
+}: {
+  title: string;
+  description: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  channels: ChannelMap;
+  onChannelsChange: (next: ChannelMap) => void;
+  availableChannels: string[];
+  extra?: React.ReactNode;
+}) {
+  const channelKeys: (keyof ChannelMap)[] = ['telegram', 'slack', 'webhook'];
+  const labels: Record<keyof ChannelMap, string> = {
+    telegram: 'Telegram',
+    slack: 'Slack',
+    webhook: 'Webhook',
+  };
+
+  return (
+    <div className='rounded-lg bg-black p-6'>
+      <div className='flex items-start justify-between gap-4'>
+        <div>
+          <h3 className='text-lg font-medium'>{title}</h3>
+          <p className='text-gray-400 text-sm'>{description}</p>
+        </div>
+        <SwitchPrimitive.Root
+          checked={enabled}
+          onCheckedChange={onToggle}
+          className={cn(
+            'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+            'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+            'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+          )}
+        >
+          <SwitchPrimitive.Thumb
+            className={cn(
+              'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+              'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+            )}
+          />
+        </SwitchPrimitive.Root>
+      </div>
+      {enabled && (
+        <div className='mt-4 space-y-4'>
+          {extra}
+          <div className='grid grid-cols-2 gap-4'>
+            {channelKeys.map((c) => {
+              const isConfigured = availableChannels.includes(c);
+              return (
+                <div
+                  key={c}
+                  className={cn(
+                    'flex items-center space-x-2',
+                    !isConfigured && 'opacity-40'
+                  )}
+                >
+                  <Checkbox
+                    id={`activation-${title}-${c}`}
+                    checked={isConfigured && channels[c]}
+                    disabled={!isConfigured}
+                    onCheckedChange={(v) =>
+                      onChannelsChange({ ...channels, [c]: v === true })
+                    }
+                    className='data-[state=checked]:bg-[#335CD7]'
+                  />
+                  <label
+                    htmlFor={`activation-${title}-${c}`}
+                    className={cn(
+                      'text-sm',
+                      isConfigured ? 'cursor-pointer' : 'cursor-not-allowed'
+                    )}
+                  >
+                    {labels[c]}
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
