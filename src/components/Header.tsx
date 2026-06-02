@@ -42,15 +42,21 @@ export default function Header() {
       <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed top-8'>
         {/* Left section - Logo and Navigation */}
         <div className='flex items-center space-x-4 text-xs'>
-          <span className='flex items-center'>
+          <span className='flex items-center min-w-0'>
             <Link
               href='/cache-status'
-              className='flex items-center gap-2 mr-2'
+              className='flex items-center gap-2 mr-1 sm:mr-2'
             >
-              <Image src={logo} alt='Stylus Manager logo' />
-              <span className='hidden sm:inline text-sm font-semibold tracking-wide whitespace-nowrap'>
+              {/* Mobile: compact wordmark only (logo asset still has old brand text and is too wide for 375px) */}
+              <span className='sm:hidden text-sm font-bold tracking-tight whitespace-nowrap text-white'>
                 Stylus Manager
               </span>
+              {/* Desktop: full logo */}
+              <Image
+                src={logo}
+                alt='Stylus Manager logo'
+                className='hidden sm:block'
+              />
             </Link>
           </span>
 

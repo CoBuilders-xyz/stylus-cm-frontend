@@ -825,14 +825,22 @@ function buildEvents(): BlockchainEvent[] {
         i % 3 === 0
           ? '0xaaa1111111111111111111111111111111111111'
           : '0xbbb2222222222222222222222222222222222222',
-      eventData: isInsert
-        ? {
-            bid: contract.lastBid,
-            size: contract.bytecode.size,
-          }
-        : {
-            evictedBid: contract.lastBid,
-          },
+      // Encoded to match the indexed access in
+      // utils/blockchainEventFormatting.ts:
+      // InsertBid: [_, _, bidWei, size]
+      // DeleteBid: [_, bidWei, size]
+      eventData: (isInsert
+        ? [
+            contract.bytecode.bytecodeHash,
+            contract.address,
+            contract.lastBid,
+            contract.bytecode.size,
+          ]
+        : [
+            contract.bytecode.bytecodeHash,
+            contract.lastBid,
+            contract.bytecode.size,
+          ]) as unknown as Record<string, unknown>,
     });
   }
   return events;

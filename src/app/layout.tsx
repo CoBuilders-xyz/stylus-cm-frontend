@@ -35,14 +35,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body className={`${inter.className} min-h-dvh`}>
+      <body className={`${inter.className} min-h-dvh flex flex-col`}>
         <RainbowKitProvider>
           <BlockchainSelectionProvider>
             <AuthenticationProvider>
               <AlertSettingsProvider>
                 <PrototypeBanner />
                 <Header />
-                {children}
+                <main className='flex-1 flex flex-col min-h-0'>
+                  {children}
+                </main>
                 <Footer />
               </AlertSettingsProvider>
             </AuthenticationProvider>

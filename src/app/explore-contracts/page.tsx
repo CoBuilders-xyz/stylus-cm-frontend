@@ -94,11 +94,8 @@ export default function ExploreContractsPage() {
 
   return (
     <div
-      className='flex flex-col'
-      style={{
-        height: 'calc(100dvh - var(--app-chrome-h, 96px))',
-        paddingTop: 'var(--app-chrome-h, 96px)',
-      }}
+      className='flex-1 flex flex-col min-h-0'
+      style={{ paddingTop: 'var(--app-chrome-h, 96px)' }}
     >
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
