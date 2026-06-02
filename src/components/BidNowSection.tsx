@@ -454,28 +454,14 @@ export function BidNowSection({
   return (
     <div
       ref={componentRef}
-      className='relative rounded-md p-4 overflow-hidden'
-      style={{
-        background:
-          'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 55.53%, #C35B88 103.8%)',
-      }}
+      className='rounded-lg border border-[#2C2E30] bg-black p-6'
       onClick={openSuggestedButtons}
     >
-      {/* White noise texture overlay */}
-      <div
-        className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-          backgroundSize: '100px 100px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
-
-      <div className='flex flex-col relative z-10'>
+      <div className='flex flex-col'>
         {/* Gas Price Warning */}
         {isGasPriceHigh && (
-          <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center'>
-            <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
+          <div className='bg-red-500/10 border border-red-500/30 text-red-300 p-2 rounded-md mb-3 flex items-center'>
+            <AlertTriangle className='w-4 h-4 mr-2 text-red-400' />
             <span className='text-sm'>
               Warning: Network fees are extremely high{' '}
               {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
@@ -484,13 +470,13 @@ export function BidNowSection({
           </div>
         )}
 
-        <div className='flex justify-between items-start'>
+        <div className='flex justify-between items-start gap-4 flex-wrap'>
           <div>
-            <p className='font-bold'>Bid now</p>
-            <p className='text-sm text-blue-200'>
+            <h3 className='text-lg font-medium'>Bid now</h3>
+            <p className='text-gray-400 text-sm'>
               {isContractCached
-                ? 'Bidding disabled for cached contracts'
-                : 'Higher bids extend cache duration'}
+                ? 'Bidding is disabled while this contract is cached.'
+                : 'Higher bids extend cache duration.'}
             </p>
           </div>
           <div className='flex flex-col items-end gap-2'>
@@ -502,26 +488,24 @@ export function BidNowSection({
                     placeholder='Bid amount'
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
-                    className={`pr-12 bg-white border-none text-gray-500 ${
+                    className={`pr-12 bg-[#1A1919] border text-white rounded-md ${
                       isDisabled
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
                         : ''
-                    } ${inputError ? 'border-red-500' : ''}`}
+                    } ${inputError ? 'border-red-500' : 'border-gray-700'}`}
                     disabled={isDisabled}
                     onClick={openSuggestedButtons}
                   />
                   <div
-                    className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none ${
-                      isDisabled
-                        ? 'text-gray-400 cursor-not-allowed opacity-60'
-                        : 'text-gray-500'
+                    className={`absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-sm ${
+                      isDisabled ? 'text-gray-500' : 'text-gray-400'
                     }`}
                   >
                     ETH
                   </div>
                 </div>
                 {inputError && (
-                  <div className='text-white text-xs italic text-left mt-1'>
+                  <div className='text-red-400 text-xs text-left mt-1'>
                     {inputError}
                   </div>
                 )}
@@ -530,7 +514,7 @@ export function BidNowSection({
                 <Button
                   onClick={handleSubmitBid}
                   disabled={isDisabled || !!inputError}
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white text-xs flex items-center disabled:opacity-50'
                 >
                   {isPlacingBid ? (
                     <div className='flex items-center'>
@@ -554,7 +538,7 @@ export function BidNowSection({
           <div className='flex justify-between gap-2 mt-3'>
             <Button
               size='sm'
-              className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+              className='bg-transparent border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 hover:text-white flex items-center'
               onClick={(e) => {
                 e.stopPropagation();
                 setBidAmount('');
@@ -593,7 +577,7 @@ export function BidNowSection({
                 </div>
                 <Button
                   size='sm'
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  className='bg-transparent border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 hover:text-white flex items-center'
                   onClick={(e) => {
                     e.stopPropagation();
                     setBidAmount('0');
@@ -607,7 +591,7 @@ export function BidNowSection({
               <div className='flex gap-2'>
                 <Button
                   size='sm'
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  className='bg-transparent border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 hover:text-white flex items-center'
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelectBid(suggestedBids.suggestedBids.lowRisk);
@@ -621,7 +605,7 @@ export function BidNowSection({
                 </Button>
                 <Button
                   size='sm'
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  className='bg-transparent border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 hover:text-white flex items-center'
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelectBid(suggestedBids.suggestedBids.midRisk);
@@ -635,7 +619,7 @@ export function BidNowSection({
                 </Button>
                 <Button
                   size='sm'
-                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center'
+                  className='bg-transparent border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 hover:text-white flex items-center'
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelectBid(suggestedBids.suggestedBids.highRisk);
