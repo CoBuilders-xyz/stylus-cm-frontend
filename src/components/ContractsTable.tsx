@@ -618,8 +618,11 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
-          <ScrollArea className='h-[calc(100vh-350px)] min-h-[400px]'>
-            <Table className='w-full'>
+          <ScrollArea
+            orientation='both'
+            className='h-[calc(100vh-350px)] min-h-[400px]'
+          >
+            <Table className='min-w-[1100px]'>
               <TableHeader className='bg-black text-white sticky top-0 z-10'>
                 <TableRow className='h-20 hover:bg-transparent'>
                   <SortableTableHead

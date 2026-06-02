@@ -4,6 +4,18 @@ import {
   UserContract,
 } from '@/services/contractService';
 import { parseEther } from 'viem';
+import type {
+  BidAverageResponse,
+  BidAverageTimespan,
+  BidTrendsResponse,
+  CacheStats,
+  TotalBytecodes,
+} from '@/services/cacheMetricsService';
+import type {
+  BlockchainEvent,
+  BlockchainEventsResponse,
+} from '@/types/blockchainEvents';
+import { BlockchainEventType } from '@/types/blockchainEvents';
 
 export type ActivationStatus = 'active' | 'expiring' | 'inactive';
 
@@ -48,9 +60,10 @@ export const MOCK_BLOCKCHAINS: Blockchain[] = [MOCK_BLOCKCHAIN];
 
 const DAY = 86_400;
 const HOUR = 3_600;
-const now = () => Math.floor(Date.now() / 1000);
 const isoMinusDays = (d: number) =>
   new Date(Date.now() - d * 86_400_000).toISOString();
+const isoMinusHours = (h: number) =>
+  new Date(Date.now() - h * 3_600_000).toISOString();
 
 const wei = (eth: string) => parseEther(eth).toString();
 
@@ -199,7 +212,7 @@ const SEEDS: MockContractSeed[] = [
 ];
 
 function buildContract(seed: MockContractSeed): Contract {
-  const bidTimestamp = String(now() - seed.bidAgeHours * HOUR);
+  const bidTimestamp = isoMinusHours(seed.bidAgeHours);
   const bidPlusDecay = wei(seed.bid);
 
   return {
@@ -607,3 +620,223 @@ export const PROTOTYPE_AUTO_ACTIVATION_TOAST =
   'Auto-activation settings saved (prototype mode)';
 export const PROTOTYPE_ALERT_PREFERENCES_TOAST =
   'Alert preferences saved (prototype mode)';
+
+// ---------------------------------------------------------------------------
+// Cache metrics mocks (powers /cache-status and the bid charts)
+// ---------------------------------------------------------------------------
+
+export const mockTotalBytecodes: TotalBytecodes = {
+  bytecodeCount: 1284,
+  bytecodeCountDiffWithLastMonth: 142,
+};
+
+export const mockCacheStatsMetric: CacheStats = {
+  queueSize: '8388608',
+  cacheSize: '12582912',
+  queueSizeMB: 8,
+  cacheSizeMB: 12,
+  cacheFilledPercentage: 67,
+};
+
+// Seeded pseudo-random generator so chart data is stable across renders.
+function seededRand(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0xffffffff;
+  };
+}
+
+function bucketCount(timespan: BidAverageTimespan): number {
+  switch (timespan) {
+    case 'D':
+      return 24;
+    case 'W':
+      return 7;
+    case 'M':
+      return 30;
+    case 'Y':
+      return 12;
+  }
+}
+
+function periodLabel(timespan: BidAverageTimespan, idx: number, total: number) {
+  const now = new Date();
+  switch (timespan) {
+    case 'D': {
+      const d = new Date(now.getTime() - (total - 1 - idx) * 3_600_000);
+      return d.toISOString();
+    }
+    case 'W': {
+      const d = new Date(now.getTime() - (total - 1 - idx) * 86_400_000);
+      return d.toISOString().slice(0, 10);
+    }
+    case 'M': {
+      const d = new Date(now.getTime() - (total - 1 - idx) * 86_400_000);
+      return d.toISOString().slice(0, 10);
+    }
+    case 'Y': {
+      const d = new Date(
+        now.getFullYear(),
+        now.getMonth() - (total - 1 - idx),
+        1
+      );
+      return d.toISOString().slice(0, 7);
+    }
+  }
+}
+
+export function buildMockBidAverage(
+  timespan: BidAverageTimespan,
+  minSize?: number
+): BidAverageResponse {
+  const buckets = bucketCount(timespan);
+  // Tie pseudo-random seed to size band so each line is distinct but stable.
+  const sizeKey = !minSize ? 1 : minSize < 800 ? 1 : minSize < 1600 ? 2 : 3;
+  const baseEth = sizeKey === 1 ? 0.0024 : sizeKey === 2 ? 0.0041 : 0.0067;
+  const rand = seededRand(sizeKey * 9973 + buckets);
+
+  const periods = Array.from({ length: buckets }, (_, i) => {
+    const wave =
+      Math.sin((i / buckets) * Math.PI * 2 + sizeKey) * 0.18 +
+      (rand() - 0.5) * 0.12;
+    const eth = Math.max(0.0001, baseEth * (1 + wave));
+    return {
+      period: periodLabel(timespan, i, buckets),
+      averageBid: parseEther(eth.toFixed(8)).toString(),
+      parsedAverageBid: eth.toFixed(8),
+      count: 12 + Math.floor(rand() * 30),
+    };
+  });
+
+  const globalAvg =
+    periods.reduce((acc, p) => acc + parseFloat(p.parsedAverageBid), 0) /
+    periods.length;
+  const totalCount = periods.reduce((acc, p) => acc + p.count, 0);
+
+  return {
+    periods,
+    global: {
+      averageBid: parseEther(globalAvg.toFixed(8)).toString(),
+      parsedAverageBid: globalAvg.toFixed(8),
+      count: totalCount,
+    },
+  };
+}
+
+export function buildMockBidTrends(
+  timespan: BidAverageTimespan
+): BidTrendsResponse {
+  const buckets = bucketCount(timespan);
+  const rand = seededRand(buckets * 31 + 7);
+  const periods = Array.from({ length: buckets }, (_, i) => {
+    const insertCount = 8 + Math.floor(rand() * 24);
+    const deleteCount = 4 + Math.floor(rand() * 18);
+    return {
+      period: periodLabel(timespan, i, buckets),
+      insertCount,
+      deleteCount,
+      netChange: insertCount - deleteCount,
+    };
+  });
+  const globalInsert = periods.reduce((acc, p) => acc + p.insertCount, 0);
+  const globalDelete = periods.reduce((acc, p) => acc + p.deleteCount, 0);
+  return {
+    periods,
+    global: {
+      insertCount: globalInsert,
+      deleteCount: globalDelete,
+      netChange: globalInsert - globalDelete,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Blockchain events mocks (powers /blockchain-events)
+// ---------------------------------------------------------------------------
+
+const EVENT_CONTRACTS = mockContracts.slice(0, 5);
+
+function buildEvents(): BlockchainEvent[] {
+  const events: BlockchainEvent[] = [];
+  const rand = seededRand(424242);
+  for (let i = 0; i < 60; i++) {
+    const contract = EVENT_CONTRACTS[i % EVENT_CONTRACTS.length];
+    const isInsert = rand() > 0.45;
+    const minutesAgo = i * 37 + Math.floor(rand() * 17);
+    const blockTimestamp = new Date(
+      Date.now() - minutesAgo * 60_000
+    ).toISOString();
+    events.push({
+      id: `evt-${i}`,
+      blockchainId: MOCK_BLOCKCHAINS[0].id,
+      blockchainName: MOCK_BLOCKCHAINS[0].name,
+      contractName: contract.name || contract.address,
+      contractAddress: contract.address,
+      eventName: isInsert ? 'InsertBid' : 'DeleteBid',
+      blockTimestamp,
+      blockNumber: 1_234_500 - i * 12,
+      transactionHash:
+        '0x' +
+        (i.toString(16).padStart(4, '0') +
+          'aa' +
+          Math.floor(rand() * 1e10)
+            .toString(16)
+            .padStart(8, '0') +
+          '0'.repeat(56)).slice(0, 64),
+      logIndex: i % 8,
+      isRealTime: i < 4,
+      originAddress:
+        i % 3 === 0
+          ? '0xaaa1111111111111111111111111111111111111'
+          : '0xbbb2222222222222222222222222222222222222',
+      eventData: isInsert
+        ? {
+            bid: contract.lastBid,
+            size: contract.bytecode.size,
+          }
+        : {
+            evictedBid: contract.lastBid,
+          },
+    });
+  }
+  return events;
+}
+
+export const mockBlockchainEvents: BlockchainEvent[] = buildEvents();
+
+export function buildMockEventsResponse(
+  page: number,
+  limit: number,
+  eventType?: BlockchainEventType,
+  search?: string
+): BlockchainEventsResponse {
+  let filtered = mockBlockchainEvents;
+  if (eventType) {
+    filtered = filtered.filter((e) => e.eventName === eventType);
+  }
+  if (search && search.trim()) {
+    const q = search.toLowerCase();
+    filtered = filtered.filter(
+      (e) =>
+        e.contractAddress.toLowerCase().includes(q) ||
+        e.contractName.toLowerCase().includes(q) ||
+        e.transactionHash.toLowerCase().includes(q)
+    );
+  }
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const start = (page - 1) * limit;
+  const data = filtered.slice(start, start + limit);
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      totalItems,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+    },
+  };
+}

@@ -15,16 +15,16 @@ export default function ActivationBadge({
   compact = false,
 }: ActivationBadgeProps) {
   return (
-    <div className='flex items-center gap-2'>
+    <div className='flex items-center gap-2 whitespace-nowrap'>
       <span
-        className={`inline-block rounded-full ${
+        className={`inline-block shrink-0 rounded-full ${
           compact ? 'h-2 w-2' : 'h-2.5 w-2.5'
         } ${activationDotClass(info.status)}`}
       />
       <span
         className={`${activationTextClass(info.status)} ${
           compact ? 'text-xs' : 'text-sm'
-        } font-medium`}
+        } font-medium whitespace-nowrap`}
       >
         {activationLabel(info)}
       </span>

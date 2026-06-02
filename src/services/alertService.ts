@@ -84,10 +84,19 @@ export class AlertService {
    * @returns Promise with the created/updated alert
    */
   async createOrUpdateAlert(alertSettings: AlertSettings): Promise<Alert> {
-    return this.apiClient.post<Alert>(
-      '/alerts',
-      alertSettings as unknown as Record<string, unknown>
-    );
+    return Promise.resolve({
+      id: `mock-alert-${alertSettings.type}-${Date.now()}`,
+      type: alertSettings.type,
+      value: String(alertSettings.value ?? ''),
+      isActive: alertSettings.isActive,
+      lastTriggered: null,
+      lastNotified: null,
+      triggeredCount: 0,
+      slackChannelEnabled: alertSettings.slackChannelEnabled ?? false,
+      telegramChannelEnabled: alertSettings.telegramChannelEnabled ?? false,
+      webhookChannelEnabled: alertSettings.webhookChannelEnabled ?? false,
+      userContractId: alertSettings.userContractId,
+    });
   }
 
   /**
@@ -113,7 +122,14 @@ export class AlertService {
    * @returns Promise with the user alert preferences
    */
   async getUserAlertPreferences(): Promise<UserAlertPreferences> {
-    return this.apiClient.get<UserAlertPreferences>('/users/alerts-settings');
+    return Promise.resolve({
+      telegramSettings: { enabled: true, destination: '@stylus-prototype' },
+      slackSettings: {
+        enabled: true,
+        destination: 'https://hooks.slack.com/services/mock',
+      },
+      webhookSettings: { enabled: false, destination: '' },
+    });
   }
 
   /**
@@ -124,10 +140,7 @@ export class AlertService {
   async updateUserAlertPreferences(
     preferences: UserAlertPreferences
   ): Promise<UserAlertPreferences> {
-    return this.apiClient.patch<UserAlertPreferences>(
-      '/users/alerts-settings',
-      preferences as unknown as Record<string, unknown>
-    );
+    return Promise.resolve(preferences);
   }
 
   /**
@@ -138,9 +151,9 @@ export class AlertService {
   async testNotification(
     notificationChannel: NotificationChannel
   ): Promise<{ success: boolean; message?: string }> {
-    // The API returns a 201 status code on success
-    return this.apiClient.post('/notifications/test/send', {
-      notificationChannel,
+    return Promise.resolve({
+      success: true,
+      message: `Test sent to ${notificationChannel} (prototype mode)`,
     });
   }
 }

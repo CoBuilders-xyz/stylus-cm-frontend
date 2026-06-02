@@ -6,6 +6,7 @@ import {
   BlockchainEventSortField,
   SortOrder,
 } from '../types/blockchainEvents';
+import { buildMockEventsResponse } from '@/lib/prototype-mocks';
 
 /**
  * Blockchain Events Service for handling blockchain event-related API requests
@@ -48,48 +49,11 @@ export class BlockchainEventsService {
   async getBlockchainEvents(
     filters: BlockchainEventFilters
   ): Promise<BlockchainEventsResponse> {
-    // Use provided blockchain ID or fallback to current one
-    const blockchainId = filters.blockchainId || this.currentBlockchainId;
-
-    if (!blockchainId) {
-      throw new Error('Blockchain ID is required');
-    }
-
-    // Build URL with query parameters manually
-    let url = `/blockchain-events?blockchainId=${blockchainId}`;
-
-    // Add optional parameters if provided
-    if (filters.eventType) {
-      url += `&eventType=${filters.eventType}`;
-    }
-
-    if (filters.search && filters.search.trim()) {
-      url += `&search=${encodeURIComponent(filters.search.trim())}`;
-    }
-
-    if (filters.sortBy) {
-      url += `&sortBy=${filters.sortBy}`;
-    }
-
-    if (filters.sortOrder) {
-      url += `&sortOrder=${filters.sortOrder}`;
-    }
-
-    if (filters.page) {
-      url += `&page=${filters.page}`;
-    }
-
-    if (filters.limit) {
-      url += `&limit=${filters.limit}`;
-    }
-
-    try {
-      const response = await this.apiClient.get<BlockchainEventsResponse>(url);
-      return response;
-    } catch (error) {
-      console.error('Error fetching blockchain events:', error);
-      throw error;
-    }
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    return Promise.resolve(
+      buildMockEventsResponse(page, limit, filters.eventType, filters.search)
+    );
   }
 
   /**

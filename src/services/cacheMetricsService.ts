@@ -1,4 +1,10 @@
 import { ApiClient } from './api';
+import {
+  buildMockBidAverage,
+  buildMockBidTrends,
+  mockCacheStatsMetric,
+  mockTotalBytecodes,
+} from '@/lib/prototype-mocks';
 
 /**
  * Interface for total bytecodes response
@@ -99,9 +105,8 @@ export class CacheMetricsService {
    * @returns Promise with total bytecodes information
    */
   async getTotalBytecodes(blockchainId: string): Promise<TotalBytecodes> {
-    return this.apiClient.get<TotalBytecodes>(
-      `/blockchains/${blockchainId}/total-bytecodes`
-    );
+    void blockchainId;
+    return Promise.resolve(mockTotalBytecodes);
   }
 
   /**
@@ -110,9 +115,8 @@ export class CacheMetricsService {
    * @returns Promise with cache statistics
    */
   async getCacheStats(blockchainId: string): Promise<CacheStats> {
-    return this.apiClient.get<CacheStats>(
-      `/blockchains/${blockchainId}/cache-stats`
-    );
+    void blockchainId;
+    return Promise.resolve(mockCacheStatsMetric);
   }
 
   /**
@@ -129,21 +133,9 @@ export class CacheMetricsService {
     minSize?: number,
     maxSize?: number
   ): Promise<BidAverageResponse> {
-    // Build query parameters
-    const params = new URLSearchParams();
-    params.append('timespan', timespan);
-
-    if (minSize !== undefined) {
-      params.append('minSize', minSize.toString());
-    }
-
-    if (maxSize !== undefined) {
-      params.append('maxSize', maxSize.toString());
-    }
-
-    return this.apiClient.get<BidAverageResponse>(
-      `/blockchains/${blockchainId}/bid-average?${params.toString()}`
-    );
+    void blockchainId;
+    void maxSize;
+    return Promise.resolve(buildMockBidAverage(timespan, minSize));
   }
 
   /**
@@ -156,12 +148,7 @@ export class CacheMetricsService {
     blockchainId: string,
     timespan: BidAverageTimespan
   ): Promise<BidTrendsResponse> {
-    // Build query parameters
-    const params = new URLSearchParams();
-    params.append('timespan', timespan);
-
-    return this.apiClient.get<BidTrendsResponse>(
-      `/blockchains/${blockchainId}/bid-trends?${params.toString()}`
-    );
+    void blockchainId;
+    return Promise.resolve(buildMockBidTrends(timespan));
   }
 }
