@@ -310,8 +310,8 @@ const Pagination = React.memo(
     handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   }) => {
     return (
-      <div className='flex items-center justify-between mt-4 text-sm text-white'>
-        <div className='flex items-center space-x-2'>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 text-sm text-white'>
+        <div className='flex items-center gap-2'>
           <span>Show</span>
           <select
             className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
@@ -324,17 +324,17 @@ const Pagination = React.memo(
           <span>entries</span>
         </div>
 
-        <div className='flex items-center space-x-2'>
-          <span>
+        <div className='flex flex-wrap items-center gap-2'>
+          <span className='whitespace-nowrap'>
             {pagination.totalItems > 0
               ? `Page ${pagination.page} of ${pagination.totalPages}`
               : 'No results'}
           </span>
-          <div className='flex space-x-1'>
+          <div className='flex flex-wrap gap-1'>
             <Button
               onClick={() => handlePageChange(1)}
               disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               First
             </Button>
@@ -379,7 +379,7 @@ const Pagination = React.memo(
             <Button
               onClick={() => handlePageChange(pagination.totalPages)}
               disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               Last
             </Button>

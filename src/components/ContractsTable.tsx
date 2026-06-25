@@ -301,8 +301,8 @@ const Pagination = React.memo(
     handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   }) => {
     return (
-      <div className='flex items-center justify-between mt-4 text-sm text-white'>
-        <div className='flex items-center space-x-2'>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 text-sm text-white'>
+        <div className='flex items-center gap-2'>
           <span>Show</span>
           <select
             className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
@@ -315,17 +315,17 @@ const Pagination = React.memo(
           <span>entries</span>
         </div>
 
-        <div className='flex items-center space-x-2'>
-          <span>
+        <div className='flex flex-wrap items-center gap-2'>
+          <span className='whitespace-nowrap'>
             {pagination.totalItems > 0
               ? `Page ${pagination.page} of ${pagination.totalPages}`
               : 'No results'}
           </span>
-          <div className='flex space-x-1'>
+          <div className='flex flex-wrap gap-1'>
             <Button
               onClick={() => handlePageChange(1)}
               disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               First
             </Button>
@@ -370,7 +370,7 @@ const Pagination = React.memo(
             <Button
               onClick={() => handlePageChange(pagination.totalPages)}
               disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               Last
             </Button>
@@ -467,25 +467,25 @@ function ContractsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex justify-between mb-8 flex-shrink-0'>
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8 flex-shrink-0'>
         <h1 className='text-xl font-bold text-white'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
         {viewType === 'my-contracts' ? (
           <Button
-            className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+            className='w-full sm:w-auto px-4 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2'
             onClick={onAddNewContract}
           >
             <span>+</span>
             <span>Add Contract</span>
           </Button>
         ) : (
-          <div className='flex items-center gap-3'>
-            <div className='relative'>
+          <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto'>
+            <div className='relative flex-1 sm:flex-none'>
               <input
                 type='text'
                 placeholder='Search contracts...'
-                className='p-2 pl-10 bg-black rounded-md w-60 border border-gray-500 focus:outline-none focus:border-white'
+                className='p-2 pl-10 bg-black rounded-md w-full sm:w-60 border border-gray-500 focus:outline-none focus:border-white'
                 value={searchInput}
                 onChange={handleSearchInputChange}
                 onKeyDown={handleKeyDown}
@@ -498,7 +498,7 @@ function ContractsTable({
               </Button>
             </div>
             <Button
-              className='px-4 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2'
+              className='w-full sm:w-auto px-4 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2'
               onClick={onAddNewContract}
             >
               <span>+</span>
