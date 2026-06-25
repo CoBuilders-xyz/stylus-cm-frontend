@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
+import EventMobileCard from '@/components/EventMobileCard';
 
 interface BlockchainEventsTableProps {
   events?: BlockchainEvent[];
@@ -502,9 +503,31 @@ function BlockchainEventsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
+          {/* Mobile card list */}
+          <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
+            {displayEvents.length > 0 ? (
+              <div className='flex flex-col gap-2 pb-4'>
+                {displayEvents.map((event) => (
+                  <EventMobileCard
+                    key={`${event.transactionHash}-${event.logIndex}`}
+                    event={event}
+                    onSelect={onEventSelect}
+                  />
+                ))}
+              </div>
+            ) : (
+              <NoticeBanner
+                image={noContractsFoundImage}
+                title='No Events Found'
+                description='No blockchain events found matching your criteria.'
+              />
+            )}
+          </div>
+
+          {/* Desktop table */}
           <ScrollArea
             orientation='both'
-            className='h-[calc(100vh-350px)] min-h-[400px]'
+            className='hidden md:block h-[calc(100vh-350px)] min-h-[400px]'
           >
             <div className='min-w-full'>
               <TooltipProvider>

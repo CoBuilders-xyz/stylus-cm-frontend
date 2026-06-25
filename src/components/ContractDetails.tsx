@@ -36,7 +36,6 @@ import EditableContractName, {
 } from './EditableContractName';
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
-import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -470,12 +469,12 @@ export default function ContractDetails({
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Sticky Header */}
       <div className='flex-shrink-0  bg-[#1A1919] p-6'>
-        <div className='flex justify-between items-center'>
-          <div>
+        <div className='flex justify-between items-center gap-3'>
+          <div className='min-w-0 flex-1'>
             {viewType === 'my-contracts' ? (
               <>
-                <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
-                  {contractData.address}
+                <div className='text-sm font-mono text-gray-300 flex items-center gap-2 min-w-0'>
+                  <span className='truncate'>{contractData.address}</span>
                   <ExplorerLinkButton
                     chainId={currentBlockchain?.chainId.toString() || null}
                     contractAddress={contractData.address}
@@ -490,20 +489,20 @@ export default function ContractDetails({
               </>
             ) : contractData.isSavedByUser ? (
               <>
-                <div className='text-sm font-mono text-gray-300'>
+                <div className='text-sm font-mono text-gray-300 truncate'>
                   {contractData.address}
                 </div>
-                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
+                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full truncate'>
                   {contractData.savedContractName}
                 </div>
               </>
             ) : (
-              <div className='text-2xl font-mono mb-1'>
+              <div className='text-lg sm:text-2xl font-mono mb-1 truncate'>
                 {contractData.address}
               </div>
             )}
           </div>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 shrink-0'>
             {/* Dropdown Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -595,13 +594,11 @@ export default function ContractDetails({
               </TabsList>
 
               <TabsContent value='cache'>
-                <ContractStatus
-                  isLoading={isLoadingContract}
-                  isCached={contractData?.bytecode.isCached}
+                <CacheHero
+                  isCached={!!contractData?.bytecode.isCached}
                   bidBlockTimestamp={contractData?.bidBlockTimestamp}
                   effectiveBid={contractData?.effectiveBid}
                   lastBid={contractData?.lastBid}
-                  viewType='my-contracts'
                 />
 
                 <ContractInfo

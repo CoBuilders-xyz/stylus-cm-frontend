@@ -23,6 +23,7 @@ import {
 } from '@/utils/blockchainEventFormatting';
 import { formatSize } from '@/utils/formatting';
 import { Copy, Info, X } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   Tooltip,
   TooltipContent,
@@ -38,7 +39,9 @@ export default function BlockchainEventsPage() {
   const [copySuccess, setCopySuccess] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const panelWidth = '50%';
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const desktopPanelWidth = '50%';
+  const panelWidth = isDesktop ? desktopPanelWidth : '100%';
 
   // Set CSS variable for header height
   useEffect(() => {
@@ -86,12 +89,17 @@ export default function BlockchainEventsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-72px)] pt-18 flex flex-col'>
+    <div
+      className='flex-1 flex flex-col min-h-0'
+      style={{ paddingTop: 'var(--app-chrome-h, 64px)' }}
+    >
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
-        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
+        style={{
+          paddingRight: isDesktop && isPanelOpen ? desktopPanelWidth : '0',
+        }}
       >
-        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='p-4 sm:p-6 md:p-10 flex-1 flex flex-col overflow-hidden'>
           <BlockchainEventsTable onEventSelect={handleEventSelect} />
         </div>
       </div>

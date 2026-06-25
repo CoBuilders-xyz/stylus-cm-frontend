@@ -6,6 +6,9 @@
 :root {
   --background: #000000;
   --foreground: #171717;
+  /* Height of the fixed top chrome (header only). Used by page-level layouts
+     so they don't render under the header. */
+  --app-chrome-h: 64px;
 }
 
 @theme inline {
@@ -120,6 +123,11 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body {
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;

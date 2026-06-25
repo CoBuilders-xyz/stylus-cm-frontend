@@ -39,12 +39,24 @@ export default function Header() {
 
   return (
     <>
-      <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed'>
+      <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed top-0'>
         {/* Left section - Logo and Navigation */}
         <div className='flex items-center space-x-4 text-xs'>
-          <span className='flex items-center'>
-            <Link href='/cache-status'>
-              <Image src={logo} alt='logo' className='mr-2' />
+          <span className='flex items-center min-w-0'>
+            <Link
+              href='/cache-status'
+              className='flex items-center gap-2 mr-1 sm:mr-2'
+            >
+              {/* Mobile: compact wordmark (logo asset is too wide for 375px) */}
+              <span className='sm:hidden text-sm font-bold tracking-tight whitespace-nowrap text-white'>
+                Stylus CM
+              </span>
+              {/* Desktop: full logo */}
+              <Image
+                src={logo}
+                alt='Stylus Cache Manager logo'
+                className='hidden sm:block'
+              />
             </Link>
           </span>
 
@@ -96,7 +108,7 @@ export default function Header() {
         </div>
 
         {/* Right section - Actions (Always visible) */}
-        <div className='flex space-x-2 sm:space-x-4 text-xs items-center'>
+        <div className='flex space-x-1.5 sm:space-x-4 text-xs items-center min-w-0'>
           {/* Mobile-only alert settings */}
           <button
             className='lg:hidden border border-white rounded-[10px] p-2 flex items-center justify-center hover:bg-gray-900'
@@ -120,25 +132,31 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Always visible */}
-          <BlockchainSelector />
+          {/* BlockchainSelector hidden on the smallest viewports to make room
+              for ConnectWallet + hamburger. Available via the mobile menu. */}
+          <div className='hidden sm:block'>
+            <BlockchainSelector />
+          </div>
           <ConnectWallet />
           {/* Mobile Menu Trigger - Shown only on mobile */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <button className='lg:hidden p-2 hover:bg-gray-800 rounded-md'>
+              <button
+                className='lg:hidden min-h-[40px] min-w-[40px] p-2 hover:bg-gray-800 rounded-md flex items-center justify-center'
+                aria-label='Open navigation menu'
+              >
                 <Menu className='w-5 h-5' />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              align='start'
+              align='end'
               className='w-64 bg-black border-gray-800 text-white'
             >
               {navItems.map((item) => (
                 <DropdownMenuItem key={item.href} className='p-0'>
                   <Link
                     href={item.href}
-                    className={`w-full px-2 py-2 ${
+                    className={`w-full px-3 py-3 ${
                       isActive(item.href)
                         ? 'text-white font-medium bg-gray-800'
                         : 'text-gray-300 hover:text-white hover:bg-gray-800'
@@ -152,17 +170,22 @@ export default function Header() {
                 <Link
                   href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
                   target='_blank'
-                  className='w-full px-2 py-2 text-gray-300 hover:text-white hover:bg-gray-800'
+                  className='w-full px-3 py-3 text-gray-300 hover:text-white hover:bg-gray-800'
                 >
                   Docs
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className='p-0 sm:hidden'>
+                <div className='w-full px-3 py-3'>
+                  <BlockchainSelector />
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* ConnectionBanner - always below header for all screen sizes */}
+      {/* ConnectionBanner - sits directly below the fixed header. */}
       <div className='w-full fixed top-16 z-10'>
         <ConnectionBanner />
       </div>

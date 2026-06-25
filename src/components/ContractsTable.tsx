@@ -37,6 +37,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import ContractMobileCard from '@/components/ContractMobileCard';
+import type { ActivationInfo } from '@/lib/activation';
+
+// Per-contract activation state will be wired in COB-493; until then the
+// mobile cards show a neutral placeholder.
+const PLACEHOLDER_ACTIVATION: ActivationInfo = {
+  status: 'inactive',
+  secondsRemaining: 0,
+  lastActivatedAt: null,
+};
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -514,7 +524,33 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
-          <ScrollArea className='h-[calc(100vh-350px)] min-h-[400px]'>
+          {/* Mobile card list */}
+          <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
+            {displayContracts.length > 0 ? (
+              <div className='flex flex-col gap-2 pb-4'>
+                {displayContracts.map((contract) => (
+                  <ContractMobileCard
+                    key={contract.address}
+                    contract={contract}
+                    viewType={viewType}
+                    activation={PLACEHOLDER_ACTIVATION}
+                    isAuthenticated={isAuthenticated}
+                    onContractSelect={onContractSelect}
+                    onAddContract={onAddContract}
+                  />
+                ))}
+              </div>
+            ) : (
+              <NoticeBanner
+                image={noContractsFoundImage}
+                title='No Contracts Found'
+                description='No contracts found.'
+              />
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <ScrollArea className='hidden md:block h-[calc(100vh-350px)] min-h-[400px]'>
             <Table className='w-full'>
               <TableHeader className='bg-black text-white sticky top-0 z-10'>
                 <TableRow className='h-20 hover:bg-transparent'>
