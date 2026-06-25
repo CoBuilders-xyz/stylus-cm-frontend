@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Zap, ExternalLink } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
@@ -47,6 +47,8 @@ export default function ActivationTab({
   onActivate,
   readOnly = false,
 }: Props) {
+  const autoActivationLabelId = useId();
+  const maxCostId = useId();
   const [autoEnabled, setAutoEnabled] = useState(DEFAULT_AUTO_ACTIVATION.enabled);
   const [maxCost, setMaxCost] = useState(
     String(DEFAULT_AUTO_ACTIVATION.maxActivationCostEth)
@@ -136,12 +138,15 @@ export default function ActivationTab({
       <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
         <div className='flex items-center justify-between'>
           <div>
-            <h3 className='text-lg font-medium'>Auto-activation</h3>
+            <h3 id={autoActivationLabelId} className='text-lg font-medium'>
+              Auto-activation
+            </h3>
             <p className='text-gray-400 text-sm'>
               Automatically re-activate this contract before it expires.
             </p>
           </div>
           <SwitchPrimitive.Root
+            aria-labelledby={autoActivationLabelId}
             checked={autoEnabled}
             onCheckedChange={setAutoEnabled}
             className={cn(
@@ -160,10 +165,11 @@ export default function ActivationTab({
         </div>
 
         <div className='mt-5'>
-          <label className='block text-sm mb-1'>
+          <label htmlFor={maxCostId} className='block text-sm mb-1'>
             Max activation cost (ETH)
           </label>
           <Input
+            id={maxCostId}
             type='number'
             step='0.0001'
             value={maxCost}

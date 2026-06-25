@@ -18,7 +18,12 @@ import { Contract } from '@/services/contractService';
 interface Props {
   contract: Contract;
   viewType: 'my-contracts' | 'explore-contracts';
-  activation: ActivationInfo;
+  /**
+   * Optional — until activation data is wired (COB-493/496) the card hides
+   * the activation badge and the Activate CTA rather than rendering a dead
+   * placeholder action.
+   */
+  activation?: ActivationInfo;
   isAuthenticated: boolean;
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
   onAddContract?: (contract: Contract) => void;
@@ -46,16 +51,30 @@ export default function ContractMobileCard({
         ? contract.savedContractName
         : null;
 
+  // Only show the Activate CTA when we have real activation data AND a handler
+  // to run it. Without a handler the button would be dead.
   const canActivate =
-    activation.status === 'expiring' || activation.status === 'inactive';
+    !!onActivate &&
+    !!activation &&
+    (activation.status === 'expiring' || activation.status === 'inactive');
 
   const handleSelect = () => onContractSelect?.(contract.id, contract);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleSelect();
+    }
+  };
+
   return (
-    <button
-      type='button'
+    <div
+      role='button'
+      tabIndex={0}
       onClick={handleSelect}
-      className='w-full text-left rounded-lg border border-[#2C2E30] bg-[#0F0F0F] hover:bg-[#161616] transition-colors p-4 flex flex-col gap-3'
+      onKeyDown={handleKeyDown}
+      className='w-full text-left rounded-lg border border-[#2C2E30] bg-[#0F0F0F] hover:bg-[#161616] transition-colors p-4 flex flex-col gap-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#335CD7]'
     >
       <div className='flex items-start justify-between gap-3'>
         <div className='min-w-0'>
@@ -78,7 +97,7 @@ export default function ContractMobileCard({
       </div>
 
       <div className='flex items-center gap-2 flex-wrap'>
-        <ActivationBadge info={activation} compact />
+        {activation && <ActivationBadge info={activation} compact />}
         <Badge
           variant={contract.bytecode.isCached ? 'secondary' : 'outline'}
           className='px-2 py-0.5 text-[11px] font-medium'
@@ -170,6 +189,6 @@ export default function ContractMobileCard({
           Added
         </Badge>
       ) : null}
-    </button>
+    </div>
   );
 }

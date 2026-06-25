@@ -25,7 +25,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
   return (
     <SidePanelContext.Provider value={{ onClose }}>
       <div
-        className={`fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-auto ${
+        className={`@container/panel fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-auto ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
@@ -34,6 +34,11 @@ const SidePanel: React.FC<SidePanelProps> = ({
           // Start below header, which has padding of 4 (p-4)
           marginTop: 'var(--header-height, 64px)',
           height: 'calc(100vh - var(--header-height, 64px))',
+          // Named container so @md/panel / @lg/panel queries inside the panel
+          // (CacheHero, ActivationTab) resolve to this element's width rather
+          // than the viewport.
+          containerType: 'inline-size',
+          containerName: 'panel',
         }}
       >
         {/* No header with title and close button anymore */}

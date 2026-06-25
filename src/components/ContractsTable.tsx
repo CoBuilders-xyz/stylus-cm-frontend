@@ -38,15 +38,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import ContractMobileCard from '@/components/ContractMobileCard';
-import type { ActivationInfo } from '@/lib/activation';
-
-// Per-contract activation state will be wired in COB-493; until then the
-// mobile cards show a neutral placeholder.
-const PLACEHOLDER_ACTIVATION: ActivationInfo = {
-  status: 'inactive',
-  secondsRemaining: 0,
-  lastActivatedAt: null,
-};
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -533,7 +524,6 @@ function ContractsTable({
                     key={contract.address}
                     contract={contract}
                     viewType={viewType}
-                    activation={PLACEHOLDER_ACTIVATION}
                     isAuthenticated={isAuthenticated}
                     onContractSelect={onContractSelect}
                     onAddContract={onAddContract}
