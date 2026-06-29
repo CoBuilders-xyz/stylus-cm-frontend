@@ -24,10 +24,20 @@ export type ActivationStatus =
   | 'unknown'
   | 'error';
 
+/**
+ * Narrower description of *why* a contract is currently inactive, surfaced as
+ * a badge sublabel. Doesn't affect the 5-state filter contract.
+ */
+export type ActivationDetail =
+  | 'never_activated'
+  | 'expired'
+  | 'needs_upgrade';
+
 export interface ActivationInfo {
   status: ActivationStatus;
   secondsRemaining: number;
   lastActivatedAt: string | null;
+  detail?: ActivationDetail;
 }
 
 /**
@@ -158,7 +168,18 @@ export function activationStatusLabel(info: ActivationInfo): string {
 }
 
 export function activationSubLabel(info: ActivationInfo): string {
-  if (info.status === 'inactive') return 'Reactivation required';
+  if (info.status === 'inactive') {
+    switch (info.detail) {
+      case 'never_activated':
+        return 'Activation required';
+      case 'expired':
+        return 'Activation expired';
+      case 'needs_upgrade':
+        return 'Needs upgrade to current Stylus version';
+      default:
+        return 'Reactivation required';
+    }
+  }
   if (info.status === 'unknown') return 'Status not yet known';
   if (info.status === 'error') return 'Last activation failed';
   const remaining = humanizeActivationTime(info);

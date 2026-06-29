@@ -7,25 +7,77 @@ import {
 } from '@/config/abis/arbWasm/arbWasm';
 
 /**
+ * Why a `programTimeLeft` read came back as "no active program". Surfaced so
+ * the UI can distinguish "never activated" from "expired" from "needs Stylus
+ * version upgrade" — the action the user has to take is the same
+ * (`activateProgram`), but the framing in the badge sublabel differs.
+ */
+export type ProgramReason = 'never_activated' | 'expired' | 'needs_upgrade';
+
+/**
+ * Per-address result from the multicall.
+ *
+ * - `seconds > 0`: program is active with that many seconds remaining.
+ * - `seconds === 0`: precompile responded but there's no executable program
+ *   (revert or genuine 0). When the revert is recognised, `reason` describes
+ *   which precompile error was hit.
+ * - `seconds === null`: no answer yet (loading, no chainId, RPC error) — the
+ *   caller should treat this as "unknown", not "inactive".
+ */
+export interface ProgramTimeLeftReading {
+  seconds: number | null;
+  reason?: ProgramReason;
+}
+
+const REASON_BY_ERROR_NAME: Record<string, ProgramReason> = {
+  ProgramNotActivated: 'never_activated',
+  ProgramExpired: 'expired',
+  ProgramNeedsUpgrade: 'needs_upgrade',
+};
+
+/**
+ * Walks the viem error cause/data chain looking for a recognised
+ * `errorName`. Falls back to a substring match on the error message, which
+ * covers RPCs that return the error as a string instead of decoded data.
+ */
+function decodeProgramReason(error: unknown): ProgramReason | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  type ViemErrLike = {
+    data?: { errorName?: string };
+    errorName?: string;
+    cause?: unknown;
+    message?: string;
+    shortMessage?: string;
+  };
+  let cur: ViemErrLike | undefined = error as ViemErrLike;
+  for (let i = 0; i < 6 && cur; i++) {
+    const name = cur.data?.errorName ?? cur.errorName;
+    if (name && REASON_BY_ERROR_NAME[name]) return REASON_BY_ERROR_NAME[name];
+    cur = cur.cause as ViemErrLike | undefined;
+  }
+  const top = error as ViemErrLike;
+  const msg = top.shortMessage ?? top.message ?? '';
+  for (const [errName, reason] of Object.entries(REASON_BY_ERROR_NAME)) {
+    if (msg.includes(errName)) return reason;
+  }
+  return undefined;
+}
+
+/**
  * Multicalls `ArbWasm.programTimeLeft(address)` for every address in
  * `addresses` against `chainId`. wagmi batches the reads through Multicall3
  * when the configured transport supports it, so this hook costs ≤ 1 RPC call
  * per render.
  *
  * Drop this in favour of the backend-supplied `programTimeLeft` field once
- * COB-490 ships — the consumer signature already accepts `number | null` so
- * the switch is a single-line change at the call site.
- *
- * @returns A map keyed by lowercased contract address. Values are seconds
- *          remaining (`number`), `0` when the program has expired, or `null`
- *          when the precompile reverted (e.g. `ProgramNotActivated`) or the
- *          chain doesn't have an ArbWasm precompile.
+ * COB-490 ships — list endpoints will return the seconds directly, and this
+ * hook (plus the consumer's fallback merge) collapses to a single line.
  */
 export function useProgramTimeLeft(
   addresses: string[] | undefined,
   chainId: number | undefined
 ): {
-  data: Record<string, number | null>;
+  data: Record<string, ProgramTimeLeftReading>;
   isLoading: boolean;
 } {
   const validAddresses = useMemo(
@@ -53,15 +105,30 @@ export function useProgramTimeLeft(
   });
 
   const result = useMemo(() => {
-    const out: Record<string, number | null> = {};
+    const out: Record<string, ProgramTimeLeftReading> = {};
     validAddresses.forEach((address, i) => {
-      const entry = data?.[i];
-      if (!entry || entry.status !== 'success') {
-        out[address.toLowerCase()] = null;
+      const key = address.toLowerCase();
+      if (!data) {
+        out[key] = { seconds: null };
+        return;
+      }
+      const entry = data[i];
+      if (!entry) {
+        out[key] = { seconds: null };
+        return;
+      }
+      if (entry.status !== 'success') {
+        // The RPC answered; the contract just doesn't have an executable
+        // program right now. Decode which precompile error fired so the
+        // badge can show a meaningful sublabel.
+        out[key] = {
+          seconds: 0,
+          reason: decodeProgramReason(entry.error),
+        };
         return;
       }
       const seconds = Number(entry.result as bigint);
-      out[address.toLowerCase()] = Number.isFinite(seconds) ? seconds : null;
+      out[key] = { seconds: Number.isFinite(seconds) ? seconds : 0 };
     });
     return out;
   }, [data, validAddresses]);

@@ -43,11 +43,15 @@ import ActivationFilters, {
   ActivationFilter,
 } from '@/components/ActivationFilters';
 import {
+  ActivationDetail,
   ActivationInfo,
   ActivationStatus,
   getEffectiveActivationStatus,
 } from '@/lib/activation';
-import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
+import {
+  ProgramReason,
+  useProgramTimeLeft,
+} from '@/hooks/useProgramTimeLeft';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 
 interface ContractsTableProps {
@@ -58,9 +62,16 @@ interface ContractsTableProps {
   onAddNewContract?: () => void;
 }
 
+const DETAIL_BY_REASON: Record<ProgramReason, ActivationDetail> = {
+  never_activated: 'never_activated',
+  expired: 'expired',
+  needs_upgrade: 'needs_upgrade',
+};
+
 function buildActivationInfo(
   contract: Contract,
-  programTimeLeftSeconds: number | null
+  programTimeLeftSeconds: number | null,
+  reason: ProgramReason | undefined
 ): ActivationInfo {
   const status: ActivationStatus = getEffectiveActivationStatus(
     contract,
@@ -70,6 +81,7 @@ function buildActivationInfo(
     status,
     secondsRemaining: programTimeLeftSeconds ?? 0,
     lastActivatedAt: contract.lastActivationTimestamp ?? null,
+    detail: reason ? DETAIL_BY_REASON[reason] : undefined,
   };
 }
 
@@ -466,10 +478,14 @@ function ContractsTable({
         const programTimeLeftSeconds =
           fromBackend != null
             ? Number(fromBackend)
-            : (fromMulticall ?? null);
+            : (fromMulticall?.seconds ?? null);
         return {
           contract,
-          activation: buildActivationInfo(contract, programTimeLeftSeconds),
+          activation: buildActivationInfo(
+            contract,
+            programTimeLeftSeconds,
+            fromMulticall?.reason
+          ),
         };
       }),
     [sourceContracts, programTimeLeftMap]
