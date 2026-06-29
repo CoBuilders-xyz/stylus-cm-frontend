@@ -69,6 +69,14 @@ function decodeProgramReason(error: unknown): ProgramReason | undefined {
  * when the configured transport supports it, so this hook costs ≤ 1 RPC call
  * per render.
  *
+ * **Multicall3 requirement**: the batching collapses to a single
+ * `eth_call` only when the target chain has `multicall3` defined in its
+ * viem chain config (true for Arbitrum, Arbitrum Sepolia, and every chain
+ * exported from `viem/chains` today). If you add a custom chain via
+ * `RainbowKitProvider`/`getDefaultConfig` without a `multicall3` contracts
+ * entry, this hook silently falls back to N separate `eth_call`s. Always
+ * include `multicall3` in custom chain definitions.
+ *
  * Drop this in favour of the backend-supplied `programTimeLeft` field once
  * COB-490 ships — list endpoints will return the seconds directly, and this
  * hook (plus the consumer's fallback merge) collapses to a single line.
