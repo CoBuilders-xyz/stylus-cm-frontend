@@ -62,11 +62,19 @@ interface ContractsTableProps {
   onAddNewContract?: () => void;
 }
 
-const DETAIL_BY_REASON: Record<ProgramReason, ActivationDetail> = {
-  never_activated: 'never_activated',
-  expired: 'expired',
-  needs_upgrade: 'needs_upgrade',
-};
+/**
+ * Backend ships `programTimeLeft` as `string | null`. Defensive against an
+ * empty string slipping through (`Number('') === 0` would otherwise short
+ * the multicall and pin the row to "Inactive"). Returns the parsed seconds
+ * when present and parseable, otherwise `null` meaning "no backend reading".
+ */
+function backendProgramTimeLeft(
+  raw: string | null | undefined
+): number | null {
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
 
 function buildActivationInfo(
   contract: Contract,
@@ -77,11 +85,13 @@ function buildActivationInfo(
     contract,
     programTimeLeftSeconds
   );
+  // `ProgramReason` and `ActivationDetail` are intentionally the same union
+  // — the cast keeps the two domains independent without an identity map.
   return {
     status,
     secondsRemaining: programTimeLeftSeconds ?? 0,
     lastActivatedAt: contract.lastActivationTimestamp ?? null,
-    detail: reason ? DETAIL_BY_REASON[reason] : undefined,
+    detail: reason as ActivationDetail | undefined,
   };
 }
 
@@ -456,7 +466,9 @@ function ContractsTable({
   const addressesForMulticall = useMemo(
     () =>
       sourceContracts
-        .map((c) => c.programTimeLeft == null ? c.address : null)
+        .map((c) =>
+          backendProgramTimeLeft(c.programTimeLeft) === null ? c.address : null
+        )
         .filter((a): a is string => a !== null),
     [sourceContracts]
   );
@@ -473,17 +485,21 @@ function ContractsTable({
   const rowsWithActivation = useMemo(
     () =>
       sourceContracts.map((contract) => {
-        const fromBackend = contract.programTimeLeft;
+        const fromBackend = backendProgramTimeLeft(contract.programTimeLeft);
         const fromMulticall = programTimeLeftMap[contract.address.toLowerCase()];
         const programTimeLeftSeconds =
-          fromBackend != null
-            ? Number(fromBackend)
-            : (fromMulticall?.seconds ?? null);
+          fromBackend !== null ? fromBackend : (fromMulticall?.seconds ?? null);
         return {
           contract,
           activation: buildActivationInfo(
             contract,
             programTimeLeftSeconds,
+            // `reason` is only available via the multicall today. Once
+            // COB-490 ships `programTimeLeft` on list endpoints we lose the
+            // ProgramExpired / NeedsUpgrade detail for those rows — backend
+            // should also surface a reason field at that point, otherwise
+            // the badge sublabel falls back to the generic "Reactivation
+            // required".
             fromMulticall?.reason
           ),
         };
@@ -493,9 +509,15 @@ function ContractsTable({
 
   const displayRows = useMemo(() => {
     if (activationFilter === 'all') return rowsWithActivation;
-    return rowsWithActivation.filter(
-      ({ activation }) => activation.status === activationFilter
-    );
+    return rowsWithActivation.filter(({ activation }) => {
+      // `error` rows belong to the same UX bucket as `inactive`: both need
+      // the user to activate. Hiding them under "Inactive" would make
+      // failed activations invisible to anyone scanning by status.
+      if (activationFilter === 'inactive') {
+        return activation.status === 'inactive' || activation.status === 'error';
+      }
+      return activation.status === activationFilter;
+    });
   }, [rowsWithActivation, activationFilter]);
 
   // Handle page changes through the hook

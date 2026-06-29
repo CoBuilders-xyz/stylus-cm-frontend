@@ -68,7 +68,12 @@ export function getEffectiveActivationStatus(
   const persisted = contract.activationStatus;
   if (persisted === 'error') return 'error';
 
-  if (programTimeLeftSeconds == null) {
+  // `NaN` slips past `<= 0` and `< threshold` and would otherwise return
+  // `'active'` — treat any non-finite value the same as "no answer yet".
+  const hasReading =
+    programTimeLeftSeconds != null && Number.isFinite(programTimeLeftSeconds);
+
+  if (!hasReading) {
     if (persisted === 'active') return 'active';
     return 'unknown';
   }

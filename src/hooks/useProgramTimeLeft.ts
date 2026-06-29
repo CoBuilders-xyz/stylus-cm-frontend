@@ -127,8 +127,14 @@ export function useProgramTimeLeft(
         };
         return;
       }
-      const seconds = Number(entry.result as bigint);
-      out[key] = { seconds: Number.isFinite(seconds) ? seconds : 0 };
+      // Defensive: a success without a bigint result is a viem/RPC quirk,
+      // not "no active program" — treat it as unknown rather than inactive.
+      if (typeof entry.result !== 'bigint') {
+        out[key] = { seconds: null };
+        return;
+      }
+      const seconds = Number(entry.result);
+      out[key] = { seconds: Number.isFinite(seconds) ? seconds : null };
     });
     return out;
   }, [data, validAddresses]);
