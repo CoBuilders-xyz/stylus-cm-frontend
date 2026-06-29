@@ -46,8 +46,10 @@ export function BiddingHistory({
         <h3 className='text-lg'>Bid History</h3>
       </div>
 
-      {/* Bid History Table */}
-      <Table>
+      {/* Bid History Table — table-fixed so columns respect their widths
+          rather than growing to fit the longest cell (which pushed the date
+          column off the right edge of the panel on mobile). */}
+      <Table className='table-fixed w-full'>
         <TableBody>
           {isLoading ? (
             // Loading state
@@ -94,11 +96,11 @@ export function BiddingHistory({
               >
                 {/* Left side with avatar and address */}
                 <TableCell className='p-2 w-1/4'>
-                  <div className='flex items-center'>
-                    <div className='w-8 h-8 bg-blue-600 rounded-full mr-3 flex items-center justify-center text-xs font-bold'>
+                  <div className='flex items-center min-w-0'>
+                    <div className='w-8 h-8 shrink-0 bg-blue-600 rounded-full mr-3 flex items-center justify-center text-xs font-bold'>
                       {bid.contractName.substring(0, 2).toUpperCase() || 'CN'}
                     </div>
-                    <div className='font-mono text-sm'>
+                    <div className='font-mono text-sm truncate min-w-0'>
                       {bid.isAutomated
                         ? 'Cache Manager Automation'
                         : bid.originAddress}
