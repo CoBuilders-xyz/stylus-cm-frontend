@@ -548,8 +548,8 @@ export function AutomatedBiddingSection({
         </div>
       )}
 
-      <div className='flex justify-between items-start relative z-10'>
-        <div>
+      <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
+        <div className='min-w-0 flex-1'>
           <p className='font-bold'>Automated Bidding Configuration</p>
           <p className='text-sm text-blue-200'>
             Configure automated bidding to maintain your position in the cache

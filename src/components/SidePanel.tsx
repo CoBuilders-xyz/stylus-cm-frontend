@@ -25,7 +25,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
   return (
     <SidePanelContext.Provider value={{ onClose }}>
       <div
-        className={`@container/panel fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-auto ${
+        className={`@container/panel fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-x-hidden overflow-y-auto ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
