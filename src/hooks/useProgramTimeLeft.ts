@@ -118,13 +118,14 @@ export function useProgramTimeLeft(
         return;
       }
       if (entry.status !== 'success') {
-        // The RPC answered; the contract just doesn't have an executable
-        // program right now. Decode which precompile error fired so the
-        // badge can show a meaningful sublabel.
-        out[key] = {
-          seconds: 0,
-          reason: decodeProgramReason(entry.error),
-        };
+        // A per-entry failure can be either an ArbWasm typed revert
+        // (`ProgramNotActivated`, etc — definitively "no active program")
+        // OR a transport/multicall/chain-level failure. Only collapse to
+        // "inactive" when we can decode a known precompile reason; leave
+        // unrecognised failures as `null` so they read as "unknown"
+        // instead of silently flipping the row to inactive on a flaky RPC.
+        const reason = decodeProgramReason(entry.error);
+        out[key] = { seconds: reason ? 0 : null, reason };
         return;
       }
       // Defensive: a success without a bigint result is a viem/RPC quirk,

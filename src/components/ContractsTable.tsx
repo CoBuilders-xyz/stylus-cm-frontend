@@ -89,7 +89,7 @@ function buildActivationInfo(
   // — the cast keeps the two domains independent without an identity map.
   return {
     status,
-    secondsRemaining: programTimeLeftSeconds ?? 0,
+    secondsRemaining: programTimeLeftSeconds,
     lastActivatedAt: contract.lastActivationTimestamp ?? null,
     detail: reason as ActivationDetail | undefined,
   };

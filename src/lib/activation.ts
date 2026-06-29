@@ -35,7 +35,13 @@ export type ActivationDetail =
 
 export interface ActivationInfo {
   status: ActivationStatus;
-  secondsRemaining: number;
+  /**
+   * `null` when we have no `programTimeLeft` reading yet — e.g. backend
+   * persisted `active` but the on-chain read hasn't returned. Distinct from
+   * `0`, which means "the precompile answered and the program is not
+   * executable right now". Consumers must not coerce `null` to `0`.
+   */
+  secondsRemaining: number | null;
   lastActivatedAt: string | null;
   detail?: ActivationDetail;
 }
@@ -107,12 +113,11 @@ export const DEFAULT_AUTO_ACTIVATION = {
 };
 
 export function humanizeActivationTime(info: ActivationInfo): string {
-  if (info.status === 'inactive' || info.secondsRemaining <= 0) {
-    return 'Inactive';
-  }
-  if (info.status === 'unknown' || info.status === 'error') {
-    return info.status === 'error' ? 'Activation failed' : 'Status unknown';
-  }
+  if (info.status === 'inactive') return 'Inactive';
+  if (info.status === 'unknown') return 'Status unknown';
+  if (info.status === 'error') return 'Activation failed';
+  if (info.secondsRemaining == null) return '—';
+  if (info.secondsRemaining <= 0) return 'Inactive';
   const s = info.secondsRemaining;
   if (s >= DAY) {
     const days = Math.floor(s / DAY);
@@ -130,9 +135,10 @@ export function activationLabel(info: ActivationInfo): string {
   if (info.status === 'inactive') return 'Inactive';
   if (info.status === 'unknown') return 'Unknown';
   if (info.status === 'error') return 'Activation failed';
-  if (info.status === 'expiring')
-    return `Expiring · ${humanizeActivationTime(info)}`;
-  return `Active · ${humanizeActivationTime(info)}`;
+  const suffix =
+    info.secondsRemaining != null ? ` · ${humanizeActivationTime(info)}` : '';
+  if (info.status === 'expiring') return `Expiring${suffix}`;
+  return `Active${suffix}`;
 }
 
 export function formatRelativeTime(isoDate: string): string {
@@ -187,6 +193,12 @@ export function activationSubLabel(info: ActivationInfo): string {
   }
   if (info.status === 'unknown') return 'Status not yet known';
   if (info.status === 'error') return 'Last activation failed';
+  // active / expiring: only show the countdown when we actually have a
+  // reading. Falling back to `humanizeActivationTime`'s "Inactive" branch
+  // when seconds are missing would render "expires in Inactive".
+  if (info.secondsRemaining == null) {
+    return info.status === 'expiring' ? 'Expiring soon' : 'Currently active';
+  }
   const remaining = humanizeActivationTime(info);
   const tail = remaining.startsWith('in ') ? remaining.slice(3) : remaining;
   return `expires in ${tail}`;
