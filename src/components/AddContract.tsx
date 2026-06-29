@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSidePanel } from './SidePanel';
@@ -8,9 +8,16 @@ import { useContractService } from '@/hooks/useContractService';
 import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
-import { X, Info } from 'lucide-react';
-import { useBytecode, useReadContract } from 'wagmi';
-import { isAddress } from 'viem';
+import { X, Info, AlertTriangle, ExternalLink, Loader2, Zap } from 'lucide-react';
+import {
+  useAccount,
+  useBytecode,
+  useReadContract,
+  useSimulateContract,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from 'wagmi';
+import { formatEther, isAddress, parseEther } from 'viem';
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +27,18 @@ import {
   ARB_WASM_ABI,
   ARB_WASM_PRECOMPILE,
 } from '@/config/abis/arbWasm/arbWasm';
+import { showErrorToast, showSuccessToast } from '@/components/Toast';
+
+// Generous over-pay used to discover the program's dataFee via simulation.
+// ArbWasm.activateProgram refunds excess value, so the user is only charged
+// the actual dataFee returned from the simulation.
+const ACTIVATION_SIMULATION_VALUE = parseEther('0.01');
+
+const explorerTxUrl = (chainId: number | undefined, hash: string) => {
+  if (chainId === 42161) return `https://arbiscan.io/tx/${hash}`;
+  if (chainId === 421614) return `https://sepolia.arbiscan.io/tx/${hash}`;
+  return null;
+};
 
 interface AddContractProps {
   onSuccess?: () => void;
@@ -35,7 +54,8 @@ export default function AddContract({
   const { onClose } = useSidePanel();
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
-  const { currentBlockchainId } = useBlockchainService();
+  const { currentBlockchain, currentBlockchainId } = useBlockchainService();
+  const { isConnected } = useAccount();
   const router = useRouter();
 
   // State for the form - initialize with initialAddress if provided
@@ -69,6 +89,7 @@ export default function AddContract({
     data: timeLeftSeconds,
     isLoading: isCheckingWasmActive,
     error: wasmActiveError,
+    refetch: refetchProgramTimeLeft,
   } = useReadContract({
     address: ARB_WASM_PRECOMPILE,
     abi: ARB_WASM_ABI,
@@ -79,6 +100,56 @@ export default function AddContract({
         isWasmContract && !!contractAddress && contractAddress.length === 42,
     },
   });
+
+  const isExpiredWasm =
+    isWasmContract &&
+    typeof timeLeftSeconds === 'bigint' &&
+    timeLeftSeconds === BigInt(0);
+
+  // Simulate activateProgram on the ArbWasm precompile so we can discover the
+  // contract-specific dataFee. Excess value is refunded by the precompile, but
+  // we want to charge the user the precise fee. simulateData.result is
+  // [version, dataFee].
+  const {
+    data: activationSimulation,
+    error: activationSimulationError,
+    isLoading: isSimulatingActivation,
+  } = useSimulateContract({
+    address: ARB_WASM_PRECOMPILE,
+    abi: ARB_WASM_ABI,
+    functionName: 'activateProgram',
+    args: [contractAddress as `0x${string}`],
+    value: ACTIVATION_SIMULATION_VALUE,
+    query: {
+      enabled: isConnected && isExpiredWasm,
+    },
+  });
+
+  const activationDataFee = useMemo(() => {
+    const result = activationSimulation?.result as
+      | readonly [number, bigint]
+      | undefined;
+    return result?.[1];
+  }, [activationSimulation]);
+
+  const {
+    writeContract: writeActivation,
+    data: activationTxHash,
+    error: activationWriteError,
+    isPending: isActivationWritePending,
+    reset: resetActivationWrite,
+  } = useWriteContract();
+
+  const {
+    isLoading: isActivationConfirming,
+    isSuccess: isActivationConfirmed,
+    error: activationReceiptError,
+  } = useWaitForTransactionReceipt({
+    hash: activationTxHash,
+  });
+
+  const isActivating =
+    isActivationWritePending || isActivationConfirming;
 
   // Handle all validation logic in one place
   useEffect(() => {
@@ -165,16 +236,18 @@ export default function AddContract({
           return;
         }
 
-        // Check if WASM program is expired
+        // Check if WASM program is expired — surface as an actionable amber
+        // state instead of a hard block so the user can reactivate in-place.
         if (
           typeof timeLeftSeconds === 'bigint' &&
           timeLeftSeconds === BigInt(0)
         ) {
           setValidationState({
-            message: 'WASM contract has expired and needs reactivation',
-            type: 'error',
+            message:
+              'This WASM contract is expired and needs to be reactivated to be cached.',
+            type: 'warning',
           });
-          setAddressError('WASM contract has expired and needs reactivation');
+          setAddressError(null);
           return;
         }
 
@@ -237,6 +310,7 @@ export default function AddContract({
     // Clear validation states when user types
     setValidationState(null);
     setIsWasmContract(false); // Reset WASM status on address change
+    resetActivationWrite();
 
     // Validate address on every change for immediate feedback
     if (newAddress.trim()) {
@@ -246,6 +320,67 @@ export default function AddContract({
       setAddressError(null);
     }
   };
+
+  const handleActivateProgram = () => {
+    if (!isConnected) {
+      showErrorToast({
+        message: 'Connect your wallet to activate this contract.',
+      });
+      return;
+    }
+    if (!activationDataFee) {
+      showErrorToast({
+        message:
+          activationSimulationError?.message ??
+          'Unable to estimate the activation fee. Try again in a moment.',
+      });
+      return;
+    }
+    writeActivation({
+      address: ARB_WASM_PRECOMPILE,
+      abi: ARB_WASM_ABI,
+      functionName: 'activateProgram',
+      args: [contractAddress as `0x${string}`],
+      value: activationDataFee,
+    });
+  };
+
+  // After the activation tx is mined, re-read programTimeLeft so the
+  // validation effect unlocks the form once the precompile reports
+  // a non-zero remaining lifetime.
+  useEffect(() => {
+    if (isActivationConfirmed) {
+      showSuccessToast({ message: 'Contract activated successfully.' });
+      refetchProgramTimeLeft();
+    }
+  }, [isActivationConfirmed, refetchProgramTimeLeft]);
+
+  useEffect(() => {
+    const err = activationWriteError ?? activationReceiptError;
+    if (!err) return;
+
+    const message = err.message ?? '';
+    const lower = message.toLowerCase();
+    let display = 'Activation failed. Please try again.';
+    if (
+      lower.includes('user rejected') ||
+      lower.includes('user denied') ||
+      lower.includes('rejected the request')
+    ) {
+      display = 'Activation cancelled in wallet.';
+    } else if (
+      lower.includes('insufficient funds') ||
+      lower.includes('insufficient balance') ||
+      lower.includes('exceeds the balance')
+    ) {
+      display = 'Insufficient ETH to cover the activation fee.';
+    }
+    showErrorToast({ message: display, onRetry: handleActivateProgram });
+    resetActivationWrite();
+    // handleActivateProgram is stable enough for this retry surface; including
+    // it would re-fire the effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activationWriteError, activationReceiptError, resetActivationWrite]);
 
   // Handle name input change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -385,20 +520,34 @@ export default function AddContract({
               {addressError && (
                 <p className='text-red-500 text-sm mt-1'>{addressError}</p>
               )}
-              {validationState && (
+              {validationState && validationState.type !== 'warning' && (
                 <p
                   className={`text-sm mt-1 ${
                     validationState.type === 'loading'
                       ? 'text-yellow-500'
                       : validationState.type === 'success'
                       ? 'text-green-500'
-                      : validationState.type === 'warning'
-                      ? 'text-orange-500'
                       : 'text-red-500'
                   }`}
                 >
                   {validationState.message}
                 </p>
+              )}
+              {isExpiredWasm && (
+                <ExpiredActivationCard
+                  message={
+                    validationState?.message ??
+                    'This WASM contract is expired and needs to be reactivated to be cached.'
+                  }
+                  isConnected={isConnected}
+                  isSimulating={isSimulatingActivation}
+                  simulationError={activationSimulationError}
+                  dataFee={activationDataFee}
+                  isActivating={isActivating}
+                  txHash={activationTxHash}
+                  chainId={currentBlockchain?.chainId}
+                  onActivate={handleActivateProgram}
+                />
               )}
             </div>
 
@@ -451,15 +600,13 @@ export default function AddContract({
                 {addressError && (
                   <p className='text-red-500 text-sm mt-1'>{addressError}</p>
                 )}
-                {validationState && (
+                {validationState && validationState.type !== 'warning' && (
                   <p
                     className={`text-sm mt-1 ${
                       validationState.type === 'loading'
                         ? 'text-yellow-500'
                         : validationState.type === 'success'
                         ? 'text-green-500'
-                        : validationState.type === 'warning'
-                        ? 'text-orange-500'
                         : 'text-red-500'
                     }`}
                   >
@@ -505,6 +652,99 @@ export default function AddContract({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+interface ExpiredActivationCardProps {
+  message: string;
+  isConnected: boolean;
+  isSimulating: boolean;
+  simulationError: Error | null;
+  dataFee: bigint | undefined;
+  isActivating: boolean;
+  txHash: `0x${string}` | undefined;
+  chainId: number | undefined;
+  onActivate: () => void;
+}
+
+function ExpiredActivationCard({
+  message,
+  isConnected,
+  isSimulating,
+  simulationError,
+  dataFee,
+  isActivating,
+  txHash,
+  chainId,
+  onActivate,
+}: ExpiredActivationCardProps) {
+  const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
+  const cannotActivate =
+    !isConnected || isActivating || (!dataFee && !simulationError);
+  const feeLabel = dataFee
+    ? `${Number(formatEther(dataFee)).toFixed(6)} ETH`
+    : null;
+
+  return (
+    <div className='mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 p-4'>
+      <div className='flex items-start gap-2'>
+        <AlertTriangle className='h-4 w-4 text-amber-300 mt-0.5 shrink-0' />
+        <div className='flex-1'>
+          <p className='text-sm font-medium text-amber-200'>{message}</p>
+          {!isConnected && (
+            <p className='text-xs text-amber-100/80 mt-1'>
+              Connect your wallet to send the activation transaction.
+            </p>
+          )}
+          {isConnected && feeLabel && !isActivating && !txHash && (
+            <p className='text-xs text-amber-100/80 mt-1'>
+              Estimated activation fee: {feeLabel}. Excess value is refunded by
+              the ArbWasm precompile.
+            </p>
+          )}
+          {isConnected && simulationError && !dataFee && (
+            <p className='text-xs text-red-300 mt-1'>
+              Could not estimate the activation fee. Make sure your wallet has
+              enough ETH on the correct chain and try again.
+            </p>
+          )}
+          {txHash && (
+            <p className='text-xs text-amber-100/80 mt-2'>
+              {isActivating
+                ? 'Waiting for the activation transaction to be confirmed…'
+                : 'Activation transaction submitted.'}{' '}
+              {txUrl ? (
+                <a
+                  href={txUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5]'
+                >
+                  View on Arbiscan
+                  <ExternalLink className='h-3 w-3' />
+                </a>
+              ) : null}
+            </p>
+          )}
+          <Button
+            type='button'
+            onClick={onActivate}
+            disabled={cannotActivate}
+            className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+          >
+            {isActivating ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <Zap className='h-4 w-4' />
+            )}
+            {isActivating ? 'Activating…' : 'Activate now'}
+            {!isActivating && isSimulating && (
+              <Loader2 className='h-3 w-3 animate-spin' />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
