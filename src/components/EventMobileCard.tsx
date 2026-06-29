@@ -39,6 +39,7 @@ export default function EventMobileCard({ event, onSelect }: Props) {
     }
   };
 
+  const isSelectable = Boolean(onSelect);
   const handleSelect = () => onSelect?.(event);
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
@@ -50,11 +51,15 @@ export default function EventMobileCard({ event, onSelect }: Props) {
 
   return (
     <div
-      role='button'
-      tabIndex={0}
-      onClick={handleSelect}
-      onKeyDown={handleKeyDown}
-      className='w-full text-left rounded-lg border border-[#2C2E30] bg-[#0F0F0F] hover:bg-[#161616] transition-colors p-4 flex flex-col gap-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#335CD7]'
+      role={isSelectable ? 'button' : undefined}
+      tabIndex={isSelectable ? 0 : undefined}
+      onClick={isSelectable ? handleSelect : undefined}
+      onKeyDown={isSelectable ? handleKeyDown : undefined}
+      className={`w-full text-left rounded-lg border border-[#2C2E30] bg-[#0F0F0F] transition-colors p-4 flex flex-col gap-3 outline-none ${
+        isSelectable
+          ? 'hover:bg-[#161616] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#335CD7]'
+          : ''
+      }`}
     >
       <div className='flex items-center justify-between gap-2'>
         <Badge

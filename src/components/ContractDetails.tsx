@@ -568,8 +568,8 @@ export default function ContractDetails({
       </div>
 
       {/* Scrollable Main Content */}
-      <ScrollArea className='flex-1'>
-        <div className='p-6'>
+      <ScrollArea className='panel-scroll-area flex-1 min-w-0'>
+        <div className='p-4 sm:p-6 min-w-0 overflow-x-hidden'>
           {viewType === 'my-contracts' ? (
             <Tabs defaultValue='cache' className='w-full'>
               <TabsList className='bg-[#0f0f0f] border border-[#2C2E30] mb-4 overflow-x-auto max-w-full flex-nowrap'>

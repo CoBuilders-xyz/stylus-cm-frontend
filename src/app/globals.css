@@ -169,3 +169,13 @@
 button:hover {
   cursor: pointer;
 }
+
+/* Radix ScrollArea wraps children in `display: table; min-width: 100%`,
+   which sizes the wrapper to the widest child instead of the viewport.
+   In the ContractDetails panel that causes the bidding cards / hero to
+   push past the visible side-panel edge on narrow viewports. Force the
+   wrapper to behave like a normal block so flex/min-w-0 propagates. */
+.panel-scroll-area > [data-slot='scroll-area-viewport'] > div {
+  display: block !important;
+  min-width: 0 !important;
+}
