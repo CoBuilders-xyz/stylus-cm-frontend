@@ -36,9 +36,26 @@ import EditableContractName, {
 } from './EditableContractName';
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
-import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import ActivationTab from '@/components/ActivationTab';
+import ContractHistoryTab from '@/components/ContractHistoryTab';
+import CacheHero from '@/components/CacheHero';
+import type { ActivationInfo } from '@/lib/activation';
+
+// Placeholder activation state until COB-496 wires real activation reads from
+// the ArbWasm precompile + CacheManagerAutomation events.
+const PLACEHOLDER_ACTIVATION: ActivationInfo = {
+  status: 'inactive',
+  secondsRemaining: 0,
+  lastActivatedAt: null,
+};
 
 // Auxiliary function to get explorer URL and enabled state
 const getExplorerLinkInfo = (
@@ -452,12 +469,12 @@ export default function ContractDetails({
     <div className='text-white flex flex-col h-full bg-[#1A1919]'>
       {/* Sticky Header */}
       <div className='flex-shrink-0  bg-[#1A1919] p-6'>
-        <div className='flex justify-between items-center'>
-          <div>
+        <div className='flex justify-between items-center gap-3'>
+          <div className='min-w-0 flex-1'>
             {viewType === 'my-contracts' ? (
               <>
-                <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
-                  {contractData.address}
+                <div className='text-sm font-mono text-gray-300 flex items-center gap-2 min-w-0'>
+                  <span className='truncate'>{contractData.address}</span>
                   <ExplorerLinkButton
                     chainId={currentBlockchain?.chainId.toString() || null}
                     contractAddress={contractData.address}
@@ -472,20 +489,20 @@ export default function ContractDetails({
               </>
             ) : contractData.isSavedByUser ? (
               <>
-                <div className='text-sm font-mono text-gray-300'>
+                <div className='text-sm font-mono text-gray-300 truncate'>
                   {contractData.address}
                 </div>
-                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
+                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full truncate'>
                   {contractData.savedContractName}
                 </div>
               </>
             ) : (
-              <div className='text-2xl font-mono mb-1'>
+              <div className='text-lg sm:text-2xl font-mono mb-1 truncate'>
                 {contractData.address}
               </div>
             )}
           </div>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 shrink-0'>
             {/* Dropdown Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -551,82 +568,135 @@ export default function ContractDetails({
       </div>
 
       {/* Scrollable Main Content */}
-      <ScrollArea className='flex-1'>
-        <div className='p-6'>
+      <ScrollArea className='panel-scroll-area flex-1 min-w-0'>
+        <div className='p-4 sm:p-6 min-w-0 overflow-x-hidden'>
           {viewType === 'my-contracts' ? (
-            <>
-              {/* Main statistics in a 2-column grid layout */}
-              <ContractStatus
-                isLoading={isLoadingContract}
-                isCached={contractData?.bytecode.isCached}
-                bidBlockTimestamp={contractData?.bidBlockTimestamp}
-                effectiveBid={contractData?.effectiveBid}
-                lastBid={contractData?.lastBid}
-                viewType='my-contracts'
-              />
+            <Tabs defaultValue='cache' className='w-full'>
+              <TabsList className='bg-[#0f0f0f] border border-[#2C2E30] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+                <TabsTrigger
+                  value='cache'
+                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                >
+                  Cache
+                </TabsTrigger>
+                <TabsTrigger
+                  value='activation'
+                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                >
+                  Activation
+                </TabsTrigger>
+                <TabsTrigger
+                  value='history'
+                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                >
+                  History
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Replace the flex items with the ContractDetailsTable */}
-              <ContractInfo
-                contractData={contractData}
-                onManageAlerts={handleContractAlerts}
-                isLoading={isLoadingContract}
-                viewType='my-contracts'
-              />
-
-              {/* Bidding Section Header */}
-              <div className='mb-3'>
-                <h3 className='text-lg'>Bidding</h3>
-              </div>
-
-              {/* Bidding Section */}
-              <div className='space-y-4 mb-8'>
-                {/* Bid now section */}
-                <BidNowSection
-                  contract={contractData}
-                  bidAmount={bidAmount}
-                  setBidAmount={setBidAmount}
-                  onSuccess={reloadContractData}
+              <TabsContent value='cache'>
+                <CacheHero
+                  isCached={!!contractData?.bytecode.isCached}
+                  bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                  effectiveBid={contractData?.effectiveBid}
+                  lastBid={contractData?.lastBid}
                 />
 
-                {/* Automated Bidding section */}
-                <AutomatedBiddingSection
-                  maxBidAmount={maxBidAmount}
-                  setMaxBidAmount={setMaxBidAmount}
-                  automationFunding={automationFunding}
-                  setAutomationFunding={setAutomationFunding}
-                  contract={contractData}
-                  onSuccess={reloadContractData}
+                <ContractInfo
+                  contractData={contractData}
+                  onManageAlerts={handleContractAlerts}
+                  isLoading={isLoadingContract}
+                  viewType='my-contracts'
                 />
-              </div>
 
-              {/* Use the BiddingHistory component */}
-              <BiddingHistory
-                isLoading={isLoadingContract}
-                biddingHistory={displayBidHistory}
-              />
-            </>
+                <div className='mb-3'>
+                  <h3 className='text-lg'>Bidding</h3>
+                </div>
+
+                <div className='space-y-4 mb-8'>
+                  <BidNowSection
+                    contract={contractData}
+                    bidAmount={bidAmount}
+                    setBidAmount={setBidAmount}
+                    onSuccess={reloadContractData}
+                  />
+
+                  <AutomatedBiddingSection
+                    maxBidAmount={maxBidAmount}
+                    setMaxBidAmount={setMaxBidAmount}
+                    automationFunding={automationFunding}
+                    setAutomationFunding={setAutomationFunding}
+                    contract={contractData}
+                    onSuccess={reloadContractData}
+                  />
+                </div>
+
+                <BiddingHistory
+                  isLoading={isLoadingContract}
+                  biddingHistory={displayBidHistory}
+                />
+              </TabsContent>
+
+              <TabsContent value='activation'>
+                <ActivationTab
+                  activation={PLACEHOLDER_ACTIVATION}
+                  history={[]}
+                  chainId={currentBlockchain?.chainId}
+                />
+              </TabsContent>
+
+              <TabsContent value='history'>
+                <ContractHistoryTab
+                  activationHistory={[]}
+                  cacheEvents={[]}
+                />
+              </TabsContent>
+            </Tabs>
           ) : (
             /* Explore Contracts View */
             <>
-              {/* Main statistics in a 2-column grid layout */}
-              <ContractStatus
-                isLoading={isLoadingContract}
-                isCached={contractData?.bytecode.isCached}
-                bidBlockTimestamp={contractData?.bidBlockTimestamp}
-                effectiveBid={contractData?.effectiveBid}
-                lastBid={contractData?.lastBid}
-                viewType='explore-contracts'
-              />
+            <Tabs defaultValue='cache' className='w-full'>
+              <TabsList className='bg-[#0f0f0f] border border-[#2C2E30] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+                <TabsTrigger
+                  value='cache'
+                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                >
+                  Cache
+                </TabsTrigger>
+                <TabsTrigger
+                  value='activation'
+                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                >
+                  Activation
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Replace the flex items with the ContractDetailsTable */}
-              <ContractInfo
-                contractData={contractData}
-                onManageAlerts={handleContractAlerts}
-                isLoading={isLoadingContract}
-                viewType='explore-contracts'
-              />
+              <TabsContent value='cache'>
+                <CacheHero
+                  isCached={!!contractData?.bytecode.isCached}
+                  bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                  effectiveBid={contractData?.effectiveBid}
+                  lastBid={contractData?.lastBid}
+                />
 
-              {/* Add to My Contracts Section */}
+                <ContractInfo
+                  contractData={contractData}
+                  onManageAlerts={handleContractAlerts}
+                  isLoading={isLoadingContract}
+                  viewType='explore-contracts'
+                />
+              </TabsContent>
+
+              <TabsContent value='activation'>
+                <ActivationTab
+                  activation={PLACEHOLDER_ACTIVATION}
+                  history={[]}
+                  chainId={currentBlockchain?.chainId}
+                  readOnly
+                />
+              </TabsContent>
+            </Tabs>
+
+            {/* Add to My Contracts Section */}
               <div className='px-6 text-center'>
                 {!contractData.isSavedByUser ? (
                   <>

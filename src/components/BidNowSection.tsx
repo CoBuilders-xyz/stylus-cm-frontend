@@ -484,8 +484,8 @@ export function BidNowSection({
           </div>
         )}
 
-        <div className='flex justify-between items-start'>
-          <div>
+        <div className='flex flex-wrap justify-between items-start gap-3'>
+          <div className='min-w-0 flex-1'>
             <p className='font-bold'>Bid now</p>
             <p className='text-sm text-blue-200'>
               {isContractCached
@@ -493,9 +493,9 @@ export function BidNowSection({
                 : 'Higher bids extend cache duration'}
             </p>
           </div>
-          <div className='flex flex-col items-end gap-2'>
-            <div className='flex items-start gap-2'>
-              <div className='flex flex-col w-full max-w-[200px]'>
+          <div className='flex flex-col items-end gap-2 w-full sm:w-auto'>
+            <div className='flex items-start gap-2 w-full sm:w-auto'>
+              <div className='flex flex-col flex-1 sm:flex-none sm:w-[200px] min-w-0'>
                 <div className='relative'>
                   <Input
                     type='text'

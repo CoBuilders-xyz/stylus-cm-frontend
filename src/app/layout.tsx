@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -20,6 +20,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#000000',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,13 +33,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body className={`${inter.className} min-h-screen`}>
+      <body className={`${inter.className} min-h-dvh flex flex-col`}>
         <RainbowKitProvider>
           <BlockchainSelectionProvider>
             <AuthenticationProvider>
               <AlertSettingsProvider>
                 <Header />
-                {children}
+                <main className='flex-1 flex flex-col min-h-0'>{children}</main>
                 <Footer />
               </AlertSettingsProvider>
             </AuthenticationProvider>

@@ -145,7 +145,7 @@ export function AutomatedBiddingSection({
     address: `0x${string}`;
     abi: Abi;
     functionName: string;
-    args: [string, bigint, boolean];
+    args: [string, bigint, boolean, boolean, bigint];
     value: string;
   } | null>(null);
 
@@ -373,11 +373,13 @@ export function AutomatedBiddingSection({
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
         functionName: 'insertContract',
-        args: [contract.address, parseEther(inputValue), automatedBidding] as [
-          string,
-          bigint,
-          boolean
-        ],
+        args: [
+          contract.address,
+          parseEther(inputValue),
+          automatedBidding,
+          false,
+          BigInt(0),
+        ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
       };
 
@@ -438,11 +440,13 @@ export function AutomatedBiddingSection({
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
         abi: cacheManagerAutomationAbi.abi as Abi,
         functionName: 'updateContract',
-        args: [contract.address, parseEther(inputValue), automatedBidding] as [
-          string,
-          bigint,
-          boolean
-        ],
+        args: [
+          contract.address,
+          parseEther(inputValue),
+          automatedBidding,
+          false,
+          BigInt(0),
+        ] as [string, bigint, boolean, boolean, bigint],
       };
 
       // Store the parameters for retry functionality
@@ -494,7 +498,9 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(originalMaxBid),
           newAutomatedBidding,
-        ] as [string, bigint, boolean],
+          false,
+          BigInt(0),
+        ] as [string, bigint, boolean, boolean, bigint],
       };
 
       // Store the parameters for retry functionality
@@ -542,8 +548,8 @@ export function AutomatedBiddingSection({
         </div>
       )}
 
-      <div className='flex justify-between items-start relative z-10'>
-        <div>
+      <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
+        <div className='min-w-0 flex-1'>
           <p className='font-bold'>Automated Bidding Configuration</p>
           <p className='text-sm text-blue-200'>
             Configure automated bidding to maintain your position in the cache
