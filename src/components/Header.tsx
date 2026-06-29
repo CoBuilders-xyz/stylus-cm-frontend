@@ -175,7 +175,12 @@ export default function Header() {
                   Docs
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className='p-0 sm:hidden'>
+              {/* BlockchainSelector inside the mobile menu — don't let
+                  DropdownMenuItem close the menu when the selector opens. */}
+              <DropdownMenuItem
+                className='p-0 sm:hidden focus:bg-transparent'
+                onSelect={(e) => e.preventDefault()}
+              >
                 <div className='w-full px-3 py-3'>
                   <BlockchainSelector />
                 </div>

@@ -34,11 +34,6 @@ const SidePanel: React.FC<SidePanelProps> = ({
           // Start below header, which has padding of 4 (p-4)
           marginTop: 'var(--header-height, 64px)',
           height: 'calc(100vh - var(--header-height, 64px))',
-          // Named container so @md/panel / @lg/panel queries inside the panel
-          // (CacheHero, ActivationTab) resolve to this element's width rather
-          // than the viewport.
-          containerType: 'inline-size',
-          containerName: 'panel',
         }}
       >
         {/* No header with title and close button anymore */}
