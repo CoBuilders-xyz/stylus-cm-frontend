@@ -63,17 +63,25 @@ interface ContractsTableProps {
 }
 
 /**
- * Backend ships `programTimeLeft` as `string | null`. Defensive against an
- * empty string slipping through (`Number('') === 0` would otherwise short
- * the multicall and pin the row to "Inactive"). Returns the parsed seconds
- * when present and parseable, otherwise `null` meaning "no backend reading".
+ * Backend ships `programTimeLeft` as `string | null`. Defensive against
+ * malformed values that would otherwise short-circuit the multicall and
+ * pin the row to "Inactive":
+ * - whitespace-only strings (`Number(' ') === 0`),
+ * - empty strings,
+ * - non-numeric strings,
+ * - negative numbers (the precompile returns `uint64`, anything < 0 is
+ *   garbage from the backend).
+ *
+ * Returns parsed seconds when usable, otherwise `null` ("no backend
+ * reading — fall back to the on-chain multicall").
  */
 function backendProgramTimeLeft(
   raw: string | null | undefined
 ): number | null {
-  if (raw == null || raw === '') return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
+  const value = raw?.trim();
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 function buildActivationInfo(
