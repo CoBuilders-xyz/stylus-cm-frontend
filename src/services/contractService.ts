@@ -76,6 +76,13 @@ export interface Alert {
 }
 
 /**
+ * Persisted activation status as stored by the backend.
+ * Derived states (`expiring`, `inactive`) are computed from `programTimeLeft`
+ * via `getEffectiveActivationStatus` (see `src/lib/activation.ts`).
+ */
+export type PersistedActivationStatus = 'unknown' | 'active' | 'error';
+
+/**
  * Contract data interface
  */
 export interface Contract {
@@ -98,6 +105,15 @@ export interface Contract {
   userContractId?: string; // Optional user contract ID
   isSavedByUser?: boolean; // Flag to indicate if the contract is already saved by the user
   savedContractName?: string | null; // Name of the saved contract
+  activationStatus: PersistedActivationStatus;
+  autoActivate: boolean;
+  maxActivationCost: string | null;
+  lastActivationTimestamp: string | null;
+  lastActivationBlockNumber: number | null;
+  activationRetryCount: number;
+  // Present on detail endpoints today. COB-490 will add it to list endpoints,
+  // at which point the FE multicall fallback can be dropped.
+  programTimeLeft?: string | null;
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;

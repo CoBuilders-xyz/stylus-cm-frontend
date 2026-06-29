@@ -19,9 +19,10 @@ interface Props {
   contract: Contract;
   viewType: 'my-contracts' | 'explore-contracts';
   /**
-   * Optional — until activation data is wired (COB-493/496) the card hides
-   * the activation badge and the Activate CTA rather than rendering a dead
-   * placeholder action.
+   * Effective activation info derived by the parent table from the persisted
+   * `activationStatus` + on-chain `programTimeLeft`. Optional because some
+   * callers (e.g. tests) may not provide it; the card hides the badge when
+   * missing rather than rendering a dead placeholder.
    */
   activation?: ActivationInfo;
   isAuthenticated: boolean;

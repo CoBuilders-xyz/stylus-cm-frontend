@@ -38,6 +38,21 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import ContractMobileCard from '@/components/ContractMobileCard';
+import ActivationBadge from '@/components/ActivationBadge';
+import ActivationFilters, {
+  ActivationFilter,
+} from '@/components/ActivationFilters';
+import {
+  ActivationDetail,
+  ActivationInfo,
+  ActivationStatus,
+  getEffectiveActivationStatus,
+} from '@/lib/activation';
+import {
+  ProgramReason,
+  useProgramTimeLeft,
+} from '@/hooks/useProgramTimeLeft';
+import { useBlockchainService } from '@/hooks/useBlockchainService';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -45,6 +60,47 @@ interface ContractsTableProps {
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
   onAddContract?: (contract: Contract) => void;
   onAddNewContract?: () => void;
+}
+
+/**
+ * Backend ships `programTimeLeft` as `string | null`. Defensive against
+ * malformed values that would otherwise short-circuit the multicall and
+ * pin the row to "Inactive":
+ * - whitespace-only strings (`Number(' ') === 0`),
+ * - empty strings,
+ * - non-numeric strings,
+ * - negative numbers (the precompile returns `uint64`, anything < 0 is
+ *   garbage from the backend).
+ *
+ * Returns parsed seconds when usable, otherwise `null` ("no backend
+ * reading — fall back to the on-chain multicall").
+ */
+function backendProgramTimeLeft(
+  raw: string | null | undefined
+): number | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function buildActivationInfo(
+  contract: Contract,
+  programTimeLeftSeconds: number | null,
+  reason: ProgramReason | undefined
+): ActivationInfo {
+  const status: ActivationStatus = getEffectiveActivationStatus(
+    contract,
+    programTimeLeftSeconds
+  );
+  // `ProgramReason` and `ActivationDetail` are intentionally the same union
+  // — the cast keeps the two domains independent without an identity map.
+  return {
+    status,
+    secondsRemaining: programTimeLeftSeconds,
+    lastActivatedAt: contract.lastActivationTimestamp ?? null,
+    detail: reason as ActivationDetail | undefined,
+  };
 }
 
 // Table header component with sorting functionality
@@ -129,12 +185,14 @@ const ContractRow = React.memo(
   ({
     contract,
     viewType,
+    activation,
     onContractSelect,
     onAddContract,
     isAuthenticated,
   }: {
     contract: Contract;
     viewType: string;
+    activation: ActivationInfo;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
     onAddContract?: (contract: Contract) => void;
     isAuthenticated: boolean;
@@ -173,6 +231,9 @@ const ContractRow = React.memo(
           ) : (
             contract.address
           )}
+        </TableCell>
+        <TableCell className='py-6'>
+          <ActivationBadge info={activation} />
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.lastBid ? (
@@ -398,13 +459,74 @@ function ContractsTable({
   );
 
   const { isAuthenticated } = useAuthentication();
+  const { currentBlockchain } = useBlockchainService(false);
   const [searchInput, setSearchInput] = useState('');
+  const [activationFilter, setActivationFilter] =
+    useState<ActivationFilter>('all');
 
-  // Use provided contracts if available, otherwise use fetched contracts
-  const displayContracts = useMemo(
+  // Source contracts before activation filtering — keep this in a separate
+  // memo so the multicall doesn't re-run when only `activationFilter` changes.
+  const sourceContracts = useMemo(
     () => (initialContracts?.length ? initialContracts : contracts),
     [initialContracts, contracts]
   );
+
+  const addressesForMulticall = useMemo(
+    () =>
+      sourceContracts
+        .map((c) =>
+          backendProgramTimeLeft(c.programTimeLeft) === null ? c.address : null
+        )
+        .filter((a): a is string => a !== null),
+    [sourceContracts]
+  );
+
+  const { data: programTimeLeftMap } = useProgramTimeLeft(
+    addressesForMulticall,
+    currentBlockchain?.chainId
+  );
+
+  // Resolve the effective activation status for every visible row. Prefer
+  // `contract.programTimeLeft` (post-COB-490) and fall back to the multicall
+  // result; once COB-490 lands, both `useProgramTimeLeft` and this fallback
+  // collapse to a single line.
+  const rowsWithActivation = useMemo(
+    () =>
+      sourceContracts.map((contract) => {
+        const fromBackend = backendProgramTimeLeft(contract.programTimeLeft);
+        const fromMulticall = programTimeLeftMap[contract.address.toLowerCase()];
+        const programTimeLeftSeconds =
+          fromBackend !== null ? fromBackend : (fromMulticall?.seconds ?? null);
+        return {
+          contract,
+          activation: buildActivationInfo(
+            contract,
+            programTimeLeftSeconds,
+            // `reason` is only available via the multicall today. Once
+            // COB-490 ships `programTimeLeft` on list endpoints we lose the
+            // ProgramExpired / NeedsUpgrade detail for those rows — backend
+            // should also surface a reason field at that point, otherwise
+            // the badge sublabel falls back to the generic "Reactivation
+            // required".
+            fromMulticall?.reason
+          ),
+        };
+      }),
+    [sourceContracts, programTimeLeftMap]
+  );
+
+  const displayRows = useMemo(() => {
+    if (activationFilter === 'all') return rowsWithActivation;
+    return rowsWithActivation.filter(({ activation }) => {
+      // `error` rows belong to the same UX bucket as `inactive`: both need
+      // the user to activate. Hiding them under "Inactive" would make
+      // failed activations invisible to anyone scanning by status.
+      if (activationFilter === 'inactive') {
+        return activation.status === 'inactive' || activation.status === 'error';
+      }
+      return activation.status === activationFilter;
+    });
+  }, [rowsWithActivation, activationFilter]);
 
   // Handle page changes through the hook
   const handlePageChange = useCallback(
@@ -515,15 +637,22 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
+          <div className='mb-4 flex-shrink-0'>
+            <ActivationFilters
+              value={activationFilter}
+              onChange={setActivationFilter}
+            />
+          </div>
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
-            {displayContracts.length > 0 ? (
+            {displayRows.length > 0 ? (
               <div className='flex flex-col gap-2 pb-4'>
-                {displayContracts.map((contract) => (
+                {displayRows.map(({ contract, activation }) => (
                   <ContractMobileCard
                     key={contract.address}
                     contract={contract}
                     viewType={viewType}
+                    activation={activation}
                     isAuthenticated={isAuthenticated}
                     onContractSelect={onContractSelect}
                     onAddContract={onAddContract}
@@ -551,6 +680,13 @@ function ContractsTable({
                     onSort={setSorting}
                   >
                     Contract
+                  </SortableTableHead>
+                  <SortableTableHead
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSort={setSorting}
+                  >
+                    Activation
                   </SortableTableHead>
                   <SortableTableHead
                     sortField={ContractSortField.LAST_BID}
@@ -631,12 +767,13 @@ function ContractsTable({
                 </TableRow>
               </TableHeader>
               <TableBody className='text-white [&>tr]:py-2'>
-                {displayContracts.length > 0 ? (
-                  displayContracts.map((contract) => (
+                {displayRows.length > 0 ? (
+                  displayRows.map(({ contract, activation }) => (
                     <ContractRow
                       key={contract.address}
                       contract={contract}
                       viewType={viewType}
+                      activation={activation}
                       onContractSelect={onContractSelect}
                       onAddContract={onAddContract}
                       isAuthenticated={isAuthenticated}
@@ -645,7 +782,7 @@ function ContractsTable({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                      colSpan={viewType === 'explore-contracts' ? 10 : 9}
                       className='text-center py-12 bg-black'
                     >
                       <NoticeBanner
