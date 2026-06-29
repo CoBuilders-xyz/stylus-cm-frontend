@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
+import EventMobileCard from '@/components/EventMobileCard';
 
 interface BlockchainEventsTableProps {
   events?: BlockchainEvent[];
@@ -267,8 +268,8 @@ const EventTypeFilter = React.memo(
     onFilterChange: (filter: BlockchainEventType | null) => void;
   }) => {
     return (
-      <div className='flex items-center space-x-2'>
-        <span className='text-sm text-gray-300'>Filter:</span>
+      <div className='flex items-center gap-2 w-full sm:w-auto'>
+        <span className='text-sm text-gray-300 shrink-0'>Filter:</span>
         <Select
           value={currentFilter || 'all'}
           onValueChange={(value) =>
@@ -277,7 +278,7 @@ const EventTypeFilter = React.memo(
             )
           }
         >
-          <SelectTrigger className='w-[180px] bg-black text-white border-gray-500 focus:border-white'>
+          <SelectTrigger className='flex-1 sm:flex-none sm:w-[180px] bg-black text-white border-gray-500 focus:border-white'>
             <SelectValue placeholder='All Events' />
           </SelectTrigger>
           <SelectContent className='bg-black text-white border-gray-500'>
@@ -309,8 +310,8 @@ const Pagination = React.memo(
     handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   }) => {
     return (
-      <div className='flex items-center justify-between mt-4 text-sm text-white'>
-        <div className='flex items-center space-x-2'>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 text-sm text-white'>
+        <div className='flex items-center gap-2'>
           <span>Show</span>
           <select
             className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
@@ -323,17 +324,17 @@ const Pagination = React.memo(
           <span>entries</span>
         </div>
 
-        <div className='flex items-center space-x-2'>
-          <span>
+        <div className='flex flex-wrap items-center gap-2'>
+          <span className='whitespace-nowrap'>
             {pagination.totalItems > 0
               ? `Page ${pagination.page} of ${pagination.totalPages}`
               : 'No results'}
           </span>
-          <div className='flex space-x-1'>
+          <div className='flex flex-wrap gap-1'>
             <Button
               onClick={() => handlePageChange(1)}
               disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               First
             </Button>
@@ -378,7 +379,7 @@ const Pagination = React.memo(
             <Button
               onClick={() => handlePageChange(pagination.totalPages)}
               disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
             >
               Last
             </Button>
@@ -460,18 +461,18 @@ function BlockchainEventsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex justify-between items-center mb-8 flex-shrink-0'>
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8 flex-shrink-0'>
         <h1 className='text-xl font-bold text-white'>Cache Events</h1>
-        <div className='flex items-center gap-4'>
+        <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto'>
           <EventTypeFilter
             currentFilter={eventTypeFilter}
             onFilterChange={setEventTypeFilter}
           />
-          <div className='relative'>
+          <div className='relative flex-1 sm:flex-none'>
             <input
               type='text'
               placeholder='Search by contract address...'
-              className='p-2 pl-10 bg-black rounded-md w-80 border border-gray-500 focus:outline-none focus:border-white'
+              className='p-2 pl-10 bg-black rounded-md w-full sm:w-80 border border-gray-500 focus:outline-none focus:border-white'
               value={searchInput}
               onChange={handleSearchInputChange}
               onKeyDown={handleKeyDown}
@@ -502,9 +503,31 @@ function BlockchainEventsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
+          {/* Mobile card list */}
+          <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
+            {displayEvents.length > 0 ? (
+              <div className='flex flex-col gap-2 pb-4'>
+                {displayEvents.map((event) => (
+                  <EventMobileCard
+                    key={`${event.transactionHash}-${event.logIndex}`}
+                    event={event}
+                    onSelect={onEventSelect}
+                  />
+                ))}
+              </div>
+            ) : (
+              <NoticeBanner
+                image={noContractsFoundImage}
+                title='No Events Found'
+                description='No blockchain events found matching your criteria.'
+              />
+            )}
+          </div>
+
+          {/* Desktop table */}
           <ScrollArea
             orientation='both'
-            className='h-[calc(100vh-350px)] min-h-[400px]'
+            className='hidden md:block h-[calc(100vh-350px)] min-h-[400px]'
           >
             <div className='min-w-full'>
               <TooltipProvider>
