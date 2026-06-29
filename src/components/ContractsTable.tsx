@@ -38,6 +38,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import ContractMobileCard from '@/components/ContractMobileCard';
+import ActivationBadge from '@/components/ActivationBadge';
+import ActivationFilters, {
+  ActivationFilter,
+} from '@/components/ActivationFilters';
+import {
+  ActivationInfo,
+  ActivationStatus,
+  getEffectiveActivationStatus,
+} from '@/lib/activation';
+import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
+import { useBlockchainService } from '@/hooks/useBlockchainService';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -45,6 +56,21 @@ interface ContractsTableProps {
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
   onAddContract?: (contract: Contract) => void;
   onAddNewContract?: () => void;
+}
+
+function buildActivationInfo(
+  contract: Contract,
+  programTimeLeftSeconds: number | null
+): ActivationInfo {
+  const status: ActivationStatus = getEffectiveActivationStatus(
+    contract,
+    programTimeLeftSeconds
+  );
+  return {
+    status,
+    secondsRemaining: programTimeLeftSeconds ?? 0,
+    lastActivatedAt: contract.lastActivationTimestamp ?? null,
+  };
 }
 
 // Table header component with sorting functionality
@@ -129,12 +155,14 @@ const ContractRow = React.memo(
   ({
     contract,
     viewType,
+    activation,
     onContractSelect,
     onAddContract,
     isAuthenticated,
   }: {
     contract: Contract;
     viewType: string;
+    activation: ActivationInfo;
     onContractSelect?: (contractId: string, initialData?: Contract) => void;
     onAddContract?: (contract: Contract) => void;
     isAuthenticated: boolean;
@@ -173,6 +201,9 @@ const ContractRow = React.memo(
           ) : (
             contract.address
           )}
+        </TableCell>
+        <TableCell className='py-6'>
+          <ActivationBadge info={activation} />
         </TableCell>
         <TableCell className='py-6 text-lg'>
           {contract.lastBid ? (
@@ -398,13 +429,58 @@ function ContractsTable({
   );
 
   const { isAuthenticated } = useAuthentication();
+  const { currentBlockchain } = useBlockchainService(false);
   const [searchInput, setSearchInput] = useState('');
+  const [activationFilter, setActivationFilter] =
+    useState<ActivationFilter>('all');
 
-  // Use provided contracts if available, otherwise use fetched contracts
-  const displayContracts = useMemo(
+  // Source contracts before activation filtering — keep this in a separate
+  // memo so the multicall doesn't re-run when only `activationFilter` changes.
+  const sourceContracts = useMemo(
     () => (initialContracts?.length ? initialContracts : contracts),
     [initialContracts, contracts]
   );
+
+  const addressesForMulticall = useMemo(
+    () =>
+      sourceContracts
+        .map((c) => c.programTimeLeft == null ? c.address : null)
+        .filter((a): a is string => a !== null),
+    [sourceContracts]
+  );
+
+  const { data: programTimeLeftMap } = useProgramTimeLeft(
+    addressesForMulticall,
+    currentBlockchain?.chainId
+  );
+
+  // Resolve the effective activation status for every visible row. Prefer
+  // `contract.programTimeLeft` (post-COB-490) and fall back to the multicall
+  // result; once COB-490 lands, both `useProgramTimeLeft` and this fallback
+  // collapse to a single line.
+  const rowsWithActivation = useMemo(
+    () =>
+      sourceContracts.map((contract) => {
+        const fromBackend = contract.programTimeLeft;
+        const fromMulticall = programTimeLeftMap[contract.address.toLowerCase()];
+        const programTimeLeftSeconds =
+          fromBackend != null
+            ? Number(fromBackend)
+            : (fromMulticall ?? null);
+        return {
+          contract,
+          activation: buildActivationInfo(contract, programTimeLeftSeconds),
+        };
+      }),
+    [sourceContracts, programTimeLeftMap]
+  );
+
+  const displayRows = useMemo(() => {
+    if (activationFilter === 'all') return rowsWithActivation;
+    return rowsWithActivation.filter(
+      ({ activation }) => activation.status === activationFilter
+    );
+  }, [rowsWithActivation, activationFilter]);
 
   // Handle page changes through the hook
   const handlePageChange = useCallback(
@@ -515,15 +591,22 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
+          <div className='mb-4 flex-shrink-0'>
+            <ActivationFilters
+              value={activationFilter}
+              onChange={setActivationFilter}
+            />
+          </div>
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
-            {displayContracts.length > 0 ? (
+            {displayRows.length > 0 ? (
               <div className='flex flex-col gap-2 pb-4'>
-                {displayContracts.map((contract) => (
+                {displayRows.map(({ contract, activation }) => (
                   <ContractMobileCard
                     key={contract.address}
                     contract={contract}
                     viewType={viewType}
+                    activation={activation}
                     isAuthenticated={isAuthenticated}
                     onContractSelect={onContractSelect}
                     onAddContract={onAddContract}
@@ -551,6 +634,13 @@ function ContractsTable({
                     onSort={setSorting}
                   >
                     Contract
+                  </SortableTableHead>
+                  <SortableTableHead
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSort={setSorting}
+                  >
+                    Activation
                   </SortableTableHead>
                   <SortableTableHead
                     sortField={ContractSortField.LAST_BID}
@@ -631,12 +721,13 @@ function ContractsTable({
                 </TableRow>
               </TableHeader>
               <TableBody className='text-white [&>tr]:py-2'>
-                {displayContracts.length > 0 ? (
-                  displayContracts.map((contract) => (
+                {displayRows.length > 0 ? (
+                  displayRows.map(({ contract, activation }) => (
                     <ContractRow
                       key={contract.address}
                       contract={contract}
                       viewType={viewType}
+                      activation={activation}
                       onContractSelect={onContractSelect}
                       onAddContract={onAddContract}
                       isAuthenticated={isAuthenticated}
@@ -645,7 +736,7 @@ function ContractsTable({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={viewType === 'explore-contracts' ? 9 : 8}
+                      colSpan={viewType === 'explore-contracts' ? 10 : 9}
                       className='text-center py-12 bg-black'
                     >
                       <NoticeBanner
