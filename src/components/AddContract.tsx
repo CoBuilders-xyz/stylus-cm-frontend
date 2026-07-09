@@ -14,10 +14,9 @@ import {
   useBytecode,
   useReadContract,
   useSimulateContract,
-  useWaitForTransactionReceipt,
-  useWriteContract,
 } from 'wagmi';
 import { formatEther, isAddress, parseEther } from 'viem';
+import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import {
   Tooltip,
   TooltipContent,
@@ -132,24 +131,22 @@ export default function AddContract({
     return result?.[1];
   }, [activationSimulation]);
 
+  // Route the write through the project-wide useWeb3 wrapper so we inherit
+  // gas-price protection and a consistent transaction status enum with the
+  // rest of the codebase (bidding, gas tank, automated bidding).
   const {
     writeContract: writeActivation,
-    data: activationTxHash,
-    error: activationWriteError,
-    isPending: isActivationWritePending,
+    status: activationStatus,
+    txHash: activationTxHash,
+    error: activationError,
     reset: resetActivationWrite,
-  } = useWriteContract();
-
-  const {
-    isLoading: isActivationConfirming,
-    isSuccess: isActivationConfirmed,
-    error: activationReceiptError,
-  } = useWaitForTransactionReceipt({
-    hash: activationTxHash,
-  });
+  } = useWeb3();
 
   const isActivating =
-    isActivationWritePending || isActivationConfirming;
+    activationStatus === TransactionStatus.PREPARING ||
+    activationStatus === TransactionStatus.PENDING;
+  const isActivationConfirmed =
+    activationStatus === TransactionStatus.SUCCESS;
 
   // Handle all validation logic in one place
   useEffect(() => {
@@ -356,10 +353,9 @@ export default function AddContract({
   }, [isActivationConfirmed, refetchProgramTimeLeft]);
 
   useEffect(() => {
-    const err = activationWriteError ?? activationReceiptError;
-    if (!err) return;
+    if (!activationError) return;
 
-    const message = err.message ?? '';
+    const message = activationError.message ?? '';
     const lower = message.toLowerCase();
     let display = 'Activation failed. Please try again.';
     if (
@@ -374,13 +370,16 @@ export default function AddContract({
       lower.includes('exceeds the balance')
     ) {
       display = 'Insufficient ETH to cover the activation fee.';
+    } else if (lower.includes('network fee is extremely high')) {
+      // Surface the gas-price-protection message from useWeb3 as-is.
+      display = message;
     }
     showErrorToast({ message: display, onRetry: handleActivateProgram });
     resetActivationWrite();
     // handleActivateProgram is stable enough for this retry surface; including
     // it would re-fire the effect on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activationWriteError, activationReceiptError, resetActivationWrite]);
+  }, [activationError, resetActivationWrite]);
 
   // Handle name input change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {

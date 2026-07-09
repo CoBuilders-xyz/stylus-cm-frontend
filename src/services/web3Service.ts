@@ -37,8 +37,14 @@ export interface ContractWriteParams<
   functionName: TFunctionName;
   /** Arguments to pass to the function */
   args: TArgs;
-  /** ETH value to send with the transaction (in ETH, not wei) */
-  value?: string;
+  /**
+   * Value to send with the transaction.
+   * - `string`: interpreted as ETH (converted with `parseEther` internally).
+   * - `bigint`: interpreted as raw wei and passed straight through. Use
+   *   this when the value was derived on-chain (e.g. from a simulation)
+   *   and precision matters.
+   */
+  value?: string | bigint;
   /** Gas protection configuration */
   gasProtection?: GasProtectionConfig;
 }
@@ -84,9 +90,13 @@ export class Web3Service {
         args,
       };
 
-      // Add value if provided (convert from ETH to wei)
-      if (value) {
-        transactionRequest.value = parseEther(value);
+      // Add value if provided. Strings are treated as ETH and converted to
+      // wei; bigints are treated as raw wei and passed straight through.
+      // Nullish check (not truthy) so a legitimate 0/0n does not silently
+      // become undefined and lose the intent to send zero value.
+      if (value != null) {
+        transactionRequest.value =
+          typeof value === 'string' ? parseEther(value) : value;
       }
 
       // Add gas limit if provided
