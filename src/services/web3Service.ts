@@ -20,6 +20,7 @@ export interface WriteTransactionRequest {
   args: readonly unknown[];
   value?: bigint;
   gas?: bigint;
+  chainId?: number;
 }
 
 /**
@@ -45,6 +46,9 @@ export interface ContractWriteParams<
    *   and precision matters.
    */
   value?: string | bigint;
+  /** Target chain id — forwarded to wagmi so the write happens on the
+   * intended network even if the wallet is currently switched elsewhere. */
+  chainId?: number;
   /** Gas protection configuration */
   gasProtection?: GasProtectionConfig;
 }
@@ -78,6 +82,7 @@ export class Web3Service {
       functionName,
       args,
       value,
+      chainId,
       gasProtection = this.DEFAULT_GAS_PROTECTION,
     } = params;
 
@@ -97,6 +102,12 @@ export class Web3Service {
       if (value != null) {
         transactionRequest.value =
           typeof value === 'string' ? parseEther(value) : value;
+      }
+
+      // Forward the target chain id (if any) so wagmi routes the write to
+      // the intended network regardless of the wallet's current chain.
+      if (chainId != null) {
+        transactionRequest.chainId = chainId;
       }
 
       // Add gas limit if provided

@@ -12,8 +12,10 @@ import { X, Info, AlertTriangle, ExternalLink, Loader2, Zap } from 'lucide-react
 import {
   useAccount,
   useBytecode,
+  useChainId,
   useReadContract,
   useSimulateContract,
+  useSwitchChain,
 } from 'wagmi';
 import { formatEther, isAddress, parseEther } from 'viem';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
@@ -55,6 +57,11 @@ export default function AddContract({
   const { signalContractUpdated } = useContractsUpdater();
   const { currentBlockchain, currentBlockchainId } = useBlockchainService();
   const { isConnected } = useAccount();
+  const walletChainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const targetChainId = currentBlockchain?.chainId;
+  const isChainMismatch =
+    isConnected && targetChainId != null && walletChainId !== targetChainId;
   const router = useRouter();
 
   // State for the form - initialize with initialAddress if provided
@@ -94,9 +101,13 @@ export default function AddContract({
     abi: ARB_WASM_ABI,
     functionName: 'programTimeLeft',
     args: [contractAddress as `0x${string}`],
+    chainId: targetChainId,
     query: {
       enabled:
-        isWasmContract && !!contractAddress && contractAddress.length === 42,
+        isWasmContract &&
+        !!contractAddress &&
+        contractAddress.length === 42 &&
+        targetChainId != null,
     },
   });
 
@@ -119,8 +130,13 @@ export default function AddContract({
     functionName: 'activateProgram',
     args: [contractAddress as `0x${string}`],
     value: ACTIVATION_SIMULATION_VALUE,
+    chainId: targetChainId,
     query: {
-      enabled: isConnected && isExpiredWasm,
+      enabled:
+        isConnected &&
+        isExpiredWasm &&
+        !isChainMismatch &&
+        targetChainId != null,
     },
   });
 
@@ -318,6 +334,12 @@ export default function AddContract({
     }
   };
 
+  const handleSwitchToTargetChain = () => {
+    if (targetChainId != null) {
+      switchChain({ chainId: targetChainId });
+    }
+  };
+
   const handleActivateProgram = () => {
     if (!isConnected) {
       showErrorToast({
@@ -325,7 +347,16 @@ export default function AddContract({
       });
       return;
     }
-    if (!activationDataFee) {
+    if (isChainMismatch) {
+      // The UI surfaces a dedicated Switch button; guard the write path just
+      // in case it gets invoked before the user resolves the mismatch.
+      handleSwitchToTargetChain();
+      return;
+    }
+    // Nullish check rather than truthy so a legitimate 0n fee is not treated
+    // as missing (the ArbWasm precompile can, in theory, return a zero
+    // dataFee for a program that has already paid its allowance).
+    if (activationDataFee == null) {
       showErrorToast({
         message:
           activationSimulationError?.message ??
@@ -339,6 +370,7 @@ export default function AddContract({
       functionName: 'activateProgram',
       args: [contractAddress as `0x${string}`],
       value: activationDataFee,
+      chainId: targetChainId,
     });
   };
 
@@ -543,8 +575,12 @@ export default function AddContract({
                   simulationError={activationSimulationError}
                   dataFee={activationDataFee}
                   isActivating={isActivating}
+                  isChainMismatch={isChainMismatch}
+                  isSwitchingChain={isSwitchingChain}
+                  chainName={currentBlockchain?.name}
+                  onSwitchChain={handleSwitchToTargetChain}
                   txHash={activationTxHash}
-                  chainId={currentBlockchain?.chainId}
+                  chainId={targetChainId}
                   onActivate={handleActivateProgram}
                 />
               )}
@@ -553,7 +589,11 @@ export default function AddContract({
             <div className='mt-6'>
               <Button
                 className='w-full px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                disabled={!contractAddress || !!addressError}
+                disabled={
+                  !contractAddress ||
+                  !!addressError ||
+                  validationState?.type !== 'success'
+                }
                 onClick={handleNextStep}
               >
                 Next: Name Your Contract
@@ -615,6 +655,31 @@ export default function AddContract({
               </div>
             )}
 
+            {/* Prefilled-address flow can drop the user straight into Step 2
+                with an expired contract; render the activation card here as
+                well so the same on-chain activate flow is available and the
+                Add Contract button stays gated until programTimeLeft > 0. */}
+            {isExpiredWasm && (
+              <ExpiredActivationCard
+                message={
+                  validationState?.message ??
+                  'This WASM contract is expired and needs to be reactivated to be cached.'
+                }
+                isConnected={isConnected}
+                isSimulating={isSimulatingActivation}
+                simulationError={activationSimulationError}
+                dataFee={activationDataFee}
+                isActivating={isActivating}
+                isChainMismatch={isChainMismatch}
+                isSwitchingChain={isSwitchingChain}
+                chainName={currentBlockchain?.name}
+                onSwitchChain={handleSwitchToTargetChain}
+                txHash={activationTxHash}
+                chainId={targetChainId}
+                onActivate={handleActivateProgram}
+              />
+            )}
+
             <div className='mb-4'>
               <label className='block text-sm mb-1'>Contract Name</label>
               <Input
@@ -644,7 +709,7 @@ export default function AddContract({
                   !initialAddress ? 'flex-1' : 'w-full'
                 } px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md`}
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || validationState?.type !== 'success'}
               >
                 {isLoading ? 'Adding...' : 'Add Contract'}
               </Button>
@@ -663,6 +728,10 @@ interface ExpiredActivationCardProps {
   simulationError: Error | null;
   dataFee: bigint | undefined;
   isActivating: boolean;
+  isChainMismatch: boolean;
+  isSwitchingChain: boolean;
+  chainName: string | undefined;
+  onSwitchChain: () => void;
   txHash: `0x${string}` | undefined;
   chainId: number | undefined;
   onActivate: () => void;
@@ -675,16 +744,26 @@ function ExpiredActivationCard({
   simulationError,
   dataFee,
   isActivating,
+  isChainMismatch,
+  isSwitchingChain,
+  chainName,
+  onSwitchChain,
   txHash,
   chainId,
   onActivate,
 }: ExpiredActivationCardProps) {
   const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
-  const cannotActivate =
-    !isConnected || isActivating || (!dataFee && !simulationError);
-  const feeLabel = dataFee
+  const targetChainLabel = chainName ?? 'the selected network';
+  // Nullish check on dataFee — 0n is a valid fee, not "missing".
+  const hasDataFee = dataFee != null;
+  const feeLabel = hasDataFee
     ? `${Number(formatEther(dataFee)).toFixed(6)} ETH`
     : null;
+  const cannotActivate =
+    !isConnected ||
+    isActivating ||
+    isChainMismatch ||
+    (!hasDataFee && !simulationError);
 
   return (
     <div className='mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 p-4'>
@@ -697,18 +776,31 @@ function ExpiredActivationCard({
               Connect your wallet to send the activation transaction.
             </p>
           )}
-          {isConnected && feeLabel && !isActivating && !txHash && (
+          {isConnected && isChainMismatch && (
             <p className='text-xs text-amber-100/80 mt-1'>
-              Estimated activation fee: {feeLabel}. Excess value is refunded by
-              the ArbWasm precompile.
+              Your wallet is on a different network. Switch to{' '}
+              {targetChainLabel} to activate this contract.
             </p>
           )}
-          {isConnected && simulationError && !dataFee && (
-            <p className='text-xs text-red-300 mt-1'>
-              Could not estimate the activation fee. Make sure your wallet has
-              enough ETH on the correct chain and try again.
-            </p>
-          )}
+          {isConnected &&
+            !isChainMismatch &&
+            feeLabel &&
+            !isActivating &&
+            !txHash && (
+              <p className='text-xs text-amber-100/80 mt-1'>
+                Estimated activation fee: {feeLabel}. Excess value is refunded
+                by the ArbWasm precompile.
+              </p>
+            )}
+          {isConnected &&
+            !isChainMismatch &&
+            simulationError &&
+            !hasDataFee && (
+              <p className='text-xs text-red-300 mt-1'>
+                Could not estimate the activation fee. Make sure your wallet
+                has enough ETH on the correct chain and try again.
+              </p>
+            )}
           {txHash && (
             <p className='text-xs text-amber-100/80 mt-2'>
               {isActivating
@@ -727,22 +819,38 @@ function ExpiredActivationCard({
               ) : null}
             </p>
           )}
-          <Button
-            type='button'
-            onClick={onActivate}
-            disabled={cannotActivate}
-            className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
-          >
-            {isActivating ? (
-              <Loader2 className='h-4 w-4 animate-spin' />
-            ) : (
-              <Zap className='h-4 w-4' />
-            )}
-            {isActivating ? 'Activating…' : 'Activate now'}
-            {!isActivating && isSimulating && (
-              <Loader2 className='h-3 w-3 animate-spin' />
-            )}
-          </Button>
+          {isConnected && isChainMismatch ? (
+            <Button
+              type='button'
+              onClick={onSwitchChain}
+              disabled={isSwitchingChain}
+              className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+            >
+              {isSwitchingChain && (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              )}
+              {isSwitchingChain
+                ? 'Switching network…'
+                : `Switch to ${targetChainLabel}`}
+            </Button>
+          ) : (
+            <Button
+              type='button'
+              onClick={onActivate}
+              disabled={cannotActivate}
+              className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+            >
+              {isActivating ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <Zap className='h-4 w-4' />
+              )}
+              {isActivating ? 'Activating…' : 'Activate now'}
+              {!isActivating && isSimulating && (
+                <Loader2 className='h-3 w-3 animate-spin' />
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
