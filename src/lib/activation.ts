@@ -11,12 +11,82 @@
 const DAY = 86_400;
 const HOUR = 3_600;
 
-export type ActivationStatus = 'active' | 'expiring' | 'inactive';
+/**
+ * 14 days — once a program has less than this window left we mark it as
+ * `expiring` so users have time to react before it falls back to inactive.
+ */
+export const EXPIRING_THRESHOLD_SECONDS = 14 * DAY;
+
+export type ActivationStatus =
+  | 'active'
+  | 'expiring'
+  | 'inactive'
+  | 'unknown'
+  | 'error';
+
+/**
+ * Narrower description of *why* a contract is currently inactive, surfaced as
+ * a badge sublabel. Doesn't affect the 5-state filter contract.
+ */
+export type ActivationDetail =
+  | 'never_activated'
+  | 'expired'
+  | 'needs_upgrade';
 
 export interface ActivationInfo {
   status: ActivationStatus;
-  secondsRemaining: number;
+  /**
+   * `null` when we have no `programTimeLeft` reading yet — e.g. backend
+   * persisted `active` but the on-chain read hasn't returned. Distinct from
+   * `0`, which means "the precompile answered and the program is not
+   * executable right now". Consumers must not coerce `null` to `0`.
+   */
+  secondsRemaining: number | null;
   lastActivatedAt: string | null;
+  detail?: ActivationDetail;
+}
+
+/**
+ * Inputs to {@link getEffectiveActivationStatus} — kept narrow so any contract
+ * shape that carries `activationStatus` can be fed in (Contract, UserContract,
+ * row drafts, etc.).
+ */
+export interface ActivationStatusInput {
+  activationStatus?: string | null;
+}
+
+/**
+ * Resolve the effective activation status for a contract by combining the
+ * backend-persisted `activationStatus` ('unknown' | 'active' | 'error') with
+ * the on-chain `programTimeLeft` reading.
+ *
+ * - `error` from the backend trumps everything (the worker saw the activation
+ *   tx fail and that's the truth until the next activation attempt).
+ * - When `programTimeLeft` is missing (list endpoints pre-COB-490, RPC error,
+ *   or contract never activated) we fall back to the persisted status.
+ * - `programTimeLeft <= 0` → `inactive`; below the expiring threshold →
+ *   `expiring`; otherwise `active`.
+ */
+export function getEffectiveActivationStatus(
+  contract: ActivationStatusInput,
+  programTimeLeftSeconds: number | null | undefined
+): ActivationStatus {
+  const persisted = contract.activationStatus;
+  if (persisted === 'error') return 'error';
+
+  // `NaN` slips past `<= 0` and `< threshold` and would otherwise return
+  // `'active'` — treat any non-finite value the same as "no answer yet".
+  const hasReading =
+    programTimeLeftSeconds != null && Number.isFinite(programTimeLeftSeconds);
+
+  if (!hasReading) {
+    if (persisted === 'active') return 'active';
+    return 'unknown';
+  }
+
+  if (programTimeLeftSeconds <= 0) return 'inactive';
+  if (programTimeLeftSeconds < EXPIRING_THRESHOLD_SECONDS) return 'expiring';
+  return 'active';
 }
 
 export interface ActivationEvent {
@@ -43,9 +113,11 @@ export const DEFAULT_AUTO_ACTIVATION = {
 };
 
 export function humanizeActivationTime(info: ActivationInfo): string {
-  if (info.status === 'inactive' || info.secondsRemaining <= 0) {
-    return 'Inactive';
-  }
+  if (info.status === 'inactive') return 'Inactive';
+  if (info.status === 'unknown') return 'Status unknown';
+  if (info.status === 'error') return 'Activation failed';
+  if (info.secondsRemaining == null) return '—';
+  if (info.secondsRemaining <= 0) return 'Inactive';
   const s = info.secondsRemaining;
   if (s >= DAY) {
     const days = Math.floor(s / DAY);
@@ -61,9 +133,12 @@ export function humanizeActivationTime(info: ActivationInfo): string {
 
 export function activationLabel(info: ActivationInfo): string {
   if (info.status === 'inactive') return 'Inactive';
-  if (info.status === 'expiring')
-    return `Expiring · ${humanizeActivationTime(info)}`;
-  return `Active · ${humanizeActivationTime(info)}`;
+  if (info.status === 'unknown') return 'Unknown';
+  if (info.status === 'error') return 'Activation failed';
+  const suffix =
+    info.secondsRemaining != null ? ` · ${humanizeActivationTime(info)}` : '';
+  if (info.status === 'expiring') return `Expiring${suffix}`;
+  return `Active${suffix}`;
 }
 
 export function formatRelativeTime(isoDate: string): string {
@@ -88,13 +163,42 @@ export function formatRelativeTime(isoDate: string): string {
 }
 
 export function activationStatusLabel(info: ActivationInfo): string {
-  if (info.status === 'inactive') return 'Inactive';
-  if (info.status === 'expiring') return 'Expiring';
-  return 'Active';
+  switch (info.status) {
+    case 'inactive':
+      return 'Inactive';
+    case 'expiring':
+      return 'Expiring';
+    case 'unknown':
+      return 'Unknown';
+    case 'error':
+      return 'Error';
+    case 'active':
+    default:
+      return 'Active';
+  }
 }
 
 export function activationSubLabel(info: ActivationInfo): string {
-  if (info.status === 'inactive') return 'Reactivation required';
+  if (info.status === 'inactive') {
+    switch (info.detail) {
+      case 'never_activated':
+        return 'Activation required';
+      case 'expired':
+        return 'Activation expired';
+      case 'needs_upgrade':
+        return 'Needs upgrade to current Stylus version';
+      default:
+        return 'Reactivation required';
+    }
+  }
+  if (info.status === 'unknown') return 'Status not yet known';
+  if (info.status === 'error') return 'Last activation failed';
+  // active / expiring: only show the countdown when we actually have a
+  // reading. Falling back to `humanizeActivationTime`'s "Inactive" branch
+  // when seconds are missing would render "expires in Inactive".
+  if (info.secondsRemaining == null) {
+    return info.status === 'expiring' ? 'Expiring soon' : 'Currently active';
+  }
   const remaining = humanizeActivationTime(info);
   const tail = remaining.startsWith('in ') ? remaining.slice(3) : remaining;
   return `expires in ${tail}`;
@@ -107,8 +211,12 @@ export function activationDotClass(status: ActivationStatus): string {
     case 'expiring':
       return 'bg-amber-400';
     case 'inactive':
-    default:
       return 'bg-red-500';
+    case 'error':
+      return 'bg-red-600';
+    case 'unknown':
+    default:
+      return 'bg-gray-500';
   }
 }
 
@@ -119,7 +227,11 @@ export function activationTextClass(status: ActivationStatus): string {
     case 'expiring':
       return 'text-amber-300';
     case 'inactive':
-    default:
       return 'text-red-400';
+    case 'error':
+      return 'text-red-500';
+    case 'unknown':
+    default:
+      return 'text-gray-400';
   }
 }
