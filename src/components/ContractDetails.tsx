@@ -48,6 +48,7 @@ import ActivationTab from '@/components/ActivationTab';
 import ContractHistoryTab from '@/components/ContractHistoryTab';
 import CacheHero from '@/components/CacheHero';
 import type { ActivationInfo } from '@/lib/activation';
+import { explorerAddressUrl } from '@/utils/explorer';
 
 // Placeholder activation state until COB-496 wires real activation reads from
 // the ArbWasm precompile + CacheManagerAutomation events.
@@ -55,25 +56,6 @@ const PLACEHOLDER_ACTIVATION: ActivationInfo = {
   status: 'inactive',
   secondsRemaining: 0,
   lastActivatedAt: null,
-};
-
-// Auxiliary function to get explorer URL and enabled state
-const getExplorerLinkInfo = (
-  chainId: string | null,
-  contractAddress: string
-) => {
-  let explorerUrl = '';
-  let isEnabled = false;
-  console.log('chainId', chainId);
-  if (chainId === '42161') {
-    explorerUrl = `https://arbiscan.io/address/${contractAddress}`;
-    isEnabled = true;
-  } else if (chainId === '421614') {
-    explorerUrl = `https://sepolia.arbiscan.io/address/${contractAddress}`;
-    isEnabled = true;
-  }
-
-  return { explorerUrl, isEnabled };
 };
 
 // Explorer Link Button Component
@@ -86,10 +68,8 @@ const ExplorerLinkButton: React.FC<ExplorerLinkButtonProps> = ({
   chainId,
   contractAddress,
 }) => {
-  const { explorerUrl, isEnabled } = getExplorerLinkInfo(
-    chainId,
-    contractAddress
-  );
+  const explorerUrl = explorerAddressUrl(chainId, contractAddress);
+  const isEnabled = explorerUrl != null;
 
   return (
     <button
@@ -99,7 +79,7 @@ const ExplorerLinkButton: React.FC<ExplorerLinkButtonProps> = ({
           : 'opacity-50 cursor-not-allowed'
       }`}
       onClick={() => {
-        if (isEnabled) {
+        if (explorerUrl) {
           window.open(explorerUrl, '_blank');
         }
       }}

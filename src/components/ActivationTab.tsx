@@ -22,6 +22,7 @@ import {
   activationTextClass,
 } from '@/lib/activation';
 import { formatDate } from '@/utils/formatting';
+import { explorerTxUrl } from '@/utils/explorer';
 
 interface Props {
   activation: ActivationInfo;
@@ -30,12 +31,6 @@ interface Props {
   onActivate?: () => void;
   readOnly?: boolean;
 }
-
-const explorerTx = (chainId: number | undefined, hash: string) => {
-  if (chainId === 42161) return `https://arbiscan.io/tx/${hash}`;
-  if (chainId === 421614) return `https://sepolia.arbiscan.io/tx/${hash}`;
-  return null;
-};
 
 const truncate = (hash: string) =>
   hash.length > 14 ? `${hash.slice(0, 8)}…${hash.slice(-6)}` : hash;
@@ -207,7 +202,7 @@ export default function ActivationTab({
             {/* Narrow-container card stack */}
             <ul className='@lg/panel:hidden flex flex-col gap-2'>
               {history.map((evt) => {
-                const url = explorerTx(chainId, evt.txHash);
+                const url = explorerTxUrl(chainId, evt.txHash);
                 return (
                   <li
                     key={evt.id}
@@ -304,7 +299,7 @@ export default function ActivationTab({
               </thead>
               <tbody>
                 {history.map((evt) => {
-                  const url = explorerTx(chainId, evt.txHash);
+                  const url = explorerTxUrl(chainId, evt.txHash);
                   return (
                     <tr
                       key={evt.id}
