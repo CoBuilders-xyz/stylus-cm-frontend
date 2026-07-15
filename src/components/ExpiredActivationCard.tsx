@@ -43,11 +43,13 @@ export default function ExpiredActivationCard({
   const feeLabel = hasDataFee
     ? `${Number(formatEther(dataFee)).toFixed(6)} ETH`
     : null;
+  // Any time we don't have a fee (still loading, simulation failed, or
+  // wallet not yet connected), activation cannot proceed. Previously this
+  // was `(!hasDataFee && !simulationError)`, which left the button
+  // enabled on a simulation failure — clicking then dead-ended in the
+  // error toast without actually retrying the simulation.
   const cannotActivate =
-    !isConnected ||
-    isActivating ||
-    isChainMismatch ||
-    (!hasDataFee && !simulationError);
+    !isConnected || isActivating || isChainMismatch || !hasDataFee;
 
   return (
     <div className='mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 p-4'>
