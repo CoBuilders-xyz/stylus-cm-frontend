@@ -264,13 +264,22 @@ export default function ContractDetails({
   // still wins when present; this hook only fills the gap when
   // `contract.programTimeLeft` is null (list endpoints pre-COB-490, RPC
   // hiccup, or contracts whose `activationStatus` has never rolled up).
+  //
+  // Chain id preference: read the chain off the contract itself first,
+  // then fall back to the header selector. The contract carries its own
+  // `blockchain.chainId` from the backend, so the hook can fire even
+  // before `useBlockchainService()` finishes hydrating — otherwise the
+  // tab briefly shows "Unknown" while the row already renders "Active"
+  // (the row is memoised after chainId is available).
+  const activationChainId =
+    contractData?.blockchain?.chainId ?? currentBlockchain?.chainId;
   const programAddressesForTab = useMemo(
     () => (contractData?.address ? [contractData.address] : undefined),
     [contractData?.address]
   );
   const { data: programTimeLeftMap } = useProgramTimeLeft(
     programAddressesForTab,
-    currentBlockchain?.chainId
+    activationChainId
   );
   const programReadingForTab = contractData?.address
     ? programTimeLeftMap[contractData.address.toLowerCase()]
