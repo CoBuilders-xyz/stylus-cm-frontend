@@ -79,9 +79,13 @@ export default function AddContract({
     error: bytecodeError,
   } = useBytecode({
     address: contractAddress as `0x${string}`,
+    chainId: targetChainId,
     query: {
       enabled:
-        !!contractAddress && contractAddress.length === 42 && !addressError,
+        !!contractAddress &&
+        contractAddress.length === 42 &&
+        !addressError &&
+        targetChainId != null,
     },
   });
 
