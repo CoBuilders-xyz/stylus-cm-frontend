@@ -277,8 +277,11 @@ export default function ContractDetails({
     () => (contractData?.address ? [contractData.address] : undefined),
     [contractData?.address]
   );
-  const { data: programTimeLeftMap, isLoading: isProgramTimeLeftLoading } =
-    useProgramTimeLeft(programAddressesForTab, activationChainId);
+  const {
+    data: programTimeLeftMap,
+    isLoading: isProgramTimeLeftLoading,
+    refetch: refetchProgramTimeLeftForTab,
+  } = useProgramTimeLeft(programAddressesForTab, activationChainId);
   const programReadingForTab = contractData?.address
     ? programTimeLeftMap[contractData.address.toLowerCase()]
     : undefined;
@@ -699,7 +702,21 @@ export default function ContractDetails({
                   history={buildActivationHistory(contractData)}
                   autoActivate={contractData?.autoActivate}
                   maxActivationCost={contractData?.maxActivationCost}
-                  chainId={currentBlockchain?.chainId}
+                  chainId={activationChainId}
+                  chainName={
+                    contractData?.blockchain?.name ??
+                    currentBlockchain?.name
+                  }
+                  contractAddress={contractData?.address}
+                  onActivated={() => {
+                    // Chain state moves immediately; backend rollup of the
+                    // direct-to-precompile tx can lag by ~1 minute (only
+                    // CMA-driven activations flow through the indexer until
+                    // COB-499 lands), but re-fetching both keeps the badge
+                    // and history in sync as fast as possible.
+                    refetchProgramTimeLeftForTab();
+                    reloadContractData();
+                  }}
                   isLoading={isActivationTabLoading}
                 />
               </TabsContent>
@@ -750,7 +767,7 @@ export default function ContractDetails({
                 <ActivationTab
                   activation={resolveActivationInfo(contractData, programReadingForTab)}
                   history={buildActivationHistory(contractData)}
-                  chainId={currentBlockchain?.chainId}
+                  chainId={activationChainId}
                   isLoading={isActivationTabLoading}
                   readOnly
                 />

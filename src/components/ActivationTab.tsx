@@ -1,7 +1,7 @@
 'use client';
 
 import { formatEther } from 'viem';
-import { Zap, ExternalLink } from 'lucide-react';
+import { ExternalLink, Loader2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -16,12 +16,22 @@ import {
 import ActivationBadge from '@/components/ActivationBadge';
 import { formatDate } from '@/utils/formatting';
 import { explorerTxUrl } from '@/utils/explorer';
+import { useActivateProgram } from '@/hooks/useActivateProgram';
 
 interface Props {
   activation: ActivationInfo;
   history: ActivationEvent[];
   chainId?: number;
-  onActivate?: () => void;
+  /**
+   * WASM contract to activate. When set together with `chainId`, the header
+   * renders a live "Activate now" button wired to the ArbWasm precompile.
+   * Left undefined on the explore view (read-only).
+   */
+  contractAddress?: string;
+  /** Human-readable chain name used in the "Switch to X" fallback CTA. */
+  chainName?: string;
+  /** Fires after the activation tx is confirmed on-chain. */
+  onActivated?: () => void;
   readOnly?: boolean;
   /**
    * Persisted per-contract auto-activation config from the backend. Rendered
@@ -53,13 +63,17 @@ export default function ActivationTab({
   activation,
   history,
   chainId,
-  onActivate,
+  contractAddress,
+  chainName,
+  onActivated,
   readOnly = false,
   autoActivate,
   maxActivationCost,
   isLoading = false,
 }: Props) {
   const isActive = activation.status === 'active';
+  const canActivate =
+    !readOnly && contractAddress != null && chainId != null;
 
   if (isLoading) {
     return <ActivationTabSkeleton readOnly={readOnly} />;
@@ -92,35 +106,15 @@ export default function ActivationTab({
             )}
           </div>
 
-          {/* Gate the CTA on a real `onActivate` handler so the button
-              never renders as an enabled no-op during ticket-by-ticket
-              rollouts. The parent will pass a real handler in COB-498. */}
-          {!readOnly &&
-            onActivate &&
-            (isActive ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      disabled
-                      className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
-                    >
-                      <Zap className='h-4 w-4' />
-                      Activate now
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Already active</TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button
-                onClick={() => onActivate()}
-                className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20'
-              >
-                <Zap className='h-4 w-4' />
-                Activate now
-              </Button>
-            ))}
+          {canActivate && (
+            <ActivateNowControl
+              contractAddress={contractAddress as string}
+              chainId={chainId as number}
+              chainName={chainName}
+              isActive={isActive}
+              onActivated={onActivated}
+            />
+          )}
         </div>
       </div>
 
@@ -340,6 +334,148 @@ export default function ActivationTab({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+interface ActivateNowControlProps {
+  contractAddress: string;
+  chainId: number;
+  chainName: string | undefined;
+  isActive: boolean;
+  onActivated: (() => void) | undefined;
+}
+
+/**
+ * Header CTA that fronts the shared `useActivateProgram` flow. Rendered as a
+ * single button that swaps its label and click handler across four states
+ * — "already active", "switch to X", "activating…", and idle — plus an
+ * inline tx-hash link once the user signs. Kept in this file rather than
+ * extracted to its own module because it is one caller, tightly coupled to
+ * the tab's status header layout.
+ */
+function ActivateNowControl({
+  contractAddress,
+  chainId,
+  chainName,
+  isActive,
+  onActivated,
+}: ActivateNowControlProps) {
+  const {
+    isConnected,
+    isChainMismatch,
+    isSwitchingChain,
+    switchToTarget,
+    isSimulating,
+    dataFee,
+    isActivating,
+    txHash,
+    activate,
+  } = useActivateProgram({
+    address: contractAddress,
+    targetChainId: chainId,
+    // Skip the simulation when the program is already active — the
+    // precompile would revert with `ProgramUpToDate` and the button is
+    // disabled anyway.
+    enabled: !isActive,
+    onConfirmed: onActivated,
+  });
+
+  const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
+  const targetChainLabel = chainName ?? 'the contract network';
+
+  if (isActive) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <Button
+              disabled
+              className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
+            >
+              <Zap className='h-4 w-4' />
+              Activate now
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Contract is already active</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <Button
+              disabled
+              className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
+            >
+              <Zap className='h-4 w-4' />
+              Activate now
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Connect your wallet to activate</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  if (isChainMismatch) {
+    return (
+      <Button
+        onClick={switchToTarget}
+        disabled={isSwitchingChain}
+        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed'
+      >
+        {isSwitchingChain ? (
+          <Loader2 className='h-4 w-4 animate-spin' />
+        ) : (
+          <Zap className='h-4 w-4' />
+        )}
+        {isSwitchingChain
+          ? 'Switching network…'
+          : `Switch to ${targetChainLabel}`}
+      </Button>
+    );
+  }
+
+  // `dataFee == null` covers both "simulation still loading" and
+  // "simulation failed" — either way, disable the button rather than
+  // dead-end the user in an error toast. `activate()` still surfaces the
+  // simulation error as a toast if the user manages to click through
+  // (e.g. from a stale render).
+  const cannotActivate = isActivating || dataFee == null;
+
+  return (
+    <div className='flex flex-col items-end gap-1'>
+      <Button
+        onClick={activate}
+        disabled={cannotActivate}
+        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed'
+      >
+        {isActivating ? (
+          <Loader2 className='h-4 w-4 animate-spin' />
+        ) : (
+          <Zap className='h-4 w-4' />
+        )}
+        {isActivating ? 'Activating…' : 'Activate now'}
+        {!isActivating && isSimulating && dataFee == null && (
+          <Loader2 className='h-3 w-3 animate-spin' />
+        )}
+      </Button>
+      {txHash && txUrl && (
+        <a
+          href={txUrl}
+          target='_blank'
+          rel='noopener noreferrer'
+          className='text-[11px] text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
+        >
+          View on Arbiscan
+          <ExternalLink className='h-3 w-3' />
+        </a>
+      )}
     </div>
   );
 }

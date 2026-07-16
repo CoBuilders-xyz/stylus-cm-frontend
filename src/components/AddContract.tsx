@@ -9,29 +9,18 @@ import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
 import { X, Info } from 'lucide-react';
-import {
-  useAccount,
-  useBytecode,
-  useChainId,
-  useSimulateContract,
-  useSwitchChain,
-} from 'wagmi';
-import { isAddress, parseEther } from 'viem';
-import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
+import { useBytecode } from 'wagmi';
+import { isAddress } from 'viem';
 import {
   useProgramTimeLeft,
   type ProgramReason,
 } from '@/hooks/useProgramTimeLeft';
+import { useActivateProgram } from '@/hooks/useActivateProgram';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  ARB_WASM_ABI,
-  ARB_WASM_PRECOMPILE,
-} from '@/config/abis/arbWasm/arbWasm';
-import { showErrorToast, showSuccessToast } from '@/components/Toast';
 import ActivationRequiredCard from '@/components/ActivationRequiredCard';
 
 // User-facing copy per revert reason. The action is the same in all three
@@ -46,11 +35,6 @@ const ACTIVATION_MESSAGE_BY_REASON: Record<ProgramReason, string> = {
   needs_upgrade:
     'This WASM contract was activated under an older Stylus version. Reactivate it under the current version to be cached.',
 };
-
-// Generous over-pay used to discover the program's dataFee via simulation.
-// ArbWasm.activateProgram refunds excess value, so the user is only charged
-// the actual dataFee returned from the simulation.
-const ACTIVATION_SIMULATION_VALUE = parseEther('0.01');
 
 interface AddContractProps {
   onSuccess?: () => void;
@@ -67,12 +51,7 @@ export default function AddContract({
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
   const { currentBlockchain, currentBlockchainId } = useBlockchainService();
-  const { isConnected } = useAccount();
-  const walletChainId = useChainId();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const targetChainId = currentBlockchain?.chainId;
-  const isChainMismatch =
-    isConnected && targetChainId != null && walletChainId !== targetChainId;
   const router = useRouter();
 
   // State for the form - initialize with initialAddress if provided
@@ -141,53 +120,32 @@ export default function AddContract({
     programSeconds != null &&
     programSeconds > 0;
 
-  // Simulate activateProgram on the ArbWasm precompile so we can discover the
-  // contract-specific dataFee. Excess value is refunded by the precompile, but
-  // we want to charge the user the precise fee. simulateData.result is
-  // [version, dataFee].
+  // On-chain activation flow — shared with the Activation tab (COB-498) via
+  // the `useActivateProgram` hook: chain-mismatch guard, simulate for the
+  // per-program dataFee, write through the project-wide `useWeb3` wrapper
+  // (with the gasLimit override that `activateProgram` needs), and mapping
+  // wallet errors to actionable toasts.
   const {
-    data: activationSimulation,
-    error: activationSimulationError,
-    isLoading: isSimulatingActivation,
-  } = useSimulateContract({
-    address: ARB_WASM_PRECOMPILE,
-    abi: ARB_WASM_ABI,
-    functionName: 'activateProgram',
-    args: [contractAddress as `0x${string}`],
-    value: ACTIVATION_SIMULATION_VALUE,
-    chainId: targetChainId,
-    query: {
-      enabled:
-        isConnected &&
-        isReactivationRequired &&
-        !isChainMismatch &&
-        targetChainId != null,
-    },
-  });
-
-  const activationDataFee = useMemo(() => {
-    const result = activationSimulation?.result as
-      | readonly [number, bigint]
-      | undefined;
-    return result?.[1];
-  }, [activationSimulation]);
-
-  // Route the write through the project-wide useWeb3 wrapper so we inherit
-  // gas-price protection and a consistent transaction status enum with the
-  // rest of the codebase (bidding, gas tank, automated bidding).
-  const {
-    writeContract: writeActivation,
-    status: activationStatus,
+    isConnected,
+    isChainMismatch,
+    isSwitchingChain,
+    switchToTarget: handleSwitchToTargetChain,
+    isSimulating: isSimulatingActivation,
+    simulationError: activationSimulationError,
+    dataFee: activationDataFee,
+    isActivating,
     txHash: activationTxHash,
-    error: activationError,
+    activate: handleActivateProgram,
     reset: resetActivationWrite,
-  } = useWeb3();
-
-  const isActivating =
-    activationStatus === TransactionStatus.PREPARING ||
-    activationStatus === TransactionStatus.PENDING;
-  const isActivationConfirmed =
-    activationStatus === TransactionStatus.SUCCESS;
+  } = useActivateProgram({
+    address: contractAddress,
+    targetChainId,
+    enabled: isReactivationRequired,
+    // After the tx is mined, re-read programTimeLeft so the validation
+    // effect unlocks the form once the precompile reports a non-zero
+    // remaining lifetime.
+    onConfirmed: refetchProgramTimeLeft,
+  });
 
   // Handle all validation logic in one place
   useEffect(() => {
@@ -355,94 +313,6 @@ export default function AddContract({
       setAddressError(null);
     }
   };
-
-  const handleSwitchToTargetChain = () => {
-    if (targetChainId != null) {
-      switchChain({ chainId: targetChainId });
-    }
-  };
-
-  const handleActivateProgram = () => {
-    if (!isConnected) {
-      showErrorToast({
-        message: 'Connect your wallet to activate this contract.',
-      });
-      return;
-    }
-    if (isChainMismatch) {
-      // The UI surfaces a dedicated Switch button; guard the write path just
-      // in case it gets invoked before the user resolves the mismatch.
-      handleSwitchToTargetChain();
-      return;
-    }
-    // Nullish check rather than truthy so a legitimate 0n fee is not treated
-    // as missing (the ArbWasm precompile can, in theory, return a zero
-    // dataFee for a program that has already paid its allowance).
-    if (activationDataFee == null) {
-      showErrorToast({
-        message:
-          activationSimulationError?.message ??
-          'Unable to estimate the activation fee. Try again in a moment.',
-      });
-      return;
-    }
-    writeActivation({
-      address: ARB_WASM_PRECOMPILE,
-      abi: ARB_WASM_ABI,
-      functionName: 'activateProgram',
-      args: [contractAddress as `0x${string}`],
-      value: activationDataFee,
-      chainId: targetChainId,
-      // The useWeb3 wrapper's default `gasProtection.gasLimit` (1M) is
-      // silently too tight for ArbWasm.activateProgram — the precompile
-      // compiles the WASM into native code inside the transaction and
-      // burns 2-3M gas even for tiny programs (measured 2.28M on Arb
-      // Sepolia for a 6 KB hello-world). Overriding gasProtection here
-      // omits the gasLimit so wagmi's eth_estimateGas sizes the tx
-      // correctly. The 500 gwei price ceiling from the default is
-      // preserved to keep the spirit of the protection.
-      gasProtection: { maxGasPriceGwei: 500 },
-    });
-  };
-
-  // After the activation tx is mined, re-read programTimeLeft so the
-  // validation effect unlocks the form once the precompile reports
-  // a non-zero remaining lifetime.
-  useEffect(() => {
-    if (isActivationConfirmed) {
-      showSuccessToast({ message: 'Contract activated successfully.' });
-      refetchProgramTimeLeft();
-    }
-  }, [isActivationConfirmed, refetchProgramTimeLeft]);
-
-  useEffect(() => {
-    if (!activationError) return;
-
-    const message = activationError.message ?? '';
-    const lower = message.toLowerCase();
-    let display = 'Activation failed. Please try again.';
-    if (
-      lower.includes('user rejected') ||
-      lower.includes('user denied') ||
-      lower.includes('rejected the request')
-    ) {
-      display = 'Activation cancelled in wallet.';
-    } else if (
-      lower.includes('insufficient funds') ||
-      lower.includes('insufficient balance') ||
-      lower.includes('exceeds the balance')
-    ) {
-      display = 'Insufficient ETH to cover the activation fee.';
-    } else if (lower.includes('network fee is extremely high')) {
-      // Surface the gas-price-protection message from useWeb3 as-is.
-      display = message;
-    }
-    showErrorToast({ message: display, onRetry: handleActivateProgram });
-    resetActivationWrite();
-    // handleActivateProgram is stable enough for this retry surface; including
-    // it would re-fire the effect on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activationError, resetActivationWrite]);
 
   // Handle name input change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
