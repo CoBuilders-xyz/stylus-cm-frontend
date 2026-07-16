@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { formatEther, parseEther } from 'viem';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -591,19 +591,16 @@ function AutoActivationConfig({
     }
   }, [persistedMaxActivationCostWei]);
 
+  // Form is user-owned once mounted. We deliberately do NOT sync the
+  // local state back to `persistedAutoActivate` / `persistedCostEth` on
+  // subsequent renders — same convention as `AutomatedBiddingSection`'s
+  // "keep user values after successful transaction". CMA event indexing
+  // lags the on-chain write by ~1 min; if we synced eagerly, a save
+  // that just confirmed would flicker back to the stale persisted
+  // values while the indexer catches up.
   const [enabled, setEnabled] = useState(persistedAutoActivate);
   const [costEth, setCostEth] = useState(persistedCostEth);
   const [costError, setCostError] = useState<string | null>(null);
-
-  // Reset the form when the persisted values change — normal flow is
-  // "user saves → parent refetches → new persisted values arrive". Keeps
-  // the form in lockstep with the backend without duplicating state.
-  useEffect(() => {
-    setEnabled(persistedAutoActivate);
-  }, [persistedAutoActivate]);
-  useEffect(() => {
-    setCostEth(persistedCostEth);
-  }, [persistedCostEth]);
 
   const ZERO_WEI = BigInt(0);
 
