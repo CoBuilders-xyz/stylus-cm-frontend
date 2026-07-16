@@ -29,15 +29,35 @@ import {
 import { useReadContract, useAccount } from 'wagmi';
 
 // Backend `maxActivationCost` comes back as a wei-formatted decimal string
-// or null. Guard the BigInt cast so a stray non-numeric value degrades to
-// zero instead of throwing inside the tx handler.
-function safeParseWei(raw: string | null | undefined): bigint {
+// or null. Return `null` on a parse failure so callers can abort the write
+// — silently defaulting to zero would clobber a valid on-chain activation
+// config, which is exactly the class of bug COB-499 sets out to prevent.
+function safeParseWei(raw: string | null | undefined): bigint | null {
   if (raw == null || raw === '') return BigInt(0);
   try {
     return BigInt(raw);
   } catch {
-    return BigInt(0);
+    return null;
   }
+}
+
+/**
+ * The three CMA writes in this file are atomic across all five fields, so
+ * we need to echo the current auto-activation values back on every write
+ * or we clobber them. If the persisted `maxActivationCost` is malformed
+ * we refuse to compute a fallback — returning `null` here forces the
+ * caller into the error-toast branch and away from `writeContract`.
+ */
+function preservedActivationFields(contract: {
+  autoActivate?: boolean;
+  maxActivationCost?: string | null;
+}): { autoActivate: boolean; maxActivationCost: bigint } | null {
+  const parsed = safeParseWei(contract.maxActivationCost);
+  if (parsed === null) return null;
+  return {
+    autoActivate: contract.autoActivate ?? false,
+    maxActivationCost: parsed,
+  };
 }
 
 interface AutomatedBiddingSectionProps {
@@ -392,8 +412,17 @@ export function AutomatedBiddingSection({
       // contract (COB-499). The CMA write is atomic across all five fields,
       // so echoing the persisted values back keeps the bidding section
       // from silently clobbering the Activation tab's state.
-      const preservedAutoActivate = contract.autoActivate ?? false;
-      const preservedMaxActivationCost = safeParseWei(contract.maxActivationCost);
+      const preserved = preservedActivationFields(contract);
+      if (preserved === null) {
+        console.error(
+          'Refusing bidding write: persisted maxActivationCost is not a valid wei string.'
+        );
+        showErrorToast({
+          message:
+            'Contract configuration is corrupt. Refresh the page and try again.',
+        });
+        return;
+      }
 
       // Create transaction parameters
       const txParams = {
@@ -405,8 +434,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          preservedAutoActivate,
-          preservedMaxActivationCost,
+          preserved.autoActivate,
+          preserved.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
       };
@@ -463,8 +492,17 @@ export function AutomatedBiddingSection({
       });
 
       // Same preservation logic as `insertContract` above (COB-499).
-      const preservedAutoActivate = contract.autoActivate ?? false;
-      const preservedMaxActivationCost = safeParseWei(contract.maxActivationCost);
+      const preserved = preservedActivationFields(contract);
+      if (preserved === null) {
+        console.error(
+          'Refusing bidding update: persisted maxActivationCost is not a valid wei string.'
+        );
+        showErrorToast({
+          message:
+            'Contract configuration is corrupt. Refresh the page and try again.',
+        });
+        return;
+      }
 
       // Create transaction parameters for updateContract
       const txParams = {
@@ -476,8 +514,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          preservedAutoActivate,
-          preservedMaxActivationCost,
+          preserved.autoActivate,
+          preserved.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 
@@ -522,8 +560,17 @@ export function AutomatedBiddingSection({
 
       // Same preservation logic (COB-499) — toggling bidding automation on
       // or off must not touch the auto-activation config.
-      const preservedAutoActivate = contract.autoActivate ?? false;
-      const preservedMaxActivationCost = safeParseWei(contract.maxActivationCost);
+      const preserved = preservedActivationFields(contract);
+      if (preserved === null) {
+        console.error(
+          'Refusing bidding toggle: persisted maxActivationCost is not a valid wei string.'
+        );
+        showErrorToast({
+          message:
+            'Contract configuration is corrupt. Refresh the page and try again.',
+        });
+        return;
+      }
 
       // Create transaction parameters for updateContract with funding = 0
       const txParams = {
@@ -535,8 +582,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(originalMaxBid),
           newAutomatedBidding,
-          preservedAutoActivate,
-          preservedMaxActivationCost,
+          preserved.autoActivate,
+          preserved.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 

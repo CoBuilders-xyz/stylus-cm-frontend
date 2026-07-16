@@ -191,6 +191,23 @@ export function useConfigureAutoActivation({
       });
       return;
     }
+    // Fail closed on simulate errors. Without this, a known-bad simulation
+    // would still reach the wallet prompt and revert on-chain, wasting the
+    // user's gas. Matches the pattern in `useActivateProgram` where
+    // `save`/`activate` refuses to write until the simulation resolves.
+    if (simulationError != null) {
+      showErrorToast({
+        message:
+          'Cannot save: the transaction would revert. Fix the config and retry.',
+      });
+      return;
+    }
+    if (isSimulating) {
+      showErrorToast({
+        message: 'Still validating the configuration. Try again in a moment.',
+      });
+      return;
+    }
     writeContract({
       address: cmaAddress,
       abi: cacheManagerAutomationAbi.abi as Abi,
@@ -205,7 +222,9 @@ export function useConfigureAutoActivation({
     functionName,
     isChainMismatch,
     isConnected,
+    isSimulating,
     isValidAddress,
+    simulationError,
     switchToTarget,
     targetChainId,
     writeContract,

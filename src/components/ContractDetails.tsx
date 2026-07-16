@@ -716,7 +716,15 @@ export default function ContractDetails({
               </TabsContent>
 
               <TabsContent value='activation'>
+                {/*
+                  Key on the contract address so switching contracts inside
+                  the same side panel remounts the tab — the auto-activation
+                  form is user-owned local state (no re-sync from props by
+                  design) and would otherwise leak the previous contract's
+                  edits into a Save against the new contract.
+                */}
                 <ActivationTab
+                  key={contractData?.address}
                   activation={resolveActivationInfo(contractData, programReadingForTab)}
                   history={buildActivationHistory(contractData)}
                   autoActivate={contractData?.autoActivate}

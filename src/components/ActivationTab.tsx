@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { formatEther, parseEther } from 'viem';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -581,15 +581,20 @@ function AutoActivationConfig({
   persistedMaxActivationCostWei,
   onSaved,
 }: AutoActivationConfigProps) {
-  const persistedCostEth = useMemo(() => {
+  // `null` on parse failure so the caller can distinguish "backend
+  // deliberately left this unset" (empty string display) from "backend
+  // sent a malformed wei value we refuse to interpret" (blocks Save so
+  // we don't clobber valid on-chain state with a silent zero).
+  const persistedCostEth = useMemo<string | null>(() => {
     if (persistedMaxActivationCostWei == null || persistedMaxActivationCostWei === '')
       return '';
     try {
       return formatEther(BigInt(persistedMaxActivationCostWei));
     } catch {
-      return '';
+      return null;
     }
   }, [persistedMaxActivationCostWei]);
+  const isPersistedCostCorrupt = persistedCostEth === null;
 
   // Form is user-owned once mounted. We deliberately do NOT sync the
   // local state back to `persistedAutoActivate` / `persistedCostEth` on
@@ -599,7 +604,7 @@ function AutoActivationConfig({
   // that just confirmed would flicker back to the stale persisted
   // values while the indexer catches up.
   const [enabled, setEnabled] = useState(persistedAutoActivate);
-  const [costEth, setCostEth] = useState(persistedCostEth);
+  const [costEth, setCostEth] = useState(persistedCostEth ?? '');
   const [costError, setCostError] = useState<string | null>(null);
 
   const ZERO_WEI = BigInt(0);
@@ -618,19 +623,64 @@ function AutoActivationConfig({
   }, [costEth]);
 
   const isFormValid = parsedCost != null && (!enabled || parsedCost > ZERO_WEI);
-  const isDirty =
-    enabled !== persistedAutoActivate ||
-    (parsedCost != null && parsedCost.toString() !== (persistedMaxActivationCostWei ?? '0'));
 
-  const currentMaxBidWei = useMemo<bigint>(() => {
+  // Baseline that `isDirty` compares against. Normally the persisted
+  // backend values — but after a successful save we snapshot the just-
+  // submitted values and use those instead, until the CMA indexer catches
+  // up (~1 min). Without this the Save button would re-enable moments
+  // after confirmation and the user could pointlessly pay gas to submit
+  // the same config twice while the backend is still stale.
+  const submittedBaselineRef = useRef<{
+    enabled: boolean;
+    costWei: string;
+  } | null>(null);
+
+  // Refs so the `onConfirmed` callback (fires once, captured via the hook's
+  // internal ref) always reads the values the user just submitted rather
+  // than stale render-time closures.
+  const enabledRef = useRef(enabled);
+  const parsedCostRef = useRef(parsedCost);
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+  useEffect(() => {
+    parsedCostRef.current = parsedCost;
+  }, [parsedCost]);
+
+  useEffect(() => {
+    const submitted = submittedBaselineRef.current;
+    if (submitted == null) return;
+    const persistedCostWei = persistedMaxActivationCostWei ?? '0';
+    if (
+      submitted.enabled === persistedAutoActivate &&
+      submitted.costWei === persistedCostWei
+    ) {
+      submittedBaselineRef.current = null;
+    }
+  }, [persistedAutoActivate, persistedMaxActivationCostWei]);
+
+  const baseline = submittedBaselineRef.current;
+  const baselineEnabled = baseline?.enabled ?? persistedAutoActivate;
+  const baselineCostWei =
+    baseline?.costWei ?? (persistedMaxActivationCostWei ?? '0');
+  const isDirty =
+    enabled !== baselineEnabled ||
+    (parsedCost != null && parsedCost.toString() !== baselineCostWei);
+
+  // `null` on parse failure — the atomic CMA write echoes the current
+  // bidding fields, and silently defaulting to zero here would erase a
+  // valid on-chain `maxBid` the user set from the Bidding tab. The form
+  // detects null and blocks Save.
+  const currentMaxBidWei = useMemo<bigint | null>(() => {
     if (currentMaxBid == null || currentMaxBid === '') return ZERO_WEI;
     try {
       return BigInt(currentMaxBid);
     } catch {
-      return ZERO_WEI;
+      return null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMaxBid]);
+  const isCurrentMaxBidCorrupt = currentMaxBidWei === null;
 
   const {
     isConnected,
@@ -648,11 +698,25 @@ function AutoActivationConfig({
     targetChainId: chainId,
     cmaAddress,
     isRegistered: isRegisteredInCMA,
-    currentMaxBid: currentMaxBidWei,
+    // Feed the hook `0n` as a safe placeholder when the persisted bidding
+    // value is corrupt — the Save button is blocked further down so the
+    // placeholder never reaches `writeContract`.
+    currentMaxBid: currentMaxBidWei ?? ZERO_WEI,
     currentBiddingEnabled,
     autoActivate: enabled,
     maxActivationCost: parsedCost ?? ZERO_WEI,
-    onConfirmed: onSaved,
+    onConfirmed: () => {
+      // Freeze the just-submitted values as the dirtiness baseline so
+      // Save stays disabled while the indexer catches up (see the
+      // `submittedBaselineRef` effect above). Reads the values through
+      // refs to avoid staleness — the confirm callback fires once per
+      // successful tx, not on every render.
+      submittedBaselineRef.current = {
+        enabled: enabledRef.current,
+        costWei: (parsedCostRef.current ?? ZERO_WEI).toString(),
+      };
+      onSaved?.();
+    },
     // Skip simulate calls while the form is pristine — no point burning
     // RPC + a wagmi query key on args that are identical to what's
     // already persisted.
@@ -716,7 +780,12 @@ function AutoActivationConfig({
       </Button>
     );
   } else {
-    const cannotSave = isSaving || !isFormValid || !isDirty;
+    const cannotSave =
+      isSaving ||
+      !isFormValid ||
+      !isDirty ||
+      isPersistedCostCorrupt ||
+      isCurrentMaxBidCorrupt;
     saveButton = (
       <Button
         onClick={save}
@@ -793,6 +862,21 @@ function AutoActivationConfig({
           )}
         </div>
       </div>
+
+      {(isPersistedCostCorrupt || isCurrentMaxBidCorrupt) && (
+        <div className='mt-4 flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-200'>
+          <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
+          <span>
+            Persisted contract configuration is corrupt (invalid wei value in{' '}
+            {isPersistedCostCorrupt && 'max activation cost'}
+            {isPersistedCostCorrupt && isCurrentMaxBidCorrupt && ' and '}
+            {isCurrentMaxBidCorrupt && 'max bid'}
+            ). Saving is disabled to avoid overwriting valid on-chain state
+            with a silent zero. Refresh the page — if this persists, contact
+            the backend team.
+          </span>
+        </div>
+      )}
 
       <div className='mt-5 flex items-center justify-end gap-3 flex-wrap'>
         {txHash && txUrl && (
