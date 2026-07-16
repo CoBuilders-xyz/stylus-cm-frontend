@@ -59,7 +59,6 @@ export function AutomatedBiddingSection({
 
   // Separate state for controlling panel visibility
   const [showAutomationPanel, setShowAutomationPanel] = useState(false);
-  const [contractExists, setContractExists] = useState(false);
   const [originalMaxBid, setOriginalMaxBid] = useState('0');
 
   // Local state for the automated bidding toggle within the form - enabled by default
@@ -101,65 +100,35 @@ export function AutomatedBiddingSection({
     },
   });
 
-  // Get user's automated contracts
-  const { data: userContracts, refetch: refetchUserContracts } =
-    useReadContract({
-      address:
-        currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-      abi: cacheManagerAutomationAbi.abi as Abi,
-      functionName: 'getUserContracts',
-      account: userAddress,
-      query: {
-        enabled:
-          !!currentBlockchain?.cacheManagerAutomationAddress &&
-          isConnected &&
-          !!userAddress,
-      },
-    });
+  // `contractExists` used to be derived from a duplicate `getUserContracts`
+  // read that ran in parallel with `useUserCMAContract`. Now both derive
+  // from the same hook — wagmi dedupes the RPC call and both surfaces
+  // agree on the source of truth (COB-499 CodeRabbit finding).
+  const contractExists = cmaRecord != null;
 
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
-  // Check if current contract is automated
+  // Hydrate the form from the on-chain CMA record. `cmaRecord === undefined`
+  // means the read hasn't resolved yet — do nothing. `null` means the
+  // contract is not registered (defaults). Object means registered — echo
+  // the values into the form.
   useEffect(() => {
-    // Only proceed if we have the necessary data
-    if (
-      contract?.address &&
-      userContracts &&
-      Array.isArray(userContracts)
-      // Check if this is a new contract or different from the last checked one
-    ) {
-      console.log('Checking contract automation status for:', contract.address);
-
-      // Remember this contract address to detect future changes
-
-      // Look for the contract in user's automated contracts
-      const existingContract = userContracts.find(
-        (c) =>
-          c.contractAddress.toLowerCase() === contract.address.toLowerCase()
-      );
-
-      if (existingContract) {
-        // Update UI with the automated contract's values
-        setAutomatedBidding(existingContract.enabled);
-
-        // Format the max bid to ETH for display
-        const maxBidEth = formatEther(existingContract.maxBid.toString());
-        setMaxBidAmount(maxBidEth);
-        setOriginalMaxBid(maxBidEth);
-        setContractExists(true);
-      } else {
-        console.log('Contract is not automated:', contract.address);
-        // If not found, reset to default values
-        setAutomatedBidding(true);
-        setMaxBidAmount('');
-        setOriginalMaxBid('0');
-        setContractExists(false);
-      }
+    if (!contract?.address) return;
+    if (cmaRecord === undefined) return;
+    if (cmaRecord === null) {
+      setAutomatedBidding(true);
+      setMaxBidAmount('');
+      setOriginalMaxBid('0');
+      return;
     }
-  }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
+    setAutomatedBidding(cmaRecord.enabled);
+    const maxBidEth = formatEther(cmaRecord.maxBid);
+    setMaxBidAmount(maxBidEth);
+    setOriginalMaxBid(maxBidEth);
+  }, [contract?.address, cmaRecord, setAutomatedBidding, setMaxBidAmount]);
 
   // Store the last transaction parameters for retry functionality
   const [lastTxParams, setLastTxParams] = useState<{
@@ -260,12 +229,9 @@ export function AutomatedBiddingSection({
         // Reset transaction state
         reset();
 
-        // Immediately refetch the balance and contracts to get updated data
+        // Immediately refetch the balance and the CMA record so both this
+        // tab and the Activation tab see the just-updated values.
         refetchBalance();
-        refetchUserContracts();
-        // Also refresh the parsed CMA record — the Activation tab shares
-        // this hook and will read the just-updated `maxBid` / `enabled`
-        // as its preserve values next time the user saves.
         refetchCMARecord();
 
         // Log the values we're keeping
@@ -280,7 +246,6 @@ export function AutomatedBiddingSection({
     onSuccess,
     reset,
     refetchBalance,
-    refetchUserContracts,
     refetchCMARecord,
     inputValue,
     automatedBidding,

@@ -30,13 +30,20 @@ export interface UseUserCMAContractResult {
   refetch: () => void;
 }
 
-type CMAUserContractTuple = readonly [
-  `0x${string}`,
-  bigint,
-  boolean,
-  boolean,
-  bigint,
-];
+/**
+ * Shape viem returns for each element of the `getUserContracts` array. The
+ * ABI defines a struct with **named** fields, so viem decodes the tuples
+ * as objects (not positional arrays) — matches how the existing
+ * `AutomatedBiddingSection` code already accesses `c.contractAddress`,
+ * `c.enabled`, etc.
+ */
+type CMAUserContractTuple = {
+  contractAddress: `0x${string}`;
+  maxBid: bigint;
+  enabled: boolean;
+  autoActivate: boolean;
+  maxActivationCost: bigint;
+};
 
 /**
  * Reads the connected user's per-contract config directly from the
@@ -91,15 +98,15 @@ export function useUserCMAContract({
     const tuples = rawContracts as readonly CMAUserContractTuple[];
     const target = contractAddress.toLowerCase();
     const match = tuples.find(
-      (entry) => entry[0].toLowerCase() === target
+      (entry) => entry.contractAddress.toLowerCase() === target
     );
     if (!match) return null;
     return {
-      contractAddress: match[0],
-      maxBid: match[1],
-      enabled: match[2],
-      autoActivate: match[3],
-      maxActivationCost: match[4],
+      contractAddress: match.contractAddress,
+      maxBid: match.maxBid,
+      enabled: match.enabled,
+      autoActivate: match.autoActivate,
+      maxActivationCost: match.maxActivationCost,
     };
   }, [rawContracts, contractAddress]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { formatEther, parseEther } from 'viem';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -662,11 +662,56 @@ function AutoActivationConfigForm({
     }
   }, [costEth]);
 
+  // `parsedCost === null` after the regex passed (non-empty, decimal-ish
+  // input) means `parseEther` itself rejected it — usually because the
+  // decimal has more than 18 places or is otherwise out of range. Surface
+  // it explicitly so the disabled Save has a visible reason.
+  const hasCostParseError = costEth.trim() !== '' && parsedCost == null;
+
   const isFormValid = parsedCost != null && (!enabled || parsedCost > ZERO_WEI);
 
+  // `refetchCMAConfig()` fires from `onConfirmed`, but wagmi's refetch has
+  // a network round-trip — for that window (typically a few hundred ms
+  // but can stretch on a slow RPC), `onChainAutoActivate` /
+  // `onChainMaxActivationCost` still reflect the pre-write state while
+  // the form already shows the just-submitted values, so `isDirty`
+  // computed naively would go true and re-enable Save. Snapshot the
+  // submitted values on confirm and use them as the dirtiness baseline
+  // until the chain read catches up.
+  const submittedSnapshotRef = useRef<{
+    enabled: boolean;
+    maxActivationCost: bigint;
+  } | null>(null);
+
+  useEffect(() => {
+    const snap = submittedSnapshotRef.current;
+    if (snap == null) return;
+    if (
+      snap.enabled === onChainAutoActivate &&
+      snap.maxActivationCost === onChainMaxActivationCost
+    ) {
+      submittedSnapshotRef.current = null;
+    }
+  }, [onChainAutoActivate, onChainMaxActivationCost]);
+
+  const snapshot = submittedSnapshotRef.current;
+  const baselineEnabled = snapshot?.enabled ?? onChainAutoActivate;
+  const baselineMaxCost =
+    snapshot?.maxActivationCost ?? onChainMaxActivationCost;
   const isDirty =
-    enabled !== onChainAutoActivate ||
-    (parsedCost != null && parsedCost !== onChainMaxActivationCost);
+    enabled !== baselineEnabled ||
+    (parsedCost != null && parsedCost !== baselineMaxCost);
+
+  // Refs so `onConfirmed` (fires once via the hook's internal ref) reads
+  // the values the user just submitted, not stale render-time closures.
+  const enabledRef = useRef(enabled);
+  const parsedCostRef = useRef(parsedCost);
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+  useEffect(() => {
+    parsedCostRef.current = parsedCost;
+  }, [parsedCost]);
 
   const {
     isConnected,
@@ -694,9 +739,14 @@ function AutoActivationConfigForm({
     autoActivate: enabled,
     maxActivationCost: parsedCost ?? ZERO_WEI,
     onConfirmed: () => {
-      // Refetching the on-chain read updates the baseline, which flips
-      // `isDirty` back to false — Save re-disables until the user makes
-      // a new change. No local snapshot ref required.
+      // Snapshot the just-submitted values as the dirtiness baseline
+      // so Save stays disabled through the refetch round-trip. The
+      // effect above clears the snapshot once the on-chain read
+      // reflects the new values.
+      submittedSnapshotRef.current = {
+        enabled: enabledRef.current,
+        maxActivationCost: parsedCostRef.current ?? ZERO_WEI,
+      };
       refetchCMAConfig();
       onSaved?.();
     },
@@ -824,7 +874,9 @@ function AutoActivationConfigForm({
             placeholder='0.0'
             disabled={isSaving}
             className={`mt-1 bg-black border ${
-              costError || (enabled && parsedCost === ZERO_WEI)
+              costError ||
+              hasCostParseError ||
+              (enabled && parsedCost === ZERO_WEI)
                 ? 'border-red-500'
                 : 'border-[#2C2E30]'
             } text-white`}
@@ -832,7 +884,12 @@ function AutoActivationConfigForm({
           {costError && (
             <p className='text-red-400 text-xs mt-1'>{costError}</p>
           )}
-          {!costError && enabled && parsedCost === ZERO_WEI && (
+          {!costError && hasCostParseError && (
+            <p className='text-red-400 text-xs mt-1'>
+              Enter a valid ETH amount (max 18 decimal places).
+            </p>
+          )}
+          {!costError && !hasCostParseError && enabled && parsedCost === ZERO_WEI && (
             <p className='text-red-400 text-xs mt-1'>
               Max activation cost must be greater than 0 when auto-activation
               is enabled.
