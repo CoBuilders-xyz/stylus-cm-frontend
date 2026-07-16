@@ -690,7 +690,7 @@ export default function ContractDetails({
                   autoActivate={contractData?.autoActivate}
                   maxActivationCost={contractData?.maxActivationCost}
                   chainId={currentBlockchain?.chainId}
-                  isLoading={isLoadingContract && !contractData}
+                  isLoading={contractData?.activationHistory === undefined}
                 />
               </TabsContent>
 
@@ -741,7 +741,7 @@ export default function ContractDetails({
                   activation={resolveActivationInfo(contractData, programReadingForTab)}
                   history={buildActivationHistory(contractData)}
                   chainId={currentBlockchain?.chainId}
-                  isLoading={isLoadingContract && !contractData}
+                  isLoading={contractData?.activationHistory === undefined}
                   readOnly
                 />
               </TabsContent>

@@ -184,10 +184,19 @@ export function activationHistoryItemToEvent(
   item: ActivationHistoryItem
 ): ActivationEvent {
   const isSuccess = item.eventType === 'ActivationPerformed';
-  const spentEth =
-    isSuccess && item.spent != null && item.spent !== ''
-      ? formatEther(BigInt(item.spent))
-      : '';
+  // Backend should send `spent` as a wei-formatted decimal string, but a
+  // stray non-numeric value would otherwise crash the whole activation
+  // tab through `BigInt(...)`. Guard the conversion and fall back to the
+  // empty-string display so a bad row degrades to "—" instead of a
+  // white-screen render.
+  let spentEth = '';
+  if (isSuccess && item.spent != null && item.spent !== '') {
+    try {
+      spentEth = formatEther(BigInt(item.spent));
+    } catch {
+      spentEth = '';
+    }
+  }
   return {
     id: item.transactionHash,
     date: item.timestamp,

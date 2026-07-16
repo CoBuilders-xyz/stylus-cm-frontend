@@ -92,7 +92,11 @@ export default function ActivationTab({
             )}
           </div>
 
+          {/* Gate the CTA on a real `onActivate` handler so the button
+              never renders as an enabled no-op during ticket-by-ticket
+              rollouts. The parent will pass a real handler in COB-498. */}
           {!readOnly &&
+            onActivate &&
             (isActive ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -110,7 +114,7 @@ export default function ActivationTab({
               </Tooltip>
             ) : (
               <Button
-                onClick={() => onActivate?.()}
+                onClick={() => onActivate()}
                 className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20'
               >
                 <Zap className='h-4 w-4' />
