@@ -49,6 +49,8 @@ export interface UseActivateProgramResult {
   switchToTarget: () => void;
   isSimulating: boolean;
   simulationError: Error | null;
+  /** Re-runs the fee-discovery simulation. Wired to the tab's Retry control when the sim fails. */
+  refetchSimulation: () => void;
   /** `undefined` while the simulation has not yet resolved. `0n` is a valid fee. */
   dataFee: bigint | undefined;
   isActivating: boolean;
@@ -101,6 +103,7 @@ export function useActivateProgram({
     data: simulation,
     error: simulationError,
     isLoading: isSimulating,
+    refetch: refetchSimulation,
   } = useSimulateContract({
     address: ARB_WASM_PRECOMPILE,
     abi: ARB_WASM_ABI,
@@ -245,6 +248,10 @@ export function useActivateProgram({
     reset();
   }, [writeError, reset]);
 
+  const refetchSimulationStable = useCallback(() => {
+    refetchSimulation();
+  }, [refetchSimulation]);
+
   return {
     isConnected,
     isChainMismatch,
@@ -252,6 +259,7 @@ export function useActivateProgram({
     switchToTarget,
     isSimulating,
     simulationError: simulationError ?? null,
+    refetchSimulation: refetchSimulationStable,
     dataFee,
     isActivating,
     isConfirmed,

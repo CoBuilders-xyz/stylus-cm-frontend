@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { formatEther } from 'viem';
-import { ExternalLink, Loader2, Zap } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -368,6 +368,8 @@ function ActivateNowControl({
     isSwitchingChain,
     switchToTarget,
     isSimulating,
+    simulationError,
+    refetchSimulation,
     dataFee,
     isActivating,
     txHash,
@@ -381,6 +383,20 @@ function ActivateNowControl({
     enabled: !isActive,
     onConfirmed: onActivated,
   });
+
+  // Fee-discovery ran, produced no dataFee, and is not currently in flight —
+  // treat this as "simulation failed" so the user gets a visible reason +
+  // Retry instead of a button that stays silently disabled forever. Bounded
+  // to the idle branch (connected, right chain, not already active) so the
+  // other states can keep their own messaging.
+  const showSimulationFailure =
+    !isActive &&
+    isConnected &&
+    !isChainMismatch &&
+    !isActivating &&
+    !isSimulating &&
+    dataFee == null &&
+    simulationError != null;
 
   const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
   const targetChainLabel = chainName ?? 'the contract network';
@@ -468,8 +484,25 @@ function ActivateNowControl({
   }
 
   return (
-    <div className='flex flex-col items-end gap-1'>
+    <div className='flex flex-col items-end gap-1 max-w-xs'>
       {button}
+      {showSimulationFailure && (
+        <div className='flex items-start gap-2 text-[11px] text-red-300/90 mt-1'>
+          <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
+          <span className='flex-1 text-right'>
+            Could not estimate the activation fee. Check your wallet has ETH
+            on the correct network and retry.
+          </span>
+          <button
+            type='button'
+            onClick={() => refetchSimulation()}
+            className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0'
+          >
+            <RefreshCw className='h-3 w-3' />
+            Retry
+          </button>
+        </div>
+      )}
       {txHash && txUrl && (
         <a
           href={txUrl}
