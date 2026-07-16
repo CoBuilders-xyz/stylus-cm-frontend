@@ -82,6 +82,25 @@ function resolveActivationInfo(
   return buildActivationInfo(contract, seconds, onChainReading?.reason);
 }
 
+/**
+ * Whether the contract is already registered inside the CacheManagerAutomation
+ * contract. Drives the choice of `insertContract` vs `updateContract` in the
+ * Activation tab's auto-activation editor. Any CMA-backed field being non-
+ * default is enough evidence — the backend only populates these off `Contract*`
+ * events emitted by the CMA. False positives here would revert the tx at
+ * simulate time, so the check errs on the side of "still call insertContract"
+ * only for pristine contracts.
+ */
+function isRegisteredInCMA(contract: Contract | null | undefined): boolean {
+  if (!contract) return false;
+  if (contract.isAutomated) return true;
+  if (contract.autoActivate) return true;
+  if (contract.maxBid != null && contract.maxBid !== '') return true;
+  if (contract.maxActivationCost != null && contract.maxActivationCost !== '')
+    return true;
+  return false;
+}
+
 function buildActivationHistory(
   contract: Contract | null | undefined
 ): ActivationEvent[] {
@@ -708,15 +727,24 @@ export default function ContractDetails({
                     currentBlockchain?.name
                   }
                   contractAddress={contractData?.address}
+                  cmaAddress={
+                    contractData?.blockchain?.cacheManagerAutomationAddress as
+                      | `0x${string}`
+                      | undefined
+                  }
+                  currentMaxBid={contractData?.maxBid ?? null}
+                  currentBiddingEnabled={contractData?.isAutomated ?? false}
+                  isRegisteredInCMA={isRegisteredInCMA(contractData)}
                   onActivated={() => {
-                    // Chain state moves immediately; backend rollup of the
-                    // direct-to-precompile tx can lag by ~1 minute (only
-                    // CMA-driven activations flow through the indexer until
-                    // COB-499 lands), but re-fetching both keeps the badge
-                    // and history in sync as fast as possible.
+                    // On-chain state moves immediately (the detail endpoint
+                    // does a live ArbWasm call), backend rollup for direct
+                    // activations lags because they do not flow through CMA
+                    // — refetch both to keep the badge, history, and
+                    // config in sync as fast as possible.
                     refetchProgramTimeLeftForTab();
                     reloadContractData();
                   }}
+                  onConfigSaved={reloadContractData}
                   isLoading={isActivationTabLoading}
                 />
               </TabsContent>

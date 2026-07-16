@@ -63,8 +63,11 @@ export interface ActivationStatusInput {
  * backend-persisted `activationStatus` ('unknown' | 'active' | 'error') with
  * the on-chain `programTimeLeft` reading.
  *
- * - `error` from the backend trumps everything (the worker saw the activation
- *   tx fail and that's the truth until the next activation attempt).
+ * - `error` from the backend trumps only when we can't prove the contract is
+ *   currently active. A successful direct-precompile activation refreshes
+ *   `programTimeLeft` immediately but does not clear the CMA-driven
+ *   `activationStatus`, so a fresh positive on-chain reading overrides the
+ *   stale error (COB-503).
  * - When `programTimeLeft` is missing (list endpoints pre-COB-490, RPC error,
  *   or contract never activated) we fall back to the persisted status.
  * - `programTimeLeft <= 0` → `inactive`; below the expiring threshold →
@@ -75,12 +78,23 @@ export function getEffectiveActivationStatus(
   programTimeLeftSeconds: number | null | undefined
 ): ActivationStatus {
   const persisted = contract.activationStatus;
-  if (persisted === 'error') return 'error';
 
   // `NaN` slips past `<= 0` and `< threshold` and would otherwise return
   // `'active'` — treat any non-finite value the same as "no answer yet".
   const hasReading =
     programTimeLeftSeconds != null && Number.isFinite(programTimeLeftSeconds);
+
+  if (persisted === 'error') {
+    // Stale-error escape hatch: an on-chain reading with time remaining
+    // proves the program is active right now, no matter what the last
+    // CMA event said. Without this, a manual "Activate now" (COB-498)
+    // after a failed CMA attempt would leave the badge stuck on "Error".
+    if (hasReading && programTimeLeftSeconds > 0) {
+      if (programTimeLeftSeconds < EXPIRING_THRESHOLD_SECONDS) return 'expiring';
+      return 'active';
+    }
+    return 'error';
+  }
 
   if (!hasReading) {
     if (persisted === 'active') return 'active';

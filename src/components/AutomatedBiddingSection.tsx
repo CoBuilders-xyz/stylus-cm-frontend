@@ -28,12 +28,33 @@ import {
 
 import { useReadContract, useAccount } from 'wagmi';
 
+// Backend `maxActivationCost` comes back as a wei-formatted decimal string
+// or null. Guard the BigInt cast so a stray non-numeric value degrades to
+// zero instead of throwing inside the tx handler.
+function safeParseWei(raw: string | null | undefined): bigint {
+  if (raw == null || raw === '') return BigInt(0);
+  try {
+    return BigInt(raw);
+  } catch {
+    return BigInt(0);
+  }
+}
+
 interface AutomatedBiddingSectionProps {
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
   setAutomationFunding?: (value: string) => void;
-  contract?: { address: string; maxBid?: string; isAutomated?: boolean };
+  contract?: {
+    address: string;
+    maxBid?: string;
+    isAutomated?: boolean;
+    // Preserve auto-activation config on `insertContract` / `updateContract`
+    // writes so the bidding section does not silently clobber whatever the
+    // user set in the Activation tab (COB-499).
+    autoActivate?: boolean;
+    maxActivationCost?: string | null;
+  };
   onSuccess?: () => void;
 }
 
@@ -367,6 +388,13 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
+      // Preserve any auto-activation config the user already set on this
+      // contract (COB-499). The CMA write is atomic across all five fields,
+      // so echoing the persisted values back keeps the bidding section
+      // from silently clobbering the Activation tab's state.
+      const preservedAutoActivate = contract.autoActivate ?? false;
+      const preservedMaxActivationCost = safeParseWei(contract.maxActivationCost);
+
       // Create transaction parameters
       const txParams = {
         address:
@@ -377,8 +405,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          false,
-          BigInt(0),
+          preservedAutoActivate,
+          preservedMaxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
       };
@@ -434,6 +462,10 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
+      // Same preservation logic as `insertContract` above (COB-499).
+      const preservedAutoActivate = contract.autoActivate ?? false;
+      const preservedMaxActivationCost = safeParseWei(contract.maxActivationCost);
+
       // Create transaction parameters for updateContract
       const txParams = {
         address:
@@ -444,8 +476,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          false,
-          BigInt(0),
+          preservedAutoActivate,
+          preservedMaxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 
@@ -488,6 +520,11 @@ export function AutomatedBiddingSection({
         automatedBidding: newAutomatedBidding,
       });
 
+      // Same preservation logic (COB-499) — toggling bidding automation on
+      // or off must not touch the auto-activation config.
+      const preservedAutoActivate = contract.autoActivate ?? false;
+      const preservedMaxActivationCost = safeParseWei(contract.maxActivationCost);
+
       // Create transaction parameters for updateContract with funding = 0
       const txParams = {
         address:
@@ -498,8 +535,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(originalMaxBid),
           newAutomatedBidding,
-          false,
-          BigInt(0),
+          preservedAutoActivate,
+          preservedMaxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 

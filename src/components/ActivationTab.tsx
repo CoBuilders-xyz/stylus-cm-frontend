@@ -1,9 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { formatEther } from 'viem';
-import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Zap } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { formatEther, parseEther } from 'viem';
+import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +21,7 @@ import ActivationBadge from '@/components/ActivationBadge';
 import { formatDate } from '@/utils/formatting';
 import { explorerTxUrl } from '@/utils/explorer';
 import { useActivateProgram } from '@/hooks/useActivateProgram';
+import { useConfigureAutoActivation } from '@/hooks/useConfigureAutoActivation';
 
 interface Props {
   activation: ActivationInfo;
@@ -34,14 +38,22 @@ interface Props {
   /** Fires after the activation tx is confirmed on-chain. */
   onActivated?: () => void;
   readOnly?: boolean;
-  /**
-   * Persisted per-contract auto-activation config from the backend. Rendered
-   * as a read-only summary here — the interactive editing surface (with
-   * on-chain writes to `CacheManagerAutomation`) lands in COB-499.
-   */
+  /** Persisted per-contract auto-activation config from the backend. */
   autoActivate?: boolean;
   /** Max activation cost in wei (`null` = never configured). */
   maxActivationCost?: string | null;
+  /**
+   * CMA-side state needed to submit the atomic `updateContract` /
+   * `insertContract` write without clobbering the user's bidding config
+   * (COB-499). Passed by `ContractDetails`; read-only view leaves them
+   * undefined and the config editor is not rendered.
+   */
+  cmaAddress?: `0x${string}`;
+  currentMaxBid?: string | null;
+  currentBiddingEnabled?: boolean;
+  isRegisteredInCMA?: boolean;
+  /** Fires after the CMA config tx is confirmed on-chain. */
+  onConfigSaved?: () => void;
   /** True while the parent is fetching the enriched contract detail. */
   isLoading?: boolean;
 }
@@ -70,11 +82,21 @@ export default function ActivationTab({
   readOnly = false,
   autoActivate,
   maxActivationCost,
+  cmaAddress,
+  currentMaxBid,
+  currentBiddingEnabled,
+  isRegisteredInCMA,
+  onConfigSaved,
   isLoading = false,
 }: Props) {
   const isActive = activation.status === 'active';
   const canActivate =
     !readOnly && contractAddress != null && chainId != null;
+  const canConfigure =
+    !readOnly &&
+    contractAddress != null &&
+    chainId != null &&
+    cmaAddress != null;
 
   if (isLoading) {
     return <ActivationTabSkeleton readOnly={readOnly} />;
@@ -119,10 +141,22 @@ export default function ActivationTab({
         </div>
       </div>
 
-      {/* Auto-activation — read-only for now. The editable version (switch
-          + max cost input + on-chain write against CacheManagerAutomation)
-          lives in COB-499. */}
-      {!readOnly && (
+      {/* Auto-activation config — interactive when the parent supplies the
+          CMA state, otherwise a read-only summary (explore view). */}
+      {canConfigure ? (
+        <AutoActivationConfig
+          contractAddress={contractAddress as string}
+          chainId={chainId as number}
+          chainName={chainName}
+          cmaAddress={cmaAddress as `0x${string}`}
+          isRegisteredInCMA={isRegisteredInCMA ?? false}
+          currentMaxBid={currentMaxBid ?? null}
+          currentBiddingEnabled={currentBiddingEnabled ?? false}
+          persistedAutoActivate={autoActivate ?? false}
+          persistedMaxActivationCostWei={maxActivationCost ?? null}
+          onSaved={onConfigSaved}
+        />
+      ) : !readOnly ? (
         <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
           <div className='flex items-start justify-between gap-4 flex-wrap'>
             <div>
@@ -158,13 +192,8 @@ export default function ActivationTab({
               </dd>
             </div>
           </dl>
-
-          <p className='mt-4 text-xs text-gray-500'>
-            Configuration is coming soon. For now this reflects the value
-            persisted from the on-chain events.
-          </p>
         </div>
-      )}
+      ) : null}
 
       {/* Activation history — indexed from the CacheManagerAutomation
           `ActivationPerformed` and `ActivationError` events by the backend. */}
@@ -513,6 +542,292 @@ function ActivateNowControl({
           View on Arbiscan
           <ExternalLink className='h-3 w-3' />
         </a>
+      )}
+    </div>
+  );
+}
+
+interface AutoActivationConfigProps {
+  contractAddress: string;
+  chainId: number;
+  chainName: string | undefined;
+  cmaAddress: `0x${string}`;
+  isRegisteredInCMA: boolean;
+  currentMaxBid: string | null;
+  currentBiddingEnabled: boolean;
+  persistedAutoActivate: boolean;
+  persistedMaxActivationCostWei: string | null;
+  onSaved: (() => void) | undefined;
+}
+
+/**
+ * Interactive auto-activation config. Owns the local form state (dirty
+ * tracking, ETH ↔ wei conversion, validation) and delegates the on-chain
+ * write to {@link useConfigureAutoActivation}. The Save button is only
+ * enabled when the form differs from the persisted values, and after
+ * confirmation the local values are kept until the parent-driven
+ * refetch (`onSaved`) brings back the fresh backend state — matches
+ * the convention used by `AutomatedBiddingSection` for CMA writes.
+ */
+function AutoActivationConfig({
+  contractAddress,
+  chainId,
+  chainName,
+  cmaAddress,
+  isRegisteredInCMA,
+  currentMaxBid,
+  currentBiddingEnabled,
+  persistedAutoActivate,
+  persistedMaxActivationCostWei,
+  onSaved,
+}: AutoActivationConfigProps) {
+  const persistedCostEth = useMemo(() => {
+    if (persistedMaxActivationCostWei == null || persistedMaxActivationCostWei === '')
+      return '';
+    try {
+      return formatEther(BigInt(persistedMaxActivationCostWei));
+    } catch {
+      return '';
+    }
+  }, [persistedMaxActivationCostWei]);
+
+  const [enabled, setEnabled] = useState(persistedAutoActivate);
+  const [costEth, setCostEth] = useState(persistedCostEth);
+  const [costError, setCostError] = useState<string | null>(null);
+
+  // Reset the form when the persisted values change — normal flow is
+  // "user saves → parent refetches → new persisted values arrive". Keeps
+  // the form in lockstep with the backend without duplicating state.
+  useEffect(() => {
+    setEnabled(persistedAutoActivate);
+  }, [persistedAutoActivate]);
+  useEffect(() => {
+    setCostEth(persistedCostEth);
+  }, [persistedCostEth]);
+
+  const ZERO_WEI = BigInt(0);
+
+  const parsedCost = useMemo<bigint | null>(() => {
+    if (!costEth.trim()) return ZERO_WEI;
+    try {
+      const wei = parseEther(costEth as `${number}`);
+      if (wei < ZERO_WEI) return null;
+      return wei;
+    } catch {
+      return null;
+    }
+    // ZERO_WEI is a local const — safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [costEth]);
+
+  const isFormValid = parsedCost != null && (!enabled || parsedCost > ZERO_WEI);
+  const isDirty =
+    enabled !== persistedAutoActivate ||
+    (parsedCost != null && parsedCost.toString() !== (persistedMaxActivationCostWei ?? '0'));
+
+  const currentMaxBidWei = useMemo<bigint>(() => {
+    if (currentMaxBid == null || currentMaxBid === '') return ZERO_WEI;
+    try {
+      return BigInt(currentMaxBid);
+    } catch {
+      return ZERO_WEI;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMaxBid]);
+
+  const {
+    isConnected,
+    isChainMismatch,
+    isSwitchingChain,
+    switchToTarget,
+    isSaving,
+    txHash,
+    save,
+    isSimulating,
+    simulationError,
+    refetchSimulation,
+  } = useConfigureAutoActivation({
+    contractAddress,
+    targetChainId: chainId,
+    cmaAddress,
+    isRegistered: isRegisteredInCMA,
+    currentMaxBid: currentMaxBidWei,
+    currentBiddingEnabled,
+    autoActivate: enabled,
+    maxActivationCost: parsedCost ?? ZERO_WEI,
+    onConfirmed: onSaved,
+    // Skip simulate calls while the form is pristine — no point burning
+    // RPC + a wagmi query key on args that are identical to what's
+    // already persisted.
+    enabled: isDirty,
+  });
+
+  const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
+  const targetChainLabel = chainName ?? 'the contract network';
+
+  const showSimulationFailure =
+    isConnected &&
+    !isChainMismatch &&
+    !isSaving &&
+    !isSimulating &&
+    simulationError != null &&
+    isDirty;
+
+  const handleCostChange = (value: string) => {
+    setCostEth(value);
+    if (!value.trim()) {
+      setCostError(null);
+      return;
+    }
+    // Only allow decimal-looking values so a paste of "abc" doesn't
+    // silently reset the button to enabled via the parsedCost null path.
+    if (!/^[0-9]*\.?[0-9]*$/.test(value)) {
+      setCostError('Enter a valid amount');
+      return;
+    }
+    setCostError(null);
+  };
+
+  let saveButton: ReactNode;
+  if (!isConnected) {
+    saveButton = (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <Button disabled className='bg-gray-800 text-gray-400 cursor-not-allowed'>
+              <Save className='h-4 w-4' />
+              Save
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Connect your wallet to save</TooltipContent>
+      </Tooltip>
+    );
+  } else if (isChainMismatch) {
+    saveButton = (
+      <Button
+        onClick={switchToTarget}
+        disabled={isSwitchingChain}
+        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+      >
+        {isSwitchingChain ? (
+          <Loader2 className='h-4 w-4 animate-spin' />
+        ) : (
+          <Save className='h-4 w-4' />
+        )}
+        {isSwitchingChain ? 'Switching network…' : `Switch to ${targetChainLabel}`}
+      </Button>
+    );
+  } else {
+    const cannotSave = isSaving || !isFormValid || !isDirty;
+    saveButton = (
+      <Button
+        onClick={save}
+        disabled={cannotSave}
+        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+      >
+        {isSaving ? (
+          <Loader2 className='h-4 w-4 animate-spin' />
+        ) : (
+          <Save className='h-4 w-4' />
+        )}
+        {isSaving ? 'Saving…' : 'Save'}
+      </Button>
+    );
+  }
+
+  return (
+    <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
+      <div className='flex items-start justify-between gap-4 flex-wrap'>
+        <div>
+          <h3 className='text-lg font-medium'>Auto-activation</h3>
+          <p className='text-gray-400 text-sm'>
+            Automatically re-activate this contract before it expires. Uses
+            your Gas Tank balance to pay for the activation fee.
+          </p>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Switch
+            id='auto-activate-switch'
+            checked={enabled}
+            onCheckedChange={setEnabled}
+            disabled={isSaving}
+            aria-label='Toggle auto-activation'
+          />
+          <Label
+            htmlFor='auto-activate-switch'
+            className='text-sm text-gray-200 cursor-pointer'
+          >
+            {enabled ? 'Enabled' : 'Disabled'}
+          </Label>
+        </div>
+      </div>
+
+      <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+        <div>
+          <Label
+            htmlFor='auto-activate-cost'
+            className='text-[11px] uppercase tracking-wider text-gray-500'
+          >
+            Max activation cost (ETH)
+          </Label>
+          <Input
+            id='auto-activate-cost'
+            type='text'
+            inputMode='decimal'
+            value={costEth}
+            onChange={(e) => handleCostChange(e.target.value)}
+            placeholder='0.0'
+            disabled={isSaving}
+            className={`mt-1 bg-black border ${
+              costError || (enabled && parsedCost === ZERO_WEI)
+                ? 'border-red-500'
+                : 'border-[#2C2E30]'
+            } text-white`}
+          />
+          {costError && (
+            <p className='text-red-400 text-xs mt-1'>{costError}</p>
+          )}
+          {!costError && enabled && parsedCost === ZERO_WEI && (
+            <p className='text-red-400 text-xs mt-1'>
+              Max activation cost must be greater than 0 when auto-activation
+              is enabled.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className='mt-5 flex items-center justify-end gap-3 flex-wrap'>
+        {txHash && txUrl && (
+          <a
+            href={txUrl}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='text-[11px] text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
+          >
+            View on Arbiscan
+            <ExternalLink className='h-3 w-3' />
+          </a>
+        )}
+        {saveButton}
+      </div>
+
+      {showSimulationFailure && (
+        <div className='mt-3 flex items-start gap-2 text-[11px] text-red-300/90'>
+          <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
+          <span className='flex-1'>
+            Could not simulate the save transaction. Check your wallet is on
+            the correct network and retry.
+          </span>
+          <button
+            type='button'
+            onClick={() => refetchSimulation()}
+            className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0'
+          >
+            <RefreshCw className='h-3 w-3' />
+            Retry
+          </button>
+        </div>
       )}
     </div>
   );
