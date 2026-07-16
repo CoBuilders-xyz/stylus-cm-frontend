@@ -83,6 +83,29 @@ export interface Alert {
 export type PersistedActivationStatus = 'unknown' | 'active' | 'error';
 
 /**
+ * A single activation-related event indexed from the CacheManagerAutomation
+ * contract. Returned by the backend's user-contract detail endpoint (not on
+ * list endpoints). Wei-denominated amounts (`dataFee`, `spent`, `refund`,
+ * `userBalance`) are strings so they survive JSON round-trips without
+ * `Number` precision loss — format with `viem.formatEther` at render time.
+ */
+export interface ActivationHistoryItem {
+  contractAddress: string;
+  eventType: 'ActivationPerformed' | 'ActivationError';
+  timestamp: string;
+  blockNumber: number;
+  transactionHash: string;
+  user: string;
+  version?: string;
+  dataFee?: string;
+  spent?: string;
+  refund?: string;
+  userBalance?: string;
+  /** Only populated on `ActivationError` — the on-chain revert reason. */
+  reason?: string;
+}
+
+/**
  * Contract data interface
  */
 export interface Contract {
@@ -114,6 +137,10 @@ export interface Contract {
   // Present on detail endpoints today. COB-490 will add it to list endpoints,
   // at which point the FE multicall fallback can be dropped.
   programTimeLeft?: string | null;
+  // Populated by the backend detail endpoint only. `undefined` = list-endpoint
+  // response (not requested yet). `[]` = detail-endpoint response with no
+  // events indexed for this contract.
+  activationHistory?: ActivationHistoryItem[];
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;

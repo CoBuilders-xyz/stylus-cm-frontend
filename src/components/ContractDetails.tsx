@@ -47,16 +47,52 @@ import {
 import ActivationTab from '@/components/ActivationTab';
 import ContractHistoryTab from '@/components/ContractHistoryTab';
 import CacheHero from '@/components/CacheHero';
-import type { ActivationInfo } from '@/lib/activation';
+import {
+  activationHistoryItemToEvent,
+  getEffectiveActivationStatus,
+  type ActivationEvent,
+  type ActivationInfo,
+} from '@/lib/activation';
 import { explorerAddressUrl } from '@/utils/explorer';
 
-// Placeholder activation state until COB-496 wires real activation reads from
-// the ArbWasm precompile + CacheManagerAutomation events.
-const PLACEHOLDER_ACTIVATION: ActivationInfo = {
-  status: 'inactive',
-  secondsRemaining: 0,
-  lastActivatedAt: null,
-};
+/**
+ * Derive the {@link ActivationInfo} passed to the Activation tab from the
+ * enriched contract detail. `secondsRemaining` is `null` when the backend
+ * has not supplied a `programTimeLeft` reading yet — `getEffectiveActivationStatus`
+ * falls back to the persisted `activationStatus` in that case rather than
+ * flipping the row to inactive on a missing value.
+ */
+function buildActivationInfo(
+  contract: Contract | null | undefined
+): ActivationInfo {
+  if (!contract) {
+    return { status: 'unknown', secondsRemaining: null, lastActivatedAt: null };
+  }
+  const raw = contract.programTimeLeft;
+  const parsed =
+    raw != null && raw !== '' && Number.isFinite(Number(raw)) ? Number(raw) : null;
+  const status = getEffectiveActivationStatus(contract, parsed);
+  return {
+    status,
+    secondsRemaining: parsed,
+    lastActivatedAt: contract.lastActivationTimestamp ?? null,
+  };
+}
+
+function buildActivationHistory(
+  contract: Contract | null | undefined
+): ActivationEvent[] {
+  const raw = contract?.activationHistory;
+  if (!raw || raw.length === 0) return [];
+  // Backend is expected to return events already sorted, but a defensive
+  // desc-by-timestamp sort keeps the UI stable if the ordering changes.
+  return [...raw]
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+    .map(activationHistoryItemToEvent);
+}
 
 // Explorer Link Button Component
 interface ExplorerLinkButtonProps {
@@ -618,9 +654,12 @@ export default function ContractDetails({
 
               <TabsContent value='activation'>
                 <ActivationTab
-                  activation={PLACEHOLDER_ACTIVATION}
-                  history={[]}
+                  activation={buildActivationInfo(contractData)}
+                  history={buildActivationHistory(contractData)}
+                  autoActivate={contractData?.autoActivate}
+                  maxActivationCost={contractData?.maxActivationCost}
                   chainId={currentBlockchain?.chainId}
+                  isLoading={isLoadingContract && !contractData}
                 />
               </TabsContent>
 
@@ -668,9 +707,10 @@ export default function ContractDetails({
 
               <TabsContent value='activation'>
                 <ActivationTab
-                  activation={PLACEHOLDER_ACTIVATION}
-                  history={[]}
+                  activation={buildActivationInfo(contractData)}
+                  history={buildActivationHistory(contractData)}
                   chainId={currentBlockchain?.chainId}
+                  isLoading={isLoadingContract && !contractData}
                   readOnly
                 />
               </TabsContent>

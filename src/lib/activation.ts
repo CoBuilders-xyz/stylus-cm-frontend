@@ -8,6 +8,9 @@
  * `ActivationInfo` so the UI shells stay decoupled from the data source.
  */
 
+import { formatEther } from 'viem';
+import type { ActivationHistoryItem } from '@/services/contractService';
+
 const DAY = 86_400;
 const HOUR = 3_600;
 
@@ -94,9 +97,48 @@ export interface ActivationEvent {
   date: string;
   status: 'success' | 'error';
   txHash: string;
+  /**
+   * ETH string formatted for display. Empty string on `error` events —
+   * the tx reverted so nothing was spent. `''` (not `'0'`) so downstream
+   * renders can distinguish "no value" from "explicit zero".
+   */
   valueConsumedEth: string;
+  /**
+   * Present, kept for compatibility with the not-yet-shipped unified
+   * history tab (COB-497). The backend does not currently index gas per
+   * activation event so activation-only consumers get `''`.
+   */
   gasUsed: string;
+  /**
+   * On-chain revert reason for `error` events. Empty for successful
+   * activations.
+   */
   note?: string;
+}
+
+/**
+ * Backend event → UI event shape. Wei-denominated `spent` becomes an
+ * `ether`-formatted string; anything the backend does not populate becomes
+ * an empty string so consumers can render a stable table without null
+ * gymnastics.
+ */
+export function activationHistoryItemToEvent(
+  item: ActivationHistoryItem
+): ActivationEvent {
+  const isSuccess = item.eventType === 'ActivationPerformed';
+  const spentEth =
+    isSuccess && item.spent != null && item.spent !== ''
+      ? formatEther(BigInt(item.spent))
+      : '';
+  return {
+    id: item.transactionHash,
+    date: item.timestamp,
+    status: isSuccess ? 'success' : 'error',
+    txHash: item.transactionHash,
+    valueConsumedEth: spentEth,
+    gasUsed: '',
+    note: isSuccess ? undefined : item.reason,
+  };
 }
 
 export interface CacheEvent {
