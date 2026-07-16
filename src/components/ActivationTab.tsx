@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { formatEther, parseEther } from 'viem';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { formatDate } from '@/utils/formatting';
 import { explorerTxUrl } from '@/utils/explorer';
 import { useActivateProgram } from '@/hooks/useActivateProgram';
 import { useConfigureAutoActivation } from '@/hooks/useConfigureAutoActivation';
+import { useUserCMAContract } from '@/hooks/useUserCMAContract';
 
 interface Props {
   activation: ActivationInfo;
@@ -38,20 +39,18 @@ interface Props {
   /** Fires after the activation tx is confirmed on-chain. */
   onActivated?: () => void;
   readOnly?: boolean;
-  /** Persisted per-contract auto-activation config from the backend. */
+  /**
+   * Persisted per-contract auto-activation config from the backend. Used
+   * only for the read-only summary rendered on the explore view — the
+   * editable path sources baseline values from the on-chain CMA read via
+   * `useUserCMAContract` (COB-499 addendum), so backend indexer lag can
+   * no longer cause silent clobbers between the Activation and Bidding tabs.
+   */
   autoActivate?: boolean;
   /** Max activation cost in wei (`null` = never configured). */
   maxActivationCost?: string | null;
-  /**
-   * CMA-side state needed to submit the atomic `updateContract` /
-   * `insertContract` write without clobbering the user's bidding config
-   * (COB-499). Passed by `ContractDetails`; read-only view leaves them
-   * undefined and the config editor is not rendered.
-   */
+  /** CMA contract address on the contract's chain, needed for the on-chain read. */
   cmaAddress?: `0x${string}`;
-  currentMaxBid?: string | null;
-  currentBiddingEnabled?: boolean;
-  isRegisteredInCMA?: boolean;
   /** Fires after the CMA config tx is confirmed on-chain. */
   onConfigSaved?: () => void;
   /** True while the parent is fetching the enriched contract detail. */
@@ -83,9 +82,6 @@ export default function ActivationTab({
   autoActivate,
   maxActivationCost,
   cmaAddress,
-  currentMaxBid,
-  currentBiddingEnabled,
-  isRegisteredInCMA,
   onConfigSaved,
   isLoading = false,
 }: Props) {
@@ -149,11 +145,6 @@ export default function ActivationTab({
           chainId={chainId as number}
           chainName={chainName}
           cmaAddress={cmaAddress as `0x${string}`}
-          isRegisteredInCMA={isRegisteredInCMA ?? false}
-          currentMaxBid={currentMaxBid ?? null}
-          currentBiddingEnabled={currentBiddingEnabled ?? false}
-          persistedAutoActivate={autoActivate ?? false}
-          persistedMaxActivationCostWei={maxActivationCost ?? null}
           onSaved={onConfigSaved}
         />
       ) : !readOnly ? (
@@ -552,62 +543,113 @@ interface AutoActivationConfigProps {
   chainId: number;
   chainName: string | undefined;
   cmaAddress: `0x${string}`;
-  isRegisteredInCMA: boolean;
-  currentMaxBid: string | null;
-  currentBiddingEnabled: boolean;
-  persistedAutoActivate: boolean;
-  persistedMaxActivationCostWei: string | null;
   onSaved: (() => void) | undefined;
 }
 
+const ZERO_WEI = BigInt(0);
+
 /**
- * Interactive auto-activation config. Owns the local form state (dirty
- * tracking, ETH ↔ wei conversion, validation) and delegates the on-chain
- * write to {@link useConfigureAutoActivation}. The Save button is only
- * enabled when the form differs from the persisted values, and after
- * confirmation the local values are kept until the parent-driven
- * refetch (`onSaved`) brings back the fresh backend state — matches
- * the convention used by `AutomatedBiddingSection` for CMA writes.
+ * Interactive auto-activation config. Sources the "current" per-contract CMA
+ * state (`autoActivate`, `maxActivationCost`, and the bidding fields we must
+ * echo back on the atomic write) directly from the on-chain
+ * `getUserContracts` view via {@link useUserCMAContract}, not from the
+ * backend `Contract`. That eliminates the whole class of "backend indexer
+ * lag lets one tab silently clobber the other tab's config" bugs — the
+ * chain updates immediately on tx confirmation, and a `refetch()` from
+ * the `onConfirmed` callback keeps the form baseline in lockstep.
+ *
+ * Delegates the actual write to {@link useConfigureAutoActivation}. Local
+ * form state is initialised once from the on-chain read; after that the
+ * user's edits are the truth until they save.
  */
 function AutoActivationConfig({
   contractAddress,
   chainId,
   chainName,
   cmaAddress,
-  isRegisteredInCMA,
-  currentMaxBid,
-  currentBiddingEnabled,
-  persistedAutoActivate,
-  persistedMaxActivationCostWei,
   onSaved,
 }: AutoActivationConfigProps) {
-  // `null` on parse failure so the caller can distinguish "backend
-  // deliberately left this unset" (empty string display) from "backend
-  // sent a malformed wei value we refuse to interpret" (blocks Save so
-  // we don't clobber valid on-chain state with a silent zero).
-  const persistedCostEth = useMemo<string | null>(() => {
-    if (persistedMaxActivationCostWei == null || persistedMaxActivationCostWei === '')
-      return '';
-    try {
-      return formatEther(BigInt(persistedMaxActivationCostWei));
-    } catch {
-      return null;
-    }
-  }, [persistedMaxActivationCostWei]);
-  const isPersistedCostCorrupt = persistedCostEth === null;
+  const {
+    data: onChainConfig,
+    isRegistered,
+    isLoading: isCMAReadLoading,
+    error: cmaReadError,
+    refetch: refetchCMAConfig,
+  } = useUserCMAContract({ chainId, cmaAddress, contractAddress });
 
-  // Form is user-owned once mounted. We deliberately do NOT sync the
-  // local state back to `persistedAutoActivate` / `persistedCostEth` on
-  // subsequent renders — same convention as `AutomatedBiddingSection`'s
-  // "keep user values after successful transaction". CMA event indexing
-  // lags the on-chain write by ~1 min; if we synced eagerly, a save
-  // that just confirmed would flicker back to the stale persisted
-  // values while the indexer catches up.
-  const [enabled, setEnabled] = useState(persistedAutoActivate);
-  const [costEth, setCostEth] = useState(persistedCostEth ?? '');
+  // Skeleton the config card until the on-chain read resolves — form state
+  // needs the on-chain values as its baseline, and initialising from
+  // "unknown" and re-syncing later reintroduces the flicker we deliberately
+  // avoid elsewhere.
+  if (isCMAReadLoading) {
+    return <AutoActivationConfigSkeleton />;
+  }
+  if (cmaReadError) {
+    return (
+      <AutoActivationConfigError
+        message='Could not read the on-chain configuration.'
+        onRetry={refetchCMAConfig}
+      />
+    );
+  }
+
+  return (
+    <AutoActivationConfigForm
+      contractAddress={contractAddress}
+      chainId={chainId}
+      chainName={chainName}
+      cmaAddress={cmaAddress}
+      isRegistered={isRegistered}
+      onChainAutoActivate={onChainConfig?.autoActivate ?? false}
+      onChainMaxActivationCost={onChainConfig?.maxActivationCost ?? ZERO_WEI}
+      onChainMaxBid={onChainConfig?.maxBid ?? ZERO_WEI}
+      onChainBiddingEnabled={onChainConfig?.enabled ?? false}
+      refetchCMAConfig={refetchCMAConfig}
+      onSaved={onSaved}
+    />
+  );
+}
+
+interface AutoActivationConfigFormProps {
+  contractAddress: string;
+  chainId: number;
+  chainName: string | undefined;
+  cmaAddress: `0x${string}`;
+  isRegistered: boolean;
+  onChainAutoActivate: boolean;
+  onChainMaxActivationCost: bigint;
+  onChainMaxBid: bigint;
+  onChainBiddingEnabled: boolean;
+  refetchCMAConfig: () => void;
+  onSaved: (() => void) | undefined;
+}
+
+function AutoActivationConfigForm({
+  contractAddress,
+  chainId,
+  chainName,
+  cmaAddress,
+  isRegistered,
+  onChainAutoActivate,
+  onChainMaxActivationCost,
+  onChainMaxBid,
+  onChainBiddingEnabled,
+  refetchCMAConfig,
+  onSaved,
+}: AutoActivationConfigFormProps) {
+  // Baseline seeded from the on-chain read. Form state is user-owned once
+  // mounted; the baseline itself refetches after a successful save (see
+  // `onConfirmed` below) so `isDirty` is compared against fresh chain
+  // state, not the local snapshot pattern that COB-499's earlier commits
+  // used against the backend props.
+  const initialCostEth =
+    onChainMaxActivationCost === ZERO_WEI
+      ? ''
+      : formatEther(onChainMaxActivationCost);
+
+  const [enabled, setEnabled] = useState(onChainAutoActivate);
+  const [costEth, setCostEth] = useState(initialCostEth);
   const [costError, setCostError] = useState<string | null>(null);
-
-  const ZERO_WEI = BigInt(0);
 
   const parsedCost = useMemo<bigint | null>(() => {
     if (!costEth.trim()) return ZERO_WEI;
@@ -618,69 +660,13 @@ function AutoActivationConfig({
     } catch {
       return null;
     }
-    // ZERO_WEI is a local const — safe to omit from deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [costEth]);
 
   const isFormValid = parsedCost != null && (!enabled || parsedCost > ZERO_WEI);
 
-  // Baseline that `isDirty` compares against. Normally the persisted
-  // backend values — but after a successful save we snapshot the just-
-  // submitted values and use those instead, until the CMA indexer catches
-  // up (~1 min). Without this the Save button would re-enable moments
-  // after confirmation and the user could pointlessly pay gas to submit
-  // the same config twice while the backend is still stale.
-  const submittedBaselineRef = useRef<{
-    enabled: boolean;
-    costWei: string;
-  } | null>(null);
-
-  // Refs so the `onConfirmed` callback (fires once, captured via the hook's
-  // internal ref) always reads the values the user just submitted rather
-  // than stale render-time closures.
-  const enabledRef = useRef(enabled);
-  const parsedCostRef = useRef(parsedCost);
-  useEffect(() => {
-    enabledRef.current = enabled;
-  }, [enabled]);
-  useEffect(() => {
-    parsedCostRef.current = parsedCost;
-  }, [parsedCost]);
-
-  useEffect(() => {
-    const submitted = submittedBaselineRef.current;
-    if (submitted == null) return;
-    const persistedCostWei = persistedMaxActivationCostWei ?? '0';
-    if (
-      submitted.enabled === persistedAutoActivate &&
-      submitted.costWei === persistedCostWei
-    ) {
-      submittedBaselineRef.current = null;
-    }
-  }, [persistedAutoActivate, persistedMaxActivationCostWei]);
-
-  const baseline = submittedBaselineRef.current;
-  const baselineEnabled = baseline?.enabled ?? persistedAutoActivate;
-  const baselineCostWei =
-    baseline?.costWei ?? (persistedMaxActivationCostWei ?? '0');
   const isDirty =
-    enabled !== baselineEnabled ||
-    (parsedCost != null && parsedCost.toString() !== baselineCostWei);
-
-  // `null` on parse failure — the atomic CMA write echoes the current
-  // bidding fields, and silently defaulting to zero here would erase a
-  // valid on-chain `maxBid` the user set from the Bidding tab. The form
-  // detects null and blocks Save.
-  const currentMaxBidWei = useMemo<bigint | null>(() => {
-    if (currentMaxBid == null || currentMaxBid === '') return ZERO_WEI;
-    try {
-      return BigInt(currentMaxBid);
-    } catch {
-      return null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMaxBid]);
-  const isCurrentMaxBidCorrupt = currentMaxBidWei === null;
+    enabled !== onChainAutoActivate ||
+    (parsedCost != null && parsedCost !== onChainMaxActivationCost);
 
   const {
     isConnected,
@@ -697,29 +683,26 @@ function AutoActivationConfig({
     contractAddress,
     targetChainId: chainId,
     cmaAddress,
-    isRegistered: isRegisteredInCMA,
-    // Feed the hook `0n` as a safe placeholder when the persisted bidding
-    // value is corrupt — the Save button is blocked further down so the
-    // placeholder never reaches `writeContract`.
-    currentMaxBid: currentMaxBidWei ?? ZERO_WEI,
-    currentBiddingEnabled,
+    isRegistered,
+    // Bidding fields sourced from the on-chain read, not from the
+    // backend — this is the whole point of the CMA read: the atomic
+    // write cannot silently clobber whatever the user set from the
+    // Bidding tab, because we're echoing the authoritative chain
+    // values back.
+    currentMaxBid: onChainMaxBid,
+    currentBiddingEnabled: onChainBiddingEnabled,
     autoActivate: enabled,
     maxActivationCost: parsedCost ?? ZERO_WEI,
     onConfirmed: () => {
-      // Freeze the just-submitted values as the dirtiness baseline so
-      // Save stays disabled while the indexer catches up (see the
-      // `submittedBaselineRef` effect above). Reads the values through
-      // refs to avoid staleness — the confirm callback fires once per
-      // successful tx, not on every render.
-      submittedBaselineRef.current = {
-        enabled: enabledRef.current,
-        costWei: (parsedCostRef.current ?? ZERO_WEI).toString(),
-      };
+      // Refetching the on-chain read updates the baseline, which flips
+      // `isDirty` back to false — Save re-disables until the user makes
+      // a new change. No local snapshot ref required.
+      refetchCMAConfig();
       onSaved?.();
     },
     // Skip simulate calls while the form is pristine — no point burning
     // RPC + a wagmi query key on args that are identical to what's
-    // already persisted.
+    // already on-chain.
     enabled: isDirty,
   });
 
@@ -780,12 +763,7 @@ function AutoActivationConfig({
       </Button>
     );
   } else {
-    const cannotSave =
-      isSaving ||
-      !isFormValid ||
-      !isDirty ||
-      isPersistedCostCorrupt ||
-      isCurrentMaxBidCorrupt;
+    const cannotSave = isSaving || !isFormValid || !isDirty;
     saveButton = (
       <Button
         onClick={save}
@@ -863,21 +841,6 @@ function AutoActivationConfig({
         </div>
       </div>
 
-      {(isPersistedCostCorrupt || isCurrentMaxBidCorrupt) && (
-        <div className='mt-4 flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-200'>
-          <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
-          <span>
-            Persisted contract configuration is corrupt (invalid wei value in{' '}
-            {isPersistedCostCorrupt && 'max activation cost'}
-            {isPersistedCostCorrupt && isCurrentMaxBidCorrupt && ' and '}
-            {isCurrentMaxBidCorrupt && 'max bid'}
-            ). Saving is disabled to avoid overwriting valid on-chain state
-            with a silent zero. Refresh the page — if this persists, contact
-            the backend team.
-          </span>
-        </div>
-      )}
-
       <div className='mt-5 flex items-center justify-end gap-3 flex-wrap'>
         {txHash && txUrl && (
           <a
@@ -910,6 +873,61 @@ function AutoActivationConfig({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function AutoActivationConfigSkeleton() {
+  return (
+    <div
+      className='rounded-lg border border-[#2C2E30] bg-black p-6 space-y-4 animate-pulse'
+      aria-busy='true'
+      aria-live='polite'
+    >
+      <div className='flex items-start justify-between gap-4 flex-wrap'>
+        <div className='space-y-2'>
+          <div className='h-5 w-40 rounded bg-gray-700' />
+          <div className='h-3 w-56 rounded bg-gray-800' />
+        </div>
+        <div className='h-6 w-16 rounded-full bg-gray-700' />
+      </div>
+      <div className='h-3 w-40 rounded bg-gray-800' />
+      <div className='h-10 w-full rounded bg-gray-800' />
+      <div className='flex justify-end'>
+        <div className='h-9 w-20 rounded bg-gray-700' />
+      </div>
+    </div>
+  );
+}
+
+function AutoActivationConfigError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className='rounded-lg border border-red-500/40 bg-red-500/10 p-6'>
+      <div className='flex items-start gap-2 text-sm text-red-200'>
+        <AlertTriangle className='h-4 w-4 shrink-0 mt-0.5' />
+        <div className='flex-1'>
+          <p className='font-medium'>{message}</p>
+          <p className='text-xs text-red-100/80 mt-1'>
+            The auto-activation editor needs to read the current config
+            directly from the CacheManagerAutomation contract before it can
+            let you save.
+          </p>
+        </div>
+        <button
+          type='button'
+          onClick={onRetry}
+          className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0 text-xs'
+        >
+          <RefreshCw className='h-3 w-3' />
+          Retry
+        </button>
+      </div>
     </div>
   );
 }

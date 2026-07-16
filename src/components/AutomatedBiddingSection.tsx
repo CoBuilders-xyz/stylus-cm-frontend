@@ -27,38 +27,7 @@ import {
 } from '@/components/Toast';
 
 import { useReadContract, useAccount } from 'wagmi';
-
-// Backend `maxActivationCost` comes back as a wei-formatted decimal string
-// or null. Return `null` on a parse failure so callers can abort the write
-// — silently defaulting to zero would clobber a valid on-chain activation
-// config, which is exactly the class of bug COB-499 sets out to prevent.
-function safeParseWei(raw: string | null | undefined): bigint | null {
-  if (raw == null || raw === '') return BigInt(0);
-  try {
-    return BigInt(raw);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The three CMA writes in this file are atomic across all five fields, so
- * we need to echo the current auto-activation values back on every write
- * or we clobber them. If the persisted `maxActivationCost` is malformed
- * we refuse to compute a fallback — returning `null` here forces the
- * caller into the error-toast branch and away from `writeContract`.
- */
-function preservedActivationFields(contract: {
-  autoActivate?: boolean;
-  maxActivationCost?: string | null;
-}): { autoActivate: boolean; maxActivationCost: bigint } | null {
-  const parsed = safeParseWei(contract.maxActivationCost);
-  if (parsed === null) return null;
-  return {
-    autoActivate: contract.autoActivate ?? false,
-    maxActivationCost: parsed,
-  };
-}
+import { useUserCMAContract } from '@/hooks/useUserCMAContract';
 
 interface AutomatedBiddingSectionProps {
   maxBidAmount?: string;
@@ -69,11 +38,6 @@ interface AutomatedBiddingSectionProps {
     address: string;
     maxBid?: string;
     isAutomated?: boolean;
-    // Preserve auto-activation config on `insertContract` / `updateContract`
-    // writes so the bidding section does not silently clobber whatever the
-    // user set in the Activation tab (COB-499).
-    autoActivate?: boolean;
-    maxActivationCost?: string | null;
   };
   onSuccess?: () => void;
 }
@@ -106,6 +70,22 @@ export function AutomatedBiddingSection({
 
   // Get the connected account
   const { address: userAddress, isConnected } = useAccount();
+
+  // Chain-authoritative read of this contract's CMA record. Sourcing the
+  // activation fields we must preserve (`autoActivate`, `maxActivationCost`)
+  // from the backend `contract` prop instead would let backend indexer lag
+  // silently clobber a just-submitted change from the Activation tab —
+  // exactly the COB-499 regression class. Refetches on write confirmation.
+  const {
+    data: cmaRecord,
+    refetch: refetchCMARecord,
+  } = useUserCMAContract({
+    chainId: currentBlockchain?.chainId,
+    cmaAddress: currentBlockchain?.cacheManagerAutomationAddress as
+      | `0x${string}`
+      | undefined,
+    contractAddress: contract?.address,
+  });
 
   // Get user balance from cache manager automation contract
   const { data: userBalance, refetch: refetchBalance } = useReadContract({
@@ -283,6 +263,10 @@ export function AutomatedBiddingSection({
         // Immediately refetch the balance and contracts to get updated data
         refetchBalance();
         refetchUserContracts();
+        // Also refresh the parsed CMA record — the Activation tab shares
+        // this hook and will read the just-updated `maxBid` / `enabled`
+        // as its preserve values next time the user saves.
+        refetchCMARecord();
 
         // Log the values we're keeping
         console.log('Keeping user values after successful transaction:', {
@@ -297,6 +281,7 @@ export function AutomatedBiddingSection({
     reset,
     refetchBalance,
     refetchUserContracts,
+    refetchCMARecord,
     inputValue,
     automatedBidding,
     contract?.address,
@@ -408,23 +393,11 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
-      // Preserve any auto-activation config the user already set on this
-      // contract (COB-499). The CMA write is atomic across all five fields,
-      // so echoing the persisted values back keeps the bidding section
-      // from silently clobbering the Activation tab's state.
-      const preserved = preservedActivationFields(contract);
-      if (preserved === null) {
-        console.error(
-          'Refusing bidding write: persisted maxActivationCost is not a valid wei string.'
-        );
-        showErrorToast({
-          message:
-            'Contract configuration is corrupt. Refresh the page and try again.',
-        });
-        return;
-      }
-
-      // Create transaction parameters
+      // `insertContract` is only reached when the contract isn't in CMA yet
+      // (`contractExists === false` above). There's nothing on-chain to
+      // preserve, so the activation fields default to (false, 0) — same
+      // defaults an Activation-first flow would pass when it initialises
+      // a fresh record.
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
@@ -434,8 +407,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          preserved.autoActivate,
-          preserved.maxActivationCost,
+          false,
+          BigInt(0),
         ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
       };
@@ -491,15 +464,14 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
-      // Same preservation logic as `insertContract` above (COB-499).
-      const preserved = preservedActivationFields(contract);
-      if (preserved === null) {
-        console.error(
-          'Refusing bidding update: persisted maxActivationCost is not a valid wei string.'
-        );
+      // Preserve auto-activation fields from the chain-authoritative CMA
+      // read (COB-499). If the read hasn't resolved yet, we refuse the
+      // write — defaulting to (false, 0) here would silently wipe a
+      // config the user set from the Activation tab.
+      if (cmaRecord == null) {
         showErrorToast({
           message:
-            'Contract configuration is corrupt. Refresh the page and try again.',
+            'Still reading the on-chain configuration. Try again in a moment.',
         });
         return;
       }
@@ -514,8 +486,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          preserved.autoActivate,
-          preserved.maxActivationCost,
+          cmaRecord.autoActivate,
+          cmaRecord.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 
@@ -558,16 +530,11 @@ export function AutomatedBiddingSection({
         automatedBidding: newAutomatedBidding,
       });
 
-      // Same preservation logic (COB-499) — toggling bidding automation on
-      // or off must not touch the auto-activation config.
-      const preserved = preservedActivationFields(contract);
-      if (preserved === null) {
-        console.error(
-          'Refusing bidding toggle: persisted maxActivationCost is not a valid wei string.'
-        );
+      // Same chain-read preservation as `handleUpdateAutomation` (COB-499).
+      if (cmaRecord == null) {
         showErrorToast({
           message:
-            'Contract configuration is corrupt. Refresh the page and try again.',
+            'Still reading the on-chain configuration. Try again in a moment.',
         });
         return;
       }
@@ -582,8 +549,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(originalMaxBid),
           newAutomatedBidding,
-          preserved.autoActivate,
-          preserved.maxActivationCost,
+          cmaRecord.autoActivate,
+          cmaRecord.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 
