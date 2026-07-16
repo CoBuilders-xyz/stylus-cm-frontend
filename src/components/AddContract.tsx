@@ -393,6 +393,15 @@ export default function AddContract({
       args: [contractAddress as `0x${string}`],
       value: activationDataFee,
       chainId: targetChainId,
+      // The useWeb3 wrapper's default `gasProtection.gasLimit` (1M) is
+      // silently too tight for ArbWasm.activateProgram — the precompile
+      // compiles the WASM into native code inside the transaction and
+      // burns 2-3M gas even for tiny programs (measured 2.28M on Arb
+      // Sepolia for a 6 KB hello-world). Overriding gasProtection here
+      // omits the gasLimit so wagmi's eth_estimateGas sizes the tx
+      // correctly. The 500 gwei price ceiling from the default is
+      // preserved to keep the spirit of the protection.
+      gasProtection: { maxGasPriceGwei: 500 },
     });
   };
 
