@@ -92,6 +92,64 @@ export function getEffectiveActivationStatus(
   return 'active';
 }
 
+/**
+ * Backend ships `programTimeLeft` as `string | null`. Defensive against
+ * malformed values that would otherwise short-circuit downstream consumers
+ * and pin the row/tab to "Inactive":
+ * - whitespace-only strings (`Number(' ') === 0`),
+ * - empty strings,
+ * - non-numeric strings,
+ * - negative numbers (the precompile returns `uint64`, anything < 0 is
+ *   garbage from the backend).
+ *
+ * Returns parsed seconds when usable, otherwise `null` ("no backend
+ * reading — fall back to the on-chain multicall").
+ */
+export function backendProgramTimeLeft(
+  raw: string | null | undefined
+): number | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/**
+ * Narrow shape needed to feed `buildActivationInfo` — kept minimal so any
+ * contract-like object (Contract, UserContract, row draft) can be passed
+ * without importing the wider domain type.
+ */
+export interface ActivationInfoInput extends ActivationStatusInput {
+  lastActivationTimestamp?: string | null;
+}
+
+/**
+ * `ProgramReason` (from `useProgramTimeLeft`) and `ActivationDetail` share
+ * the same string union deliberately — the two domains stay decoupled but
+ * a value from one can be passed to the other without an identity map.
+ * Consumers should keep the alignment when either union changes.
+ */
+type ProgramReasonLike = ActivationDetail;
+
+/**
+ * Compose an {@link ActivationInfo} from a contract + a `programTimeLeft`
+ * reading. Both the contracts table and the ContractDetails Activation tab
+ * feed this so their status badges stay in lockstep.
+ */
+export function buildActivationInfo(
+  contract: ActivationInfoInput,
+  programTimeLeftSeconds: number | null,
+  reason: ProgramReasonLike | undefined
+): ActivationInfo {
+  const status = getEffectiveActivationStatus(contract, programTimeLeftSeconds);
+  return {
+    status,
+    secondsRemaining: programTimeLeftSeconds,
+    lastActivatedAt: contract.lastActivationTimestamp ?? null,
+    detail: reason,
+  };
+}
+
 export interface ActivationEvent {
   id: string;
   date: string;

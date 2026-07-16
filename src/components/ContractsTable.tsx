@@ -43,15 +43,11 @@ import ActivationFilters, {
   ActivationFilter,
 } from '@/components/ActivationFilters';
 import {
-  ActivationDetail,
-  ActivationInfo,
-  ActivationStatus,
-  getEffectiveActivationStatus,
+  backendProgramTimeLeft,
+  buildActivationInfo,
+  type ActivationInfo,
 } from '@/lib/activation';
-import {
-  ProgramReason,
-  useProgramTimeLeft,
-} from '@/hooks/useProgramTimeLeft';
+import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 
 interface ContractsTableProps {
@@ -60,47 +56,6 @@ interface ContractsTableProps {
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
   onAddContract?: (contract: Contract) => void;
   onAddNewContract?: () => void;
-}
-
-/**
- * Backend ships `programTimeLeft` as `string | null`. Defensive against
- * malformed values that would otherwise short-circuit the multicall and
- * pin the row to "Inactive":
- * - whitespace-only strings (`Number(' ') === 0`),
- * - empty strings,
- * - non-numeric strings,
- * - negative numbers (the precompile returns `uint64`, anything < 0 is
- *   garbage from the backend).
- *
- * Returns parsed seconds when usable, otherwise `null` ("no backend
- * reading — fall back to the on-chain multicall").
- */
-function backendProgramTimeLeft(
-  raw: string | null | undefined
-): number | null {
-  const value = raw?.trim();
-  if (!value) return null;
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 ? n : null;
-}
-
-function buildActivationInfo(
-  contract: Contract,
-  programTimeLeftSeconds: number | null,
-  reason: ProgramReason | undefined
-): ActivationInfo {
-  const status: ActivationStatus = getEffectiveActivationStatus(
-    contract,
-    programTimeLeftSeconds
-  );
-  // `ProgramReason` and `ActivationDetail` are intentionally the same union
-  // — the cast keeps the two domains independent without an identity map.
-  return {
-    status,
-    secondsRemaining: programTimeLeftSeconds,
-    lastActivatedAt: contract.lastActivationTimestamp ?? null,
-    detail: reason as ActivationDetail | undefined,
-  };
 }
 
 // Table header component with sorting functionality
