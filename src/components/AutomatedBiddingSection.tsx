@@ -351,6 +351,27 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    // Refuse to `insertContract` unless the on-chain read has definitively
+    // resolved to "not registered". `undefined` means the CMA read is
+    // still in flight — the button is visible because `contractExists`
+    // defaults to false while loading, but firing `insertContract`
+    // against an already-registered contract would revert on-chain and
+    // burn the user's gas.
+    if (cmaRecord === undefined) {
+      showErrorToast({
+        message:
+          'Still reading the on-chain configuration. Try again in a moment.',
+      });
+      return;
+    }
+    if (cmaRecord !== null) {
+      showErrorToast({
+        message:
+          'This contract is already automated. Refresh to see its current config, then use Update.',
+      });
+      return;
+    }
+
     try {
       console.log('Setting bid with values:', {
         contractAddress: contract.address,
@@ -358,11 +379,11 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
-      // `insertContract` is only reached when the contract isn't in CMA yet
-      // (`contractExists === false` above). There's nothing on-chain to
-      // preserve, so the activation fields default to (false, 0) — same
-      // defaults an Activation-first flow would pass when it initialises
-      // a fresh record.
+      // `insertContract` is safe here — the guard above proved the
+      // contract is not yet in CMA. There's nothing on-chain to preserve,
+      // so the activation fields default to (false, 0) — same defaults
+      // an Activation-first flow would pass when it initialises a fresh
+      // record.
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
