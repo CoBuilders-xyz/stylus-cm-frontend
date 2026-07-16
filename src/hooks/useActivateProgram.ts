@@ -1,5 +1,3 @@
-'use client';
-
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { isAddress, parseEther } from 'viem';
 import {
@@ -21,7 +19,7 @@ import { TransactionStatus, useWeb3 } from '@/hooks/useWeb3';
  * the fee returned by the simulation — this value only has to be strictly
  * larger than the largest fee we expect to see in practice.
  */
-export const ACTIVATION_SIMULATION_VALUE = parseEther('0.01');
+const ACTIVATION_SIMULATION_VALUE = parseEther('0.01');
 
 export interface UseActivateProgramParams {
   /** Address of the WASM program to activate. Simulation waits until this is a valid 42-char address. */
@@ -135,9 +133,16 @@ export function useActivateProgram({
   }, [simulation?.result]);
 
   const switchToTarget = useCallback(() => {
-    if (targetChainId != null) {
-      switchChain({ chainId: targetChainId });
+    if (targetChainId == null) {
+      // Consumers wire this to a "Switch to X" button that is only shown
+      // when `isChainMismatch === true`, which itself implies `targetChainId`
+      // is set — reaching this branch means the caller is out of sync.
+      showErrorToast({
+        message: 'Target network is not set yet. Try again in a moment.',
+      });
+      return;
     }
+    switchChain({ chainId: targetChainId });
   }, [switchChain, targetChainId]);
 
   const activate = useCallback(() => {
