@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSidePanel } from './SidePanel';
@@ -9,8 +9,19 @@ import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
 import { X, Info } from 'lucide-react';
-import { useBytecode, useReadContract } from 'wagmi';
-import { isAddress } from 'viem';
+import {
+  useAccount,
+  useBytecode,
+  useChainId,
+  useSimulateContract,
+  useSwitchChain,
+} from 'wagmi';
+import { isAddress, parseEther } from 'viem';
+import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
+import {
+  useProgramTimeLeft,
+  type ProgramReason,
+} from '@/hooks/useProgramTimeLeft';
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +31,26 @@ import {
   ARB_WASM_ABI,
   ARB_WASM_PRECOMPILE,
 } from '@/config/abis/arbWasm/arbWasm';
+import { showErrorToast, showSuccessToast } from '@/components/Toast';
+import ActivationRequiredCard from '@/components/ActivationRequiredCard';
+
+// User-facing copy per revert reason. The action is the same in all three
+// cases (call ArbWasm.activateProgram) — only the framing differs so the
+// user understands whether they are activating for the first time,
+// re-activating after expiry, or migrating to a newer Stylus runtime.
+const ACTIVATION_MESSAGE_BY_REASON: Record<ProgramReason, string> = {
+  never_activated:
+    'This WASM contract has not been activated yet. Activate it now to cache it.',
+  expired:
+    "This WASM contract's activation has expired. Reactivate it to be cached.",
+  needs_upgrade:
+    'This WASM contract was activated under an older Stylus version. Reactivate it under the current version to be cached.',
+};
+
+// Generous over-pay used to discover the program's dataFee via simulation.
+// ArbWasm.activateProgram refunds excess value, so the user is only charged
+// the actual dataFee returned from the simulation.
+const ACTIVATION_SIMULATION_VALUE = parseEther('0.01');
 
 interface AddContractProps {
   onSuccess?: () => void;
@@ -35,7 +66,13 @@ export default function AddContract({
   const { onClose } = useSidePanel();
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
-  const { currentBlockchainId } = useBlockchainService();
+  const { currentBlockchain, currentBlockchainId } = useBlockchainService();
+  const { isConnected } = useAccount();
+  const walletChainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const targetChainId = currentBlockchain?.chainId;
+  const isChainMismatch =
+    isConnected && targetChainId != null && walletChainId !== targetChainId;
   const router = useRouter();
 
   // State for the form - initialize with initialAddress if provided
@@ -58,27 +95,99 @@ export default function AddContract({
     error: bytecodeError,
   } = useBytecode({
     address: contractAddress as `0x${string}`,
+    chainId: targetChainId,
     query: {
       enabled:
-        !!contractAddress && contractAddress.length === 42 && !addressError,
+        !!contractAddress &&
+        contractAddress.length === 42 &&
+        !addressError &&
+        targetChainId != null,
     },
   });
 
-  // Check if WASM contract is active using ArbWasm precompile
+  // Check the program's activation status against the ArbWasm precompile.
+  // useProgramTimeLeft (COB-493) decodes the precompile's typed reverts into
+  // a stable `reason` — this is what lets the amber card handle every
+  // reactivation case (never-activated, expired, needs-upgrade) with a single
+  // `activateProgram` call. Using the shared hook here means the AddContract
+  // validation stays in lockstep with the badge on the contracts tables.
+  const programAddresses = useMemo(
+    () =>
+      isWasmContract && contractAddress.length === 42
+        ? [contractAddress]
+        : undefined,
+    [isWasmContract, contractAddress]
+  );
   const {
-    data: timeLeftSeconds,
+    data: programReadings,
     isLoading: isCheckingWasmActive,
-    error: wasmActiveError,
-  } = useReadContract({
+    refetch: refetchProgramTimeLeft,
+  } = useProgramTimeLeft(programAddresses, targetChainId);
+  const programReading = programReadings[contractAddress.toLowerCase()];
+  const programSeconds = programReading?.seconds ?? null;
+  // Defensive: some ArbWasm precompile builds may return `0n` instead of
+  // reverting for expired programs, and older revert types not covered by
+  // `REASON_BY_ERROR_NAME` in useProgramTimeLeft fall back to `null`. If we
+  // observe a numeric zero without a decoded reason, treat it as expired so
+  // the amber card still surfaces instead of silently blocking the user.
+  const effectiveReason: ProgramReason | undefined =
+    programReading?.reason ??
+    (programSeconds === 0 ? 'expired' : undefined);
+  const isReactivationRequired =
+    isWasmContract && effectiveReason != null;
+  const isProgramActive =
+    isWasmContract &&
+    effectiveReason == null &&
+    programSeconds != null &&
+    programSeconds > 0;
+
+  // Simulate activateProgram on the ArbWasm precompile so we can discover the
+  // contract-specific dataFee. Excess value is refunded by the precompile, but
+  // we want to charge the user the precise fee. simulateData.result is
+  // [version, dataFee].
+  const {
+    data: activationSimulation,
+    error: activationSimulationError,
+    isLoading: isSimulatingActivation,
+  } = useSimulateContract({
     address: ARB_WASM_PRECOMPILE,
     abi: ARB_WASM_ABI,
-    functionName: 'programTimeLeft',
+    functionName: 'activateProgram',
     args: [contractAddress as `0x${string}`],
+    value: ACTIVATION_SIMULATION_VALUE,
+    chainId: targetChainId,
     query: {
       enabled:
-        isWasmContract && !!contractAddress && contractAddress.length === 42,
+        isConnected &&
+        isReactivationRequired &&
+        !isChainMismatch &&
+        targetChainId != null,
     },
   });
+
+  const activationDataFee = useMemo(() => {
+    const result = activationSimulation?.result as
+      | readonly [number, bigint]
+      | undefined;
+    return result?.[1];
+  }, [activationSimulation]);
+
+  // Route the write through the project-wide useWeb3 wrapper so we inherit
+  // gas-price protection and a consistent transaction status enum with the
+  // rest of the codebase (bidding, gas tank, automated bidding).
+  const {
+    writeContract: writeActivation,
+    status: activationStatus,
+    txHash: activationTxHash,
+    error: activationError,
+    reset: resetActivationWrite,
+  } = useWeb3();
+
+  const isActivating =
+    activationStatus === TransactionStatus.PREPARING ||
+    activationStatus === TransactionStatus.PENDING;
+  const isActivationConfirmed =
+    activationStatus === TransactionStatus.SUCCESS;
 
   // Handle all validation logic in one place
   useEffect(() => {
@@ -143,7 +252,8 @@ export default function AddContract({
         );
         setIsWasmContract(false);
       } else {
-        // It's a WASM contract, now we need to check if it's active
+        // It's a WASM contract, now we need to check its activation state
+        // against the ArbWasm precompile.
         setIsWasmContract(true);
         // Show loading while checking activation status
         if (isCheckingWasmActive) {
@@ -154,37 +264,23 @@ export default function AddContract({
           return;
         }
 
-        // Handle timeout case
-        if (wasmActiveError) {
-          // programTimeLeft reverts for EVM contracts or non-activated programs
+        // Every "not active" state from the precompile — never activated,
+        // expired, or activated under an older Stylus version — is resolved
+        // by the same `activateProgram` call, so all three surface as the
+        // actionable amber state instead of a hard block. The wording is
+        // tailored per reason so the user understands what actually happened.
+        if (isReactivationRequired && effectiveReason) {
           setValidationState({
-            message: 'Make sure your WASM contract is active',
-            type: 'error',
+            message: ACTIVATION_MESSAGE_BY_REASON[effectiveReason],
+            type: 'warning',
           });
-          setAddressError('Make sure your WASM contract is active');
-          return;
-        }
-
-        // Check if WASM program is expired
-        if (
-          typeof timeLeftSeconds === 'bigint' &&
-          timeLeftSeconds === BigInt(0)
-        ) {
-          setValidationState({
-            message: 'WASM contract has expired and needs reactivation',
-            type: 'error',
-          });
-          setAddressError('WASM contract has expired and needs reactivation');
+          setAddressError(null);
           return;
         }
 
         // WASM contract exists, is active, and still valid
-        if (
-          typeof timeLeftSeconds === 'bigint' &&
-          timeLeftSeconds > BigInt(0)
-        ) {
-          const timeInSeconds = Number(timeLeftSeconds);
-          const daysLeft = Math.floor(timeInSeconds / 86400); // Convert seconds to days
+        if (isProgramActive && programSeconds != null) {
+          const daysLeft = Math.floor(programSeconds / 86400); // Convert seconds to days
           setValidationState({
             message: `Valid WASM contract. Program expires in ${daysLeft} days`,
             type: 'success',
@@ -193,6 +289,16 @@ export default function AddContract({
           setAddressError(null);
           return;
         }
+
+        // Reading came back as "unknown" (RPC error, unrecognised revert,
+        // or wagmi not settled yet). Keep the user in the loading state
+        // rather than falsely surfacing the contract as inactive — the
+        // hook will re-emit once the read resolves.
+        setValidationState({
+          message: 'Checking WASM contract activation status...',
+          type: 'loading',
+        });
+        return;
       }
       return;
     }
@@ -205,9 +311,11 @@ export default function AddContract({
     isBytecodeLoading,
     bytecodeError,
     isWasmContract,
-    timeLeftSeconds,
     isCheckingWasmActive,
-    wasmActiveError,
+    isReactivationRequired,
+    effectiveReason,
+    isProgramActive,
+    programSeconds,
   ]);
 
   // Function to validate Ethereum address
@@ -237,6 +345,7 @@ export default function AddContract({
     // Clear validation states when user types
     setValidationState(null);
     setIsWasmContract(false); // Reset WASM status on address change
+    resetActivationWrite();
 
     // Validate address on every change for immediate feedback
     if (newAddress.trim()) {
@@ -246,6 +355,94 @@ export default function AddContract({
       setAddressError(null);
     }
   };
+
+  const handleSwitchToTargetChain = () => {
+    if (targetChainId != null) {
+      switchChain({ chainId: targetChainId });
+    }
+  };
+
+  const handleActivateProgram = () => {
+    if (!isConnected) {
+      showErrorToast({
+        message: 'Connect your wallet to activate this contract.',
+      });
+      return;
+    }
+    if (isChainMismatch) {
+      // The UI surfaces a dedicated Switch button; guard the write path just
+      // in case it gets invoked before the user resolves the mismatch.
+      handleSwitchToTargetChain();
+      return;
+    }
+    // Nullish check rather than truthy so a legitimate 0n fee is not treated
+    // as missing (the ArbWasm precompile can, in theory, return a zero
+    // dataFee for a program that has already paid its allowance).
+    if (activationDataFee == null) {
+      showErrorToast({
+        message:
+          activationSimulationError?.message ??
+          'Unable to estimate the activation fee. Try again in a moment.',
+      });
+      return;
+    }
+    writeActivation({
+      address: ARB_WASM_PRECOMPILE,
+      abi: ARB_WASM_ABI,
+      functionName: 'activateProgram',
+      args: [contractAddress as `0x${string}`],
+      value: activationDataFee,
+      chainId: targetChainId,
+      // The useWeb3 wrapper's default `gasProtection.gasLimit` (1M) is
+      // silently too tight for ArbWasm.activateProgram — the precompile
+      // compiles the WASM into native code inside the transaction and
+      // burns 2-3M gas even for tiny programs (measured 2.28M on Arb
+      // Sepolia for a 6 KB hello-world). Overriding gasProtection here
+      // omits the gasLimit so wagmi's eth_estimateGas sizes the tx
+      // correctly. The 500 gwei price ceiling from the default is
+      // preserved to keep the spirit of the protection.
+      gasProtection: { maxGasPriceGwei: 500 },
+    });
+  };
+
+  // After the activation tx is mined, re-read programTimeLeft so the
+  // validation effect unlocks the form once the precompile reports
+  // a non-zero remaining lifetime.
+  useEffect(() => {
+    if (isActivationConfirmed) {
+      showSuccessToast({ message: 'Contract activated successfully.' });
+      refetchProgramTimeLeft();
+    }
+  }, [isActivationConfirmed, refetchProgramTimeLeft]);
+
+  useEffect(() => {
+    if (!activationError) return;
+
+    const message = activationError.message ?? '';
+    const lower = message.toLowerCase();
+    let display = 'Activation failed. Please try again.';
+    if (
+      lower.includes('user rejected') ||
+      lower.includes('user denied') ||
+      lower.includes('rejected the request')
+    ) {
+      display = 'Activation cancelled in wallet.';
+    } else if (
+      lower.includes('insufficient funds') ||
+      lower.includes('insufficient balance') ||
+      lower.includes('exceeds the balance')
+    ) {
+      display = 'Insufficient ETH to cover the activation fee.';
+    } else if (lower.includes('network fee is extremely high')) {
+      // Surface the gas-price-protection message from useWeb3 as-is.
+      display = message;
+    }
+    showErrorToast({ message: display, onRetry: handleActivateProgram });
+    resetActivationWrite();
+    // handleActivateProgram is stable enough for this retry surface; including
+    // it would re-fire the effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activationError, resetActivationWrite]);
 
   // Handle name input change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -385,27 +582,49 @@ export default function AddContract({
               {addressError && (
                 <p className='text-red-500 text-sm mt-1'>{addressError}</p>
               )}
-              {validationState && (
+              {validationState && validationState.type !== 'warning' && (
                 <p
                   className={`text-sm mt-1 ${
                     validationState.type === 'loading'
                       ? 'text-yellow-500'
                       : validationState.type === 'success'
                       ? 'text-green-500'
-                      : validationState.type === 'warning'
-                      ? 'text-orange-500'
                       : 'text-red-500'
                   }`}
                 >
                   {validationState.message}
                 </p>
               )}
+              {isReactivationRequired && (
+                <ActivationRequiredCard
+                  message={
+                    validationState?.message ??
+                    'This WASM contract is expired and needs to be reactivated to be cached.'
+                  }
+                  isConnected={isConnected}
+                  isSimulating={isSimulatingActivation}
+                  simulationError={activationSimulationError}
+                  dataFee={activationDataFee}
+                  isActivating={isActivating}
+                  isChainMismatch={isChainMismatch}
+                  isSwitchingChain={isSwitchingChain}
+                  chainName={currentBlockchain?.name}
+                  onSwitchChain={handleSwitchToTargetChain}
+                  txHash={activationTxHash}
+                  chainId={targetChainId}
+                  onActivate={handleActivateProgram}
+                />
+              )}
             </div>
 
             <div className='mt-6'>
               <Button
                 className='w-full px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                disabled={!contractAddress || !!addressError}
+                disabled={
+                  !contractAddress ||
+                  !!addressError ||
+                  validationState?.type !== 'success'
+                }
                 onClick={handleNextStep}
               >
                 Next: Name Your Contract
@@ -451,15 +670,13 @@ export default function AddContract({
                 {addressError && (
                   <p className='text-red-500 text-sm mt-1'>{addressError}</p>
                 )}
-                {validationState && (
+                {validationState && validationState.type !== 'warning' && (
                   <p
                     className={`text-sm mt-1 ${
                       validationState.type === 'loading'
                         ? 'text-yellow-500'
                         : validationState.type === 'success'
                         ? 'text-green-500'
-                        : validationState.type === 'warning'
-                        ? 'text-orange-500'
                         : 'text-red-500'
                     }`}
                   >
@@ -467,6 +684,31 @@ export default function AddContract({
                   </p>
                 )}
               </div>
+            )}
+
+            {/* Prefilled-address flow can drop the user straight into Step 2
+                with an expired contract; render the activation card here as
+                well so the same on-chain activate flow is available and the
+                Add Contract button stays gated until programTimeLeft > 0. */}
+            {isReactivationRequired && (
+              <ActivationRequiredCard
+                message={
+                  validationState?.message ??
+                  'This WASM contract is expired and needs to be reactivated to be cached.'
+                }
+                isConnected={isConnected}
+                isSimulating={isSimulatingActivation}
+                simulationError={activationSimulationError}
+                dataFee={activationDataFee}
+                isActivating={isActivating}
+                isChainMismatch={isChainMismatch}
+                isSwitchingChain={isSwitchingChain}
+                chainName={currentBlockchain?.name}
+                onSwitchChain={handleSwitchToTargetChain}
+                txHash={activationTxHash}
+                chainId={targetChainId}
+                onActivate={handleActivateProgram}
+              />
             )}
 
             <div className='mb-4'>
@@ -498,7 +740,7 @@ export default function AddContract({
                   !initialAddress ? 'flex-1' : 'w-full'
                 } px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md`}
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || validationState?.type !== 'success'}
               >
                 {isLoading ? 'Adding...' : 'Add Contract'}
               </Button>
