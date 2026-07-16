@@ -277,13 +277,23 @@ export default function ContractDetails({
     () => (contractData?.address ? [contractData.address] : undefined),
     [contractData?.address]
   );
-  const { data: programTimeLeftMap } = useProgramTimeLeft(
-    programAddressesForTab,
-    activationChainId
-  );
+  const { data: programTimeLeftMap, isLoading: isProgramTimeLeftLoading } =
+    useProgramTimeLeft(programAddressesForTab, activationChainId);
   const programReadingForTab = contractData?.address
     ? programTimeLeftMap[contractData.address.toLowerCase()]
     : undefined;
+
+  // The Activation tab is "loading" while either input the status header
+  // depends on is still resolving: the detail-endpoint response (recognised
+  // by `activationHistory` transitioning from `undefined` → `[]`), or the
+  // on-chain multicall when the backend did not supply `programTimeLeft`
+  // and we therefore need the multicall to derive the effective status.
+  // Otherwise the skeleton stops early and the badge flashes "Unknown"
+  // for a beat before flipping to the real state.
+  const isActivationTabLoading =
+    contractData?.activationHistory === undefined ||
+    (isProgramTimeLeftLoading &&
+      backendProgramTimeLeft(contractData?.programTimeLeft ?? null) === null);
 
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
@@ -690,7 +700,7 @@ export default function ContractDetails({
                   autoActivate={contractData?.autoActivate}
                   maxActivationCost={contractData?.maxActivationCost}
                   chainId={currentBlockchain?.chainId}
-                  isLoading={contractData?.activationHistory === undefined}
+                  isLoading={isActivationTabLoading}
                 />
               </TabsContent>
 
@@ -741,7 +751,7 @@ export default function ContractDetails({
                   activation={resolveActivationInfo(contractData, programReadingForTab)}
                   history={buildActivationHistory(contractData)}
                   chainId={currentBlockchain?.chainId}
-                  isLoading={contractData?.activationHistory === undefined}
+                  isLoading={isActivationTabLoading}
                   readOnly
                 />
               </TabsContent>
