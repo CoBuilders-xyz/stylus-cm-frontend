@@ -87,6 +87,13 @@ export function useProgramTimeLeft(
 ): {
   data: Record<string, ProgramTimeLeftReading>;
   isLoading: boolean;
+  /**
+   * Force a fresh read. `useReadContracts` caches with a `staleTime` of one
+   * minute (see below), so callers that trigger an on-chain state change
+   * (e.g. `activateProgram`) need to call this to unstick the read before
+   * the next auto-refresh.
+   */
+  refetch: () => void;
 } {
   const validAddresses = useMemo(
     () =>
@@ -96,7 +103,7 @@ export function useProgramTimeLeft(
     [addresses]
   );
 
-  const { data, isLoading } = useReadContracts({
+  const { data, isLoading, refetch } = useReadContracts({
     contracts: validAddresses.map((address) => ({
       address: ARB_WASM_PRECOMPILE,
       abi: ARB_WASM_ABI,
@@ -148,5 +155,9 @@ export function useProgramTimeLeft(
     return out;
   }, [data, validAddresses]);
 
-  return { data: result, isLoading };
+  // Pass wagmi's memoised refetch reference straight through so downstream
+  // effects can list it in their dependency array without re-firing every
+  // render — wrapping it in an arrow would allocate a fresh function each
+  // time and destabilise those deps.
+  return { data: result, isLoading, refetch };
 }

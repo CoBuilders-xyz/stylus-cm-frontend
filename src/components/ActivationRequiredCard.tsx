@@ -5,7 +5,7 @@ import { AlertTriangle, ExternalLink, Loader2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { explorerTxUrl } from '@/utils/explorer';
 
-export interface ExpiredActivationCardProps {
+export interface ActivationRequiredCardProps {
   message: string;
   isConnected: boolean;
   isSimulating: boolean;
@@ -21,7 +21,7 @@ export interface ExpiredActivationCardProps {
   onActivate: () => void;
 }
 
-export default function ExpiredActivationCard({
+export default function ActivationRequiredCard({
   message,
   isConnected,
   isSimulating,
@@ -35,7 +35,7 @@ export default function ExpiredActivationCard({
   txHash,
   chainId,
   onActivate,
-}: ExpiredActivationCardProps) {
+}: ActivationRequiredCardProps) {
   const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
   const targetChainLabel = chainName ?? 'the selected network';
   // Nullish check on dataFee — 0n is a valid fee, not "missing".

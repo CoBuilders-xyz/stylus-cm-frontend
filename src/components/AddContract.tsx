@@ -13,12 +13,15 @@ import {
   useAccount,
   useBytecode,
   useChainId,
-  useReadContract,
   useSimulateContract,
   useSwitchChain,
 } from 'wagmi';
 import { isAddress, parseEther } from 'viem';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
+import {
+  useProgramTimeLeft,
+  type ProgramReason,
+} from '@/hooks/useProgramTimeLeft';
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +32,20 @@ import {
   ARB_WASM_PRECOMPILE,
 } from '@/config/abis/arbWasm/arbWasm';
 import { showErrorToast, showSuccessToast } from '@/components/Toast';
-import ExpiredActivationCard from '@/components/ExpiredActivationCard';
+import ActivationRequiredCard from '@/components/ActivationRequiredCard';
+
+// User-facing copy per revert reason. The action is the same in all three
+// cases (call ArbWasm.activateProgram) — only the framing differs so the
+// user understands whether they are activating for the first time,
+// re-activating after expiry, or migrating to a newer Stylus runtime.
+const ACTIVATION_MESSAGE_BY_REASON: Record<ProgramReason, string> = {
+  never_activated:
+    'This WASM contract has not been activated yet. Activate it now to cache it.',
+  expired:
+    "This WASM contract's activation has expired. Reactivate it to be cached.",
+  needs_upgrade:
+    'This WASM contract was activated under an older Stylus version. Reactivate it under the current version to be cached.',
+};
 
 // Generous over-pay used to discover the program's dataFee via simulation.
 // ArbWasm.activateProgram refunds excess value, so the user is only charged
@@ -89,31 +105,41 @@ export default function AddContract({
     },
   });
 
-  // Check if WASM contract is active using ArbWasm precompile
+  // Check the program's activation status against the ArbWasm precompile.
+  // useProgramTimeLeft (COB-493) decodes the precompile's typed reverts into
+  // a stable `reason` — this is what lets the amber card handle every
+  // reactivation case (never-activated, expired, needs-upgrade) with a single
+  // `activateProgram` call. Using the shared hook here means the AddContract
+  // validation stays in lockstep with the badge on the contracts tables.
+  const programAddresses = useMemo(
+    () =>
+      isWasmContract && contractAddress.length === 42
+        ? [contractAddress]
+        : undefined,
+    [isWasmContract, contractAddress]
+  );
   const {
-    data: timeLeftSeconds,
+    data: programReadings,
     isLoading: isCheckingWasmActive,
-    error: wasmActiveError,
     refetch: refetchProgramTimeLeft,
-  } = useReadContract({
-    address: ARB_WASM_PRECOMPILE,
-    abi: ARB_WASM_ABI,
-    functionName: 'programTimeLeft',
-    args: [contractAddress as `0x${string}`],
-    chainId: targetChainId,
-    query: {
-      enabled:
-        isWasmContract &&
-        !!contractAddress &&
-        contractAddress.length === 42 &&
-        targetChainId != null,
-    },
-  });
-
-  const isExpiredWasm =
+  } = useProgramTimeLeft(programAddresses, targetChainId);
+  const programReading = programReadings[contractAddress.toLowerCase()];
+  const programSeconds = programReading?.seconds ?? null;
+  // Defensive: some ArbWasm precompile builds may return `0n` instead of
+  // reverting for expired programs, and older revert types not covered by
+  // `REASON_BY_ERROR_NAME` in useProgramTimeLeft fall back to `null`. If we
+  // observe a numeric zero without a decoded reason, treat it as expired so
+  // the amber card still surfaces instead of silently blocking the user.
+  const effectiveReason: ProgramReason | undefined =
+    programReading?.reason ??
+    (programSeconds === 0 ? 'expired' : undefined);
+  const isReactivationRequired =
+    isWasmContract && effectiveReason != null;
+  const isProgramActive =
     isWasmContract &&
-    typeof timeLeftSeconds === 'bigint' &&
-    timeLeftSeconds === BigInt(0);
+    effectiveReason == null &&
+    programSeconds != null &&
+    programSeconds > 0;
 
   // Simulate activateProgram on the ArbWasm precompile so we can discover the
   // contract-specific dataFee. Excess value is refunded by the precompile, but
@@ -133,7 +159,7 @@ export default function AddContract({
     query: {
       enabled:
         isConnected &&
-        isExpiredWasm &&
+        isReactivationRequired &&
         !isChainMismatch &&
         targetChainId != null,
     },
@@ -226,7 +252,8 @@ export default function AddContract({
         );
         setIsWasmContract(false);
       } else {
-        // It's a WASM contract, now we need to check if it's active
+        // It's a WASM contract, now we need to check its activation state
+        // against the ArbWasm precompile.
         setIsWasmContract(true);
         // Show loading while checking activation status
         if (isCheckingWasmActive) {
@@ -237,26 +264,14 @@ export default function AddContract({
           return;
         }
 
-        // Handle timeout case
-        if (wasmActiveError) {
-          // programTimeLeft reverts for EVM contracts or non-activated programs
+        // Every "not active" state from the precompile — never activated,
+        // expired, or activated under an older Stylus version — is resolved
+        // by the same `activateProgram` call, so all three surface as the
+        // actionable amber state instead of a hard block. The wording is
+        // tailored per reason so the user understands what actually happened.
+        if (isReactivationRequired && effectiveReason) {
           setValidationState({
-            message: 'Make sure your WASM contract is active',
-            type: 'error',
-          });
-          setAddressError('Make sure your WASM contract is active');
-          return;
-        }
-
-        // Check if WASM program is expired — surface as an actionable amber
-        // state instead of a hard block so the user can reactivate in-place.
-        if (
-          typeof timeLeftSeconds === 'bigint' &&
-          timeLeftSeconds === BigInt(0)
-        ) {
-          setValidationState({
-            message:
-              'This WASM contract is expired and needs to be reactivated to be cached.',
+            message: ACTIVATION_MESSAGE_BY_REASON[effectiveReason],
             type: 'warning',
           });
           setAddressError(null);
@@ -264,12 +279,8 @@ export default function AddContract({
         }
 
         // WASM contract exists, is active, and still valid
-        if (
-          typeof timeLeftSeconds === 'bigint' &&
-          timeLeftSeconds > BigInt(0)
-        ) {
-          const timeInSeconds = Number(timeLeftSeconds);
-          const daysLeft = Math.floor(timeInSeconds / 86400); // Convert seconds to days
+        if (isProgramActive && programSeconds != null) {
+          const daysLeft = Math.floor(programSeconds / 86400); // Convert seconds to days
           setValidationState({
             message: `Valid WASM contract. Program expires in ${daysLeft} days`,
             type: 'success',
@@ -278,6 +289,16 @@ export default function AddContract({
           setAddressError(null);
           return;
         }
+
+        // Reading came back as "unknown" (RPC error, unrecognised revert,
+        // or wagmi not settled yet). Keep the user in the loading state
+        // rather than falsely surfacing the contract as inactive — the
+        // hook will re-emit once the read resolves.
+        setValidationState({
+          message: 'Checking WASM contract activation status...',
+          type: 'loading',
+        });
+        return;
       }
       return;
     }
@@ -290,9 +311,11 @@ export default function AddContract({
     isBytecodeLoading,
     bytecodeError,
     isWasmContract,
-    timeLeftSeconds,
     isCheckingWasmActive,
-    wasmActiveError,
+    isReactivationRequired,
+    effectiveReason,
+    isProgramActive,
+    programSeconds,
   ]);
 
   // Function to validate Ethereum address
@@ -563,8 +586,8 @@ export default function AddContract({
                   {validationState.message}
                 </p>
               )}
-              {isExpiredWasm && (
-                <ExpiredActivationCard
+              {isReactivationRequired && (
+                <ActivationRequiredCard
                   message={
                     validationState?.message ??
                     'This WASM contract is expired and needs to be reactivated to be cached.'
@@ -658,8 +681,8 @@ export default function AddContract({
                 with an expired contract; render the activation card here as
                 well so the same on-chain activate flow is available and the
                 Add Contract button stays gated until programTimeLeft > 0. */}
-            {isExpiredWasm && (
-              <ExpiredActivationCard
+            {isReactivationRequired && (
+              <ActivationRequiredCard
                 message={
                   validationState?.message ??
                   'This WASM contract is expired and needs to be reactivated to be cached.'
