@@ -8,6 +8,9 @@
  * `ActivationInfo` so the UI shells stay decoupled from the data source.
  */
 
+import { formatEther } from 'viem';
+import type { ActivationHistoryItem } from '@/services/contractService';
+
 const DAY = 86_400;
 const HOUR = 3_600;
 
@@ -89,14 +92,120 @@ export function getEffectiveActivationStatus(
   return 'active';
 }
 
+/**
+ * Backend ships `programTimeLeft` as `string | null`. Defensive against
+ * malformed values that would otherwise short-circuit downstream consumers
+ * and pin the row/tab to "Inactive":
+ * - whitespace-only strings (`Number(' ') === 0`),
+ * - empty strings,
+ * - non-numeric strings,
+ * - negative numbers (the precompile returns `uint64`, anything < 0 is
+ *   garbage from the backend).
+ *
+ * Returns parsed seconds when usable, otherwise `null` ("no backend
+ * reading — fall back to the on-chain multicall").
+ */
+export function backendProgramTimeLeft(
+  raw: string | null | undefined
+): number | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/**
+ * Narrow shape needed to feed `buildActivationInfo` — kept minimal so any
+ * contract-like object (Contract, UserContract, row draft) can be passed
+ * without importing the wider domain type.
+ */
+export interface ActivationInfoInput extends ActivationStatusInput {
+  lastActivationTimestamp?: string | null;
+}
+
+/**
+ * `ProgramReason` (from `useProgramTimeLeft`) and `ActivationDetail` share
+ * the same string union deliberately — the two domains stay decoupled but
+ * a value from one can be passed to the other without an identity map.
+ * Consumers should keep the alignment when either union changes.
+ */
+type ProgramReasonLike = ActivationDetail;
+
+/**
+ * Compose an {@link ActivationInfo} from a contract + a `programTimeLeft`
+ * reading. Both the contracts table and the ContractDetails Activation tab
+ * feed this so their status badges stay in lockstep.
+ */
+export function buildActivationInfo(
+  contract: ActivationInfoInput,
+  programTimeLeftSeconds: number | null,
+  reason: ProgramReasonLike | undefined
+): ActivationInfo {
+  const status = getEffectiveActivationStatus(contract, programTimeLeftSeconds);
+  return {
+    status,
+    secondsRemaining: programTimeLeftSeconds,
+    lastActivatedAt: contract.lastActivationTimestamp ?? null,
+    detail: reason,
+  };
+}
+
 export interface ActivationEvent {
   id: string;
   date: string;
   status: 'success' | 'error';
   txHash: string;
+  /**
+   * ETH string formatted for display. Empty string on `error` events —
+   * the tx reverted so nothing was spent. `''` (not `'0'`) so downstream
+   * renders can distinguish "no value" from "explicit zero".
+   */
   valueConsumedEth: string;
+  /**
+   * Present, kept for compatibility with the not-yet-shipped unified
+   * history tab (COB-497). The backend does not currently index gas per
+   * activation event so activation-only consumers get `''`.
+   */
   gasUsed: string;
+  /**
+   * On-chain revert reason for `error` events. Empty for successful
+   * activations.
+   */
   note?: string;
+}
+
+/**
+ * Backend event → UI event shape. Wei-denominated `spent` becomes an
+ * `ether`-formatted string; anything the backend does not populate becomes
+ * an empty string so consumers can render a stable table without null
+ * gymnastics.
+ */
+export function activationHistoryItemToEvent(
+  item: ActivationHistoryItem
+): ActivationEvent {
+  const isSuccess = item.eventType === 'ActivationPerformed';
+  // Backend should send `spent` as a wei-formatted decimal string, but a
+  // stray non-numeric value would otherwise crash the whole activation
+  // tab through `BigInt(...)`. Guard the conversion and fall back to the
+  // empty-string display so a bad row degrades to "—" instead of a
+  // white-screen render.
+  let spentEth = '';
+  if (isSuccess && item.spent != null && item.spent !== '') {
+    try {
+      spentEth = formatEther(BigInt(item.spent));
+    } catch {
+      spentEth = '';
+    }
+  }
+  return {
+    id: item.transactionHash,
+    date: item.timestamp,
+    status: isSuccess ? 'success' : 'error',
+    txHash: item.transactionHash,
+    valueConsumedEth: spentEth,
+    gasUsed: '',
+    note: isSuccess ? undefined : item.reason,
+  };
 }
 
 export interface CacheEvent {

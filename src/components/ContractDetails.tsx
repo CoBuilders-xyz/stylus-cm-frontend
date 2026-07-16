@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { formatEther } from 'viem';
 import { formatDate, formatRoundedEth } from '@/utils/formatting';
 import { Contract, Alert } from '@/services/contractService';
@@ -47,16 +47,55 @@ import {
 import ActivationTab from '@/components/ActivationTab';
 import ContractHistoryTab from '@/components/ContractHistoryTab';
 import CacheHero from '@/components/CacheHero';
-import type { ActivationInfo } from '@/lib/activation';
+import {
+  activationHistoryItemToEvent,
+  backendProgramTimeLeft,
+  buildActivationInfo,
+  type ActivationEvent,
+  type ActivationInfo,
+} from '@/lib/activation';
+import {
+  useProgramTimeLeft,
+  type ProgramTimeLeftReading,
+} from '@/hooks/useProgramTimeLeft';
 import { explorerAddressUrl } from '@/utils/explorer';
 
-// Placeholder activation state until COB-496 wires real activation reads from
-// the ArbWasm precompile + CacheManagerAutomation events.
-const PLACEHOLDER_ACTIVATION: ActivationInfo = {
-  status: 'inactive',
-  secondsRemaining: 0,
-  lastActivatedAt: null,
-};
+/**
+ * Compose an {@link ActivationInfo} from the enriched contract detail
+ * combined with the on-chain `programTimeLeft` multicall — same pattern the
+ * contracts table uses. Backend value wins when present; otherwise we fall
+ * back to the on-chain reading (which also decodes the typed reverts into
+ * a `reason`, so contracts that need reactivation surface the right
+ * sublabel — "Needs upgrade to current Stylus version" and friends —
+ * instead of a generic "Unknown").
+ */
+function resolveActivationInfo(
+  contract: Contract | null | undefined,
+  onChainReading: ProgramTimeLeftReading | undefined
+): ActivationInfo {
+  if (!contract) {
+    return { status: 'unknown', secondsRemaining: null, lastActivatedAt: null };
+  }
+  const fromBackend = backendProgramTimeLeft(contract.programTimeLeft);
+  const seconds =
+    fromBackend !== null ? fromBackend : (onChainReading?.seconds ?? null);
+  return buildActivationInfo(contract, seconds, onChainReading?.reason);
+}
+
+function buildActivationHistory(
+  contract: Contract | null | undefined
+): ActivationEvent[] {
+  const raw = contract?.activationHistory;
+  if (!raw || raw.length === 0) return [];
+  // Backend is expected to return events already sorted, but a defensive
+  // desc-by-timestamp sort keeps the UI stable if the ordering changes.
+  return [...raw]
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+    .map(activationHistoryItemToEvent);
+}
 
 // Explorer Link Button Component
 interface ExplorerLinkButtonProps {
@@ -217,6 +256,44 @@ export default function ContractDetails({
 
     fetchContractData();
   }, [contractService, contractId, viewType, initialContractData]);
+
+  // Multicall `programTimeLeft` for the currently open contract so the
+  // Activation tab can distinguish "never activated" / "expired" /
+  // "needs upgrade" reverts from a genuine "backend has no reading yet",
+  // matching what the contracts table does per row. The backend value
+  // still wins when present; this hook only fills the gap when
+  // `contract.programTimeLeft` is null (list endpoints pre-COB-490, RPC
+  // hiccup, or contracts whose `activationStatus` has never rolled up).
+  //
+  // Chain id preference: read the chain off the contract itself first,
+  // then fall back to the header selector. The contract carries its own
+  // `blockchain.chainId` from the backend, so the hook can fire even
+  // before `useBlockchainService()` finishes hydrating — otherwise the
+  // tab briefly shows "Unknown" while the row already renders "Active"
+  // (the row is memoised after chainId is available).
+  const activationChainId =
+    contractData?.blockchain?.chainId ?? currentBlockchain?.chainId;
+  const programAddressesForTab = useMemo(
+    () => (contractData?.address ? [contractData.address] : undefined),
+    [contractData?.address]
+  );
+  const { data: programTimeLeftMap, isLoading: isProgramTimeLeftLoading } =
+    useProgramTimeLeft(programAddressesForTab, activationChainId);
+  const programReadingForTab = contractData?.address
+    ? programTimeLeftMap[contractData.address.toLowerCase()]
+    : undefined;
+
+  // The Activation tab is "loading" while either input the status header
+  // depends on is still resolving: the detail-endpoint response (recognised
+  // by `activationHistory` transitioning from `undefined` → `[]`), or the
+  // on-chain multicall when the backend did not supply `programTimeLeft`
+  // and we therefore need the multicall to derive the effective status.
+  // Otherwise the skeleton stops early and the badge flashes "Unknown"
+  // for a beat before flipping to the real state.
+  const isActivationTabLoading =
+    contractData?.activationHistory === undefined ||
+    (isProgramTimeLeftLoading &&
+      backendProgramTimeLeft(contractData?.programTimeLeft ?? null) === null);
 
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
@@ -618,9 +695,12 @@ export default function ContractDetails({
 
               <TabsContent value='activation'>
                 <ActivationTab
-                  activation={PLACEHOLDER_ACTIVATION}
-                  history={[]}
+                  activation={resolveActivationInfo(contractData, programReadingForTab)}
+                  history={buildActivationHistory(contractData)}
+                  autoActivate={contractData?.autoActivate}
+                  maxActivationCost={contractData?.maxActivationCost}
                   chainId={currentBlockchain?.chainId}
+                  isLoading={isActivationTabLoading}
                 />
               </TabsContent>
 
@@ -668,9 +748,10 @@ export default function ContractDetails({
 
               <TabsContent value='activation'>
                 <ActivationTab
-                  activation={PLACEHOLDER_ACTIVATION}
-                  history={[]}
+                  activation={resolveActivationInfo(contractData, programReadingForTab)}
+                  history={buildActivationHistory(contractData)}
                   chainId={currentBlockchain?.chainId}
+                  isLoading={isActivationTabLoading}
                   readOnly
                 />
               </TabsContent>
