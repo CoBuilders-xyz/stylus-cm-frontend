@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { formatEther } from 'viem';
 import { ExternalLink, Loader2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -384,8 +385,19 @@ function ActivateNowControl({
   const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
   const targetChainLabel = chainName ?? 'the contract network';
 
+  // `dataFee == null` covers both "simulation still loading" and
+  // "simulation failed" — either way, disable the idle button rather than
+  // dead-end the user in an error toast. `activate()` still surfaces the
+  // simulation error as a toast if the user manages to click through
+  // (e.g. from a stale render).
+  const cannotActivate = isActivating || dataFee == null;
+
+  // Pick the button for the current state; the tx-hash link below renders
+  // regardless of branch so a mid-tx wallet disconnect or chain switch
+  // does not hide the reference to a transaction that is already in flight.
+  let button: ReactNode;
   if (isActive) {
-    return (
+    button = (
       <Tooltip>
         <TooltipTrigger asChild>
           <span>
@@ -401,10 +413,8 @@ function ActivateNowControl({
         <TooltipContent>Contract is already active</TooltipContent>
       </Tooltip>
     );
-  }
-
-  if (!isConnected) {
-    return (
+  } else if (!isConnected) {
+    button = (
       <Tooltip>
         <TooltipTrigger asChild>
           <span>
@@ -420,10 +430,8 @@ function ActivateNowControl({
         <TooltipContent>Connect your wallet to activate</TooltipContent>
       </Tooltip>
     );
-  }
-
-  if (isChainMismatch) {
-    return (
+  } else if (isChainMismatch) {
+    button = (
       <Button
         onClick={switchToTarget}
         disabled={isSwitchingChain}
@@ -439,17 +447,8 @@ function ActivateNowControl({
           : `Switch to ${targetChainLabel}`}
       </Button>
     );
-  }
-
-  // `dataFee == null` covers both "simulation still loading" and
-  // "simulation failed" — either way, disable the button rather than
-  // dead-end the user in an error toast. `activate()` still surfaces the
-  // simulation error as a toast if the user manages to click through
-  // (e.g. from a stale render).
-  const cannotActivate = isActivating || dataFee == null;
-
-  return (
-    <div className='flex flex-col items-end gap-1'>
+  } else {
+    button = (
       <Button
         onClick={activate}
         disabled={cannotActivate}
@@ -465,6 +464,12 @@ function ActivateNowControl({
           <Loader2 className='h-3 w-3 animate-spin' />
         )}
       </Button>
+    );
+  }
+
+  return (
+    <div className='flex flex-col items-end gap-1'>
+      {button}
       {txHash && txUrl && (
         <a
           href={txUrl}

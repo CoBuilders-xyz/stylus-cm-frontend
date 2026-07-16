@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
-import { parseEther } from 'viem';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { isAddress, parseEther } from 'viem';
 import {
   useAccount,
   useChainId,
@@ -82,36 +82,7 @@ export function useActivateProgram({
   const isChainMismatch =
     isConnected && targetChainId != null && walletChainId !== targetChainId;
 
-  const isValidAddress =
-    typeof address === 'string' && address.length === 42;
-
-  const {
-    data: simulation,
-    error: simulationError,
-    isLoading: isSimulating,
-  } = useSimulateContract({
-    address: ARB_WASM_PRECOMPILE,
-    abi: ARB_WASM_ABI,
-    functionName: 'activateProgram',
-    args: isValidAddress ? [address as `0x${string}`] : undefined,
-    value: ACTIVATION_SIMULATION_VALUE,
-    chainId: targetChainId,
-    query: {
-      enabled:
-        enabled &&
-        isConnected &&
-        isValidAddress &&
-        !isChainMismatch &&
-        targetChainId != null,
-    },
-  });
-
-  const dataFee = useMemo(() => {
-    const result = simulation?.result as
-      | readonly [number, bigint]
-      | undefined;
-    return result?.[1];
-  }, [simulation]);
+  const isValidAddress = typeof address === 'string' && isAddress(address);
 
   const {
     writeContract,
@@ -125,6 +96,40 @@ export function useActivateProgram({
     status === TransactionStatus.PREPARING ||
     status === TransactionStatus.PENDING;
   const isConfirmed = status === TransactionStatus.SUCCESS;
+
+  const {
+    data: simulation,
+    error: simulationError,
+    isLoading: isSimulating,
+  } = useSimulateContract({
+    address: ARB_WASM_PRECOMPILE,
+    abi: ARB_WASM_ABI,
+    functionName: 'activateProgram',
+    args: isValidAddress ? [address as `0x${string}`] : undefined,
+    value: ACTIVATION_SIMULATION_VALUE,
+    chainId: targetChainId,
+    query: {
+      // Also stop simulating once the write is in flight or just confirmed —
+      // the precompile would revert with `ProgramUpToDate` and surface as
+      // a `simulationError` in the small window before the parent refetches
+      // and flips `enabled` off from the caller side.
+      enabled:
+        enabled &&
+        isConnected &&
+        isValidAddress &&
+        !isChainMismatch &&
+        !isActivating &&
+        !isConfirmed &&
+        targetChainId != null,
+    },
+  });
+
+  const dataFee = useMemo(() => {
+    const result = simulation?.result as
+      | readonly [number, bigint]
+      | undefined;
+    return result?.[1];
+  }, [simulation?.result]);
 
   const switchToTarget = useCallback(() => {
     if (targetChainId != null) {
@@ -183,11 +188,34 @@ export function useActivateProgram({
     writeContract,
   ]);
 
+  // Stash `onConfirmed` and `activate` in refs so the effects below can
+  // depend on transaction state alone — otherwise the callback identity
+  // changing on every parent render would re-fire the success toast for
+  // the whole ~3s `useWeb3` auto-reset window, and the error toast's
+  // Retry would capture a stale `activate` closure with an outdated fee.
+  const onConfirmedRef = useRef(onConfirmed);
   useEffect(() => {
-    if (!isConfirmed) return;
-    showSuccessToast({ message: 'Contract activated successfully.' });
-    onConfirmed?.();
-  }, [isConfirmed, onConfirmed]);
+    onConfirmedRef.current = onConfirmed;
+  }, [onConfirmed]);
+
+  const activateRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    activateRef.current = activate;
+  }, [activate]);
+
+  const hasFiredConfirmationRef = useRef(false);
+  useEffect(() => {
+    if (isConfirmed) {
+      if (hasFiredConfirmationRef.current) return;
+      hasFiredConfirmationRef.current = true;
+      showSuccessToast({ message: 'Contract activated successfully.' });
+      onConfirmedRef.current?.();
+    } else {
+      // Arm the guard again once `useWeb3` auto-resets, so a subsequent
+      // activation attempt on the same hook instance can fire its toast.
+      hasFiredConfirmationRef.current = false;
+    }
+  }, [isConfirmed]);
 
   useEffect(() => {
     if (!writeError) return;
@@ -210,11 +238,11 @@ export function useActivateProgram({
       // Surface the gas-price-protection message from useWeb3 as-is.
       display = message;
     }
-    showErrorToast({ message: display, onRetry: activate });
+    // Route the retry through the ref so the toast always calls the most
+    // recent `activate` (fresh `dataFee`, chain, etc.) even if the toast
+    // outlives the render that raised it.
+    showErrorToast({ message: display, onRetry: () => activateRef.current() });
     reset();
-    // `activate` changes on every render because it depends on `dataFee`;
-    // including it here would re-fire the toast on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [writeError, reset]);
 
   return {
