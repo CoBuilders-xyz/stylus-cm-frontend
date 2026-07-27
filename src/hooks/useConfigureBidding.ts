@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAddress, type Abi } from 'viem';
 import {
   useAccount,
@@ -10,6 +10,34 @@ import {
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { showErrorToast, showSuccessToast } from '@/components/Toast';
 import { TransactionStatus, useWeb3 } from '@/hooks/useWeb3';
+
+/**
+ * Best-effort decode of the on-chain error surfaced by a viem
+ * `simulateContract` rejection. Viem wraps CMA reverts in
+ * `ContractFunctionExecutionError`; we pull the error name (e.g.
+ * `InvalidBid`) or the short message so the user sees the actual CMA
+ * failure reason instead of a generic "would revert".
+ */
+function extractRevertReason(err: unknown): string | null {
+  if (err == null || typeof err !== 'object') return null;
+  const anyErr = err as {
+    cause?: { data?: { errorName?: string }; errorName?: string };
+    shortMessage?: string;
+    message?: string;
+  };
+  const errorName =
+    anyErr.cause?.data?.errorName ??
+    anyErr.cause?.errorName ??
+    undefined;
+  if (typeof errorName === 'string' && errorName.length > 0) {
+    return errorName;
+  }
+  const short = anyErr.shortMessage;
+  if (typeof short === 'string' && short.length > 0) {
+    return short;
+  }
+  return null;
+}
 
 export interface UseConfigureBiddingParams {
   /** WASM contract whose CMA bidding config is being edited. */
@@ -203,18 +231,27 @@ export function useConfigureBidding({
     },
   });
 
-  // Snapshot the args tuple that the declarative simulate has already
-  // resolved for. When a settle event lands (data or error, not-loading),
-  // record the current args — subsequent `save()` calls compare against
-  // this to know whether the declarative result is fresh or if the form
-  // changed in the same tick (toggle path).
-  const lastSimulatedArgsRef = useRef<readonly unknown[] | null>(null);
+  // Snapshot the full simulate identity — args tuple + value + functionName
+  // — that the declarative simulate has already resolved for. Comparing
+  // only `args` would let a same-tick funding-value edit (writeValue
+  // changes, args unchanged) or an insert→update transition (functionName
+  // flips) falsely match a stale snapshot, green-lighting an unsimulated
+  // write.
+  const lastSimulatedKeyRef = useRef<{
+    args: readonly unknown[];
+    value: bigint;
+    functionName: string;
+  } | null>(null);
   useEffect(() => {
     if (isSimulating) return;
     if (args == null) return;
     if (simData === undefined && simulationError == null) return;
-    lastSimulatedArgsRef.current = args as unknown as readonly unknown[];
-  }, [args, isSimulating, simData, simulationError]);
+    lastSimulatedKeyRef.current = {
+      args: args as unknown as readonly unknown[],
+      value: writeValue,
+      functionName,
+    };
+  }, [args, functionName, isSimulating, simData, simulationError, writeValue]);
 
   const switchToTarget = useCallback(() => {
     if (targetChainId == null) {
@@ -231,17 +268,27 @@ export function useConfigureBidding({
   // toggle would silently retry with the hook-level (pre-flip) values.
   const lastOverridesRef = useRef<SaveOverrides | undefined>(undefined);
 
+  // Guards against a re-entrant `save()` during the imperative simulate
+  // await. `isSaving` (from `useWeb3`) only turns true once
+  // `writeContract` is invoked, so a second click landing while the
+  // first save is still awaiting the preflight sim would race to two
+  // wallet prompts. Ref for the synchronous re-entry check inside
+  // `save()`; state so the UI can disable the button during preflight.
+  const isPreflightingRef = useRef(false);
+  const [isPreflighting, setIsPreflighting] = useState(false);
+
   const save = useCallback(
     async (overrides?: SaveOverrides) => {
-      lastOverridesRef.current = overrides;
-      // Defensive gate — mirrors `useConfigureAutoActivation`. If the caller
-      // reaches `save()` with `enabled: false` (retry callback across a
-      // pristine re-render, keyboard submit past a disabled button), the
-      // declarative simulate has been skipped so we have no validation
-      // result to fail-closed on. Refuse.
-      if (!enabled) {
+      // NB: no `enabled` gate here. `enabled` disables the declarative
+      // simulate query for pristine forms, but `save()` still has to
+      // work for the toggle path — pristine input + click Disable is
+      // valid and its safety comes from the imperative-simulate branch
+      // below, not from the declarative one.
+      if (isPreflightingRef.current) {
         return;
       }
+      lastOverridesRef.current = overrides;
+
       if (!isConnected) {
         showErrorToast({
           message: 'Connect your wallet to save this configuration.',
@@ -273,19 +320,21 @@ export function useConfigureBidding({
         currentMaxActivationCost,
       ];
 
-      // Are the write args identical to what the declarative simulate
-      // most recently resolved for? If yes (typical Set/Update path with
-      // no overrides and no same-tick edits), the declarative
-      // `simulationError` is authoritative and we can skip the RPC
-      // round-trip. If no (toggle path with overrides, or same-tick form
-      // state change), run an imperative simulate before writing.
-      const last = lastSimulatedArgsRef.current;
-      const argsMatch =
+      // Are the write's full simulate identity (args + value +
+      // functionName) identical to what the declarative simulate last
+      // resolved for? If yes (typical Set/Update path with no overrides
+      // and no same-tick edits), the declarative `simulationError` is
+      // authoritative. Otherwise run an imperative simulate before
+      // writing.
+      const last = lastSimulatedKeyRef.current;
+      const keyMatch =
         last != null &&
-        last.length === writeArgs.length &&
-        last.every((v, i) => v === writeArgs[i]);
+        last.value === writeValue &&
+        last.functionName === functionName &&
+        last.args.length === writeArgs.length &&
+        last.args.every((v, i) => v === writeArgs[i]);
 
-      if (argsMatch) {
+      if (keyMatch) {
         if (simulationError != null) {
           showErrorToast({
             message:
@@ -307,6 +356,8 @@ export function useConfigureBidding({
           });
           return;
         }
+        isPreflightingRef.current = true;
+        setIsPreflighting(true);
         try {
           await publicClient.simulateContract({
             address: cmaAddress,
@@ -316,12 +367,20 @@ export function useConfigureBidding({
             value: writeValue,
             account: userAddress,
           });
-        } catch {
+        } catch (err) {
+          // Preserve viem's decoded revert reason so the user sees the
+          // actual CMA error (`InvalidBid()`, `ContractAlreadyExists()`,
+          // etc.) instead of a generic "would revert".
+          const reason = extractRevertReason(err);
           showErrorToast({
-            message:
-              'Cannot save: the transaction would revert. Fix the config and retry.',
+            message: reason
+              ? `Cannot save: ${reason}. Fix the config and retry.`
+              : 'Cannot save: the transaction would revert. Fix the config and retry.',
           });
           return;
+        } finally {
+          isPreflightingRef.current = false;
+          setIsPreflighting(false);
         }
       }
 
@@ -341,7 +400,6 @@ export function useConfigureBidding({
       contractAddress,
       currentAutoActivate,
       currentMaxActivationCost,
-      enabled,
       functionName,
       isChainMismatch,
       isConnected,
@@ -380,10 +438,17 @@ export function useConfigureBidding({
       hasFiredConfirmationRef.current = true;
       showSuccessToast({ message: 'Bidding config saved.' });
       onConfirmedRef.current?.();
+      // Return the useWeb3 state machine to IDLE — otherwise `status`
+      // stays `SUCCESS` for the rest of the session, `isConfirmed`
+      // remains true, and the declarative simulate query stays
+      // permanently disabled (see the `!isConfirmed` gate above).
+      // Subsequent saves would fall back to the imperative path only
+      // and the inline retry banner would never re-populate.
+      reset();
     } else {
       hasFiredConfirmationRef.current = false;
     }
-  }, [isConfirmed]);
+  }, [isConfirmed, reset]);
 
   useEffect(() => {
     if (!writeError) return;
@@ -431,7 +496,10 @@ export function useConfigureBidding({
     isSimulating,
     simulationError: simulationError ?? null,
     refetchSimulation: refetchSimulationStable,
-    isSaving,
+    // Fold preflight into `isSaving` so a single flag disables the UI
+    // across both the imperative sim await and the write phase — no
+    // caller has to know the internal state split.
+    isSaving: isSaving || isPreflighting,
     isConfirmed,
     txHash,
     save: saveStable,

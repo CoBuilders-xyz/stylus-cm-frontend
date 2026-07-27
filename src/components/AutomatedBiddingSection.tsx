@@ -81,7 +81,10 @@ export function AutomatedBiddingSection({
     contractAddress: contract?.address,
   });
 
-  // Get user balance from cache manager automation contract
+  // Get user balance from cache manager automation contract. Gated on
+  // `chainId != null` too — without it, wagmi falls back to the connected
+  // chain before `chainId` resolves and reads `cmaAddress` (a chain-scoped
+  // contract) on the wrong chain, surfacing a stale zero balance.
   const { data: userBalance, refetch: refetchBalance } = useReadContract({
     address: cmaAddress,
     abi: cacheManagerAutomationAbi.abi as Abi,
@@ -89,7 +92,11 @@ export function AutomatedBiddingSection({
     account: userAddress,
     chainId,
     query: {
-      enabled: cmaAddress != null && isConnected && !!userAddress,
+      enabled:
+        cmaAddress != null &&
+        chainId != null &&
+        isConnected &&
+        !!userAddress,
     },
   });
 
@@ -150,6 +157,11 @@ export function AutomatedBiddingSection({
 
   const parsedMaxBid = safeParseEther(inputValue);
   const parsedFunding = safeParseEther(fundingValue);
+  // Persisted on-chain `maxBid` (from `originalMaxBid`, rehydrated from
+  // the CMA record). Kept alongside `parsedMaxBid` because the toggle
+  // path writes the persisted value and must remain functional even
+  // when the user has cleared the max-bid input.
+  const persistedMaxBid = safeParseEther(originalMaxBid);
 
   // Activation-side fields to preserve on the atomic write. When
   // registered, echo the live on-chain values; on fresh insert, seed
@@ -157,9 +169,13 @@ export function AutomatedBiddingSection({
   const preserveAutoActivate = cmaRecord?.autoActivate ?? false;
   const preserveMaxActivationCost = cmaRecord?.maxActivationCost ?? BigInt(0);
 
-  // Gate the declarative simulate: only when the CMA record has resolved
-  // (registered vs fresh insert is known) and the max-bid input parses
-  // to a non-zero value that could plausibly pass CMA validation.
+  // Gate the DECLARATIVE simulate only: CMA record resolved + a
+  // usable input maxBid. The toggle path is intentionally not covered
+  // here — with an empty input, sim stays disabled (no doomed RPCs)
+  // but `save({maxBid: persistedMaxBid, ...})` still works, because
+  // the hook does not gate `save()` on `enabled` and falls through to
+  // the imperative-simulate branch when the declarative snapshot is
+  // absent.
   const isFormReady =
     cmaRecord !== undefined && parsedMaxBid > BigInt(0);
 
@@ -270,12 +286,6 @@ export function AutomatedBiddingSection({
   // only after tx confirmation. See `SaveOverrides` in
   // `useConfigureBidding` for why the overrides are needed.
   const handleToggleAutomation = () => {
-    let persistedMaxBid: bigint;
-    try {
-      persistedMaxBid = parseEther(originalMaxBid || '0');
-    } catch {
-      persistedMaxBid = BigInt(0);
-    }
     save({
       maxBid: persistedMaxBid,
       biddingEnabled: !automatedBidding,
