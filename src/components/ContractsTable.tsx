@@ -47,8 +47,6 @@ import {
   buildActivationInfo,
   type ActivationInfo,
 } from '@/lib/activation';
-import { useProgramTimeLeft } from '@/hooks/useProgramTimeLeft';
-import { useBlockchainService } from '@/hooks/useBlockchainService';
 
 interface ContractsTableProps {
   contracts?: Contract[];
@@ -414,60 +412,32 @@ function ContractsTable({
   );
 
   const { isAuthenticated } = useAuthentication();
-  const { currentBlockchain } = useBlockchainService(false);
   const [searchInput, setSearchInput] = useState('');
   const [activationFilter, setActivationFilter] =
     useState<ActivationFilter>('all');
 
   // Source contracts before activation filtering — keep this in a separate
-  // memo so the multicall doesn't re-run when only `activationFilter` changes.
+  // memo so downstream derivations don't re-run when only the filter changes.
   const sourceContracts = useMemo(
     () => (initialContracts?.length ? initialContracts : contracts),
     [initialContracts, contracts]
   );
 
-  const addressesForMulticall = useMemo(
-    () =>
-      sourceContracts
-        .map((c) =>
-          backendProgramTimeLeft(c.programTimeLeft) === null ? c.address : null
-        )
-        .filter((a): a is string => a !== null),
-    [sourceContracts]
-  );
-
-  const { data: programTimeLeftMap } = useProgramTimeLeft(
-    addressesForMulticall,
-    currentBlockchain?.chainId
-  );
-
-  // Resolve the effective activation status for every visible row. Prefer
-  // `contract.programTimeLeft` (post-COB-490) and fall back to the multicall
-  // result; once COB-490 lands, both `useProgramTimeLeft` and this fallback
-  // collapse to a single line.
+  // Resolve the effective activation status for every visible row using the
+  // backend-provided fields. `programTimeLeft` + `programTimeLeftReason` are
+  // returned on the list endpoints since COB-490, so no FE multicall or
+  // fallback is required — `buildActivationInfo` reads the reason off the
+  // contract object directly.
   const rowsWithActivation = useMemo(
     () =>
-      sourceContracts.map((contract) => {
-        const fromBackend = backendProgramTimeLeft(contract.programTimeLeft);
-        const fromMulticall = programTimeLeftMap[contract.address.toLowerCase()];
-        const programTimeLeftSeconds =
-          fromBackend !== null ? fromBackend : (fromMulticall?.seconds ?? null);
-        return {
+      sourceContracts.map((contract) => ({
+        contract,
+        activation: buildActivationInfo(
           contract,
-          activation: buildActivationInfo(
-            contract,
-            programTimeLeftSeconds,
-            // `reason` is only available via the multicall today. Once
-            // COB-490 ships `programTimeLeft` on list endpoints we lose the
-            // ProgramExpired / NeedsUpgrade detail for those rows — backend
-            // should also surface a reason field at that point, otherwise
-            // the badge sublabel falls back to the generic "Reactivation
-            // required".
-            fromMulticall?.reason
-          ),
-        };
-      }),
-    [sourceContracts, programTimeLeftMap]
+          backendProgramTimeLeft(contract.programTimeLeft)
+        ),
+      })),
+    [sourceContracts]
   );
 
   const displayRows = useMemo(() => {

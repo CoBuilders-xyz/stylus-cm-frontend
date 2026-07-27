@@ -9,7 +9,10 @@
  */
 
 import { formatEther } from 'viem';
-import type { ActivationHistoryItem } from '@/services/contractService';
+import type {
+  ActivationHistoryItem,
+  ProgramTimeLeftReason,
+} from '@/services/contractService';
 
 const DAY = 86_400;
 const HOUR = 3_600;
@@ -61,15 +64,17 @@ export interface ActivationStatusInput {
 /**
  * Resolve the effective activation status for a contract by combining the
  * backend-persisted `activationStatus` ('unknown' | 'active' | 'error') with
- * the on-chain `programTimeLeft` reading.
+ * the `programTimeLeft` reading now returned by both list and detail
+ * endpoints (COB-490 backend).
  *
  * - `error` from the backend trumps only when we can't prove the contract is
  *   currently active. A successful direct-precompile activation refreshes
  *   `programTimeLeft` immediately but does not clear the CMA-driven
- *   `activationStatus`, so a fresh positive on-chain reading overrides the
- *   stale error (COB-503).
- * - When `programTimeLeft` is missing (list endpoints pre-COB-490, RPC error,
- *   or contract never activated) we fall back to the persisted status.
+ *   `activationStatus`, so a fresh positive reading overrides the stale
+ *   error (COB-503).
+ * - When `programTimeLeft` is missing (transient backend timeout on the
+ *   ArbWasm read — cached as `null` for a short window server-side) we fall
+ *   back to the persisted status.
  * - `programTimeLeft <= 0` → `inactive`; below the expiring threshold →
  *   `expiring`; otherwise `active`.
  */
@@ -116,8 +121,8 @@ export function getEffectiveActivationStatus(
  * - negative numbers (the precompile returns `uint64`, anything < 0 is
  *   garbage from the backend).
  *
- * Returns parsed seconds when usable, otherwise `null` ("no backend
- * reading — fall back to the on-chain multicall").
+ * Returns parsed seconds when usable, otherwise `null` ("no usable backend
+ * reading" — consumers should fall back to the persisted activationStatus).
  */
 export function backendProgramTimeLeft(
   raw: string | null | undefined
@@ -131,36 +136,32 @@ export function backendProgramTimeLeft(
 /**
  * Narrow shape needed to feed `buildActivationInfo` — kept minimal so any
  * contract-like object (Contract, UserContract, row draft) can be passed
- * without importing the wider domain type.
+ * without importing the wider domain type. `programTimeLeftReason` now
+ * comes from the backend directly (COB-490) — consumers used to pass it
+ * as a separate arg sourced from the on-chain multicall.
  */
 export interface ActivationInfoInput extends ActivationStatusInput {
   lastActivationTimestamp?: string | null;
+  programTimeLeftReason?: ProgramTimeLeftReason | null;
 }
-
-/**
- * `ProgramReason` (from `useProgramTimeLeft`) and `ActivationDetail` share
- * the same string union deliberately — the two domains stay decoupled but
- * a value from one can be passed to the other without an identity map.
- * Consumers should keep the alignment when either union changes.
- */
-type ProgramReasonLike = ActivationDetail;
 
 /**
  * Compose an {@link ActivationInfo} from a contract + a `programTimeLeft`
  * reading. Both the contracts table and the ContractDetails Activation tab
- * feed this so their status badges stay in lockstep.
+ * feed this so their status badges stay in lockstep. The `detail` sublabel
+ * comes from `contract.programTimeLeftReason` (backend-decoded) since
+ * COB-490.
  */
 export function buildActivationInfo(
   contract: ActivationInfoInput,
-  programTimeLeftSeconds: number | null,
-  reason: ProgramReasonLike | undefined
+  programTimeLeftSeconds: number | null
 ): ActivationInfo {
   const status = getEffectiveActivationStatus(contract, programTimeLeftSeconds);
   return {
     status,
     secondsRemaining: programTimeLeftSeconds,
     lastActivatedAt: contract.lastActivationTimestamp ?? null,
-    detail: reason,
+    detail: contract.programTimeLeftReason ?? undefined,
   };
 }
 
