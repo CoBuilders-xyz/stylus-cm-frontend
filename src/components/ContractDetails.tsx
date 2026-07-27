@@ -256,12 +256,16 @@ export default function ContractDetails({
   const activationChainId =
     contractData?.blockchain?.chainId ?? currentBlockchain?.chainId;
 
-  // The Activation tab is "loading" while the detail-endpoint response is
-  // still in flight (recognised by `activationHistory` transitioning from
-  // `undefined` → `[]`). `programTimeLeft` and `programTimeLeftReason` now
-  // arrive with the same response since COB-490, so no separate on-chain
-  // gate is needed.
-  const isActivationTabLoading = contractData?.activationHistory === undefined;
+  // The Activation tab is "loading" while the enriched contract fetch is
+  // in flight. `isLoadingContract` is the honest signal — the previous
+  // proxy (`activationHistory === undefined`) left the tab stuck on the
+  // skeleton in the explore-contracts view, where `initialContractData`
+  // comes from the list endpoint (no `activationHistory` field) and no
+  // detail fetch ever runs. Post-COB-490 all badge-relevant fields
+  // (`programTimeLeft`, `programTimeLeftReason`, `activationStatus`)
+  // arrive on both endpoints, so gating on `activationHistory` was
+  // over-eager anyway.
+  const isActivationTabLoading = isLoadingContract;
 
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
