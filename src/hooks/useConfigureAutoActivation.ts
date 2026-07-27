@@ -175,6 +175,16 @@ export function useConfigureAutoActivation({
   }, [switchChain, targetChainId]);
 
   const save = useCallback(() => {
+    // Defensive gate — the caller sets `enabled` from its own dirtiness
+    // check and the Save button already refuses pristine forms, but if
+    // some future call path (keyboard submit, retry callback across a
+    // re-render that made the form pristine again) reaches `save()`
+    // pristine, the internal simulate has been skipped (`enabled: false`
+    // above), so `simulationError` / `isSimulating` are both null and
+    // the write would go through unvalidated. Refuse it.
+    if (!enabled) {
+      return;
+    }
     if (!isConnected) {
       showErrorToast({
         message: 'Connect your wallet to save this configuration.',
@@ -219,6 +229,7 @@ export function useConfigureAutoActivation({
   }, [
     args,
     cmaAddress,
+    enabled,
     functionName,
     isChainMismatch,
     isConnected,
