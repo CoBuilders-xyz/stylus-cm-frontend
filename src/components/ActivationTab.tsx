@@ -1,9 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { formatEther } from 'viem';
-import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Zap } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { formatEther, parseEther } from 'viem';
+import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +21,8 @@ import ActivationBadge from '@/components/ActivationBadge';
 import { formatDate } from '@/utils/formatting';
 import { explorerTxUrl } from '@/utils/explorer';
 import { useActivateProgram } from '@/hooks/useActivateProgram';
+import { useConfigureAutoActivation } from '@/hooks/useConfigureAutoActivation';
+import { useUserCMAContract } from '@/hooks/useUserCMAContract';
 
 interface Props {
   activation: ActivationInfo;
@@ -35,13 +40,19 @@ interface Props {
   onActivated?: () => void;
   readOnly?: boolean;
   /**
-   * Persisted per-contract auto-activation config from the backend. Rendered
-   * as a read-only summary here — the interactive editing surface (with
-   * on-chain writes to `CacheManagerAutomation`) lands in COB-499.
+   * Persisted per-contract auto-activation config from the backend. Used
+   * only for the read-only summary rendered on the explore view — the
+   * editable path sources baseline values from the on-chain CMA read via
+   * `useUserCMAContract` (COB-499 addendum), so backend indexer lag can
+   * no longer cause silent clobbers between the Activation and Bidding tabs.
    */
   autoActivate?: boolean;
   /** Max activation cost in wei (`null` = never configured). */
   maxActivationCost?: string | null;
+  /** CMA contract address on the contract's chain, needed for the on-chain read. */
+  cmaAddress?: `0x${string}`;
+  /** Fires after the CMA config tx is confirmed on-chain. */
+  onConfigSaved?: () => void;
   /** True while the parent is fetching the enriched contract detail. */
   isLoading?: boolean;
 }
@@ -70,11 +81,18 @@ export default function ActivationTab({
   readOnly = false,
   autoActivate,
   maxActivationCost,
+  cmaAddress,
+  onConfigSaved,
   isLoading = false,
 }: Props) {
   const isActive = activation.status === 'active';
   const canActivate =
     !readOnly && contractAddress != null && chainId != null;
+  const canConfigure =
+    !readOnly &&
+    contractAddress != null &&
+    chainId != null &&
+    cmaAddress != null;
 
   if (isLoading) {
     return <ActivationTabSkeleton readOnly={readOnly} />;
@@ -119,10 +137,17 @@ export default function ActivationTab({
         </div>
       </div>
 
-      {/* Auto-activation — read-only for now. The editable version (switch
-          + max cost input + on-chain write against CacheManagerAutomation)
-          lives in COB-499. */}
-      {!readOnly && (
+      {/* Auto-activation config — interactive when the parent supplies the
+          CMA state, otherwise a read-only summary (explore view). */}
+      {canConfigure ? (
+        <AutoActivationConfig
+          contractAddress={contractAddress as string}
+          chainId={chainId as number}
+          chainName={chainName}
+          cmaAddress={cmaAddress as `0x${string}`}
+          onSaved={onConfigSaved}
+        />
+      ) : !readOnly ? (
         <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
           <div className='flex items-start justify-between gap-4 flex-wrap'>
             <div>
@@ -158,13 +183,8 @@ export default function ActivationTab({
               </dd>
             </div>
           </dl>
-
-          <p className='mt-4 text-xs text-gray-500'>
-            Configuration is coming soon. For now this reflects the value
-            persisted from the on-chain events.
-          </p>
         </div>
-      )}
+      ) : null}
 
       {/* Activation history — indexed from the CacheManagerAutomation
           `ActivationPerformed` and `ActivationError` events by the backend. */}
@@ -514,6 +534,473 @@ function ActivateNowControl({
           <ExternalLink className='h-3 w-3' />
         </a>
       )}
+    </div>
+  );
+}
+
+interface AutoActivationConfigProps {
+  contractAddress: string;
+  chainId: number;
+  chainName: string | undefined;
+  cmaAddress: `0x${string}`;
+  onSaved: (() => void) | undefined;
+}
+
+const ZERO_WEI = BigInt(0);
+
+/**
+ * Interactive auto-activation config. Sources the "current" per-contract CMA
+ * state (`autoActivate`, `maxActivationCost`, and the bidding fields we must
+ * echo back on the atomic write) directly from the on-chain
+ * `getUserContracts` view via {@link useUserCMAContract}, not from the
+ * backend `Contract`. That eliminates the whole class of "backend indexer
+ * lag lets one tab silently clobber the other tab's config" bugs — the
+ * chain updates immediately on tx confirmation, and a `refetch()` from
+ * the `onConfirmed` callback keeps the form baseline in lockstep.
+ *
+ * Delegates the actual write to {@link useConfigureAutoActivation}. Local
+ * form state is initialised once from the on-chain read; after that the
+ * user's edits are the truth until they save.
+ */
+function AutoActivationConfig({
+  contractAddress,
+  chainId,
+  chainName,
+  cmaAddress,
+  onSaved,
+}: AutoActivationConfigProps) {
+  const {
+    data: onChainConfig,
+    isRegistered,
+    minMaxBidAmount,
+    isLoading: isCMAReadLoading,
+    error: cmaReadError,
+    refetch: refetchCMAConfig,
+  } = useUserCMAContract({ chainId, cmaAddress, contractAddress });
+
+  // Skeleton the config card until BOTH on-chain reads resolve — form
+  // state needs `getUserContracts` for the baseline and Activation-first
+  // flows need `minMaxBidAmount` as the `maxBid` seed for `insertContract`.
+  // The hook's `isLoading` is now the combined state, so one gate covers
+  // both. Any failure surfaces through the error path with a retry that
+  // hits both reads.
+  if (isCMAReadLoading) {
+    return <AutoActivationConfigSkeleton />;
+  }
+  if (cmaReadError || minMaxBidAmount === undefined) {
+    return (
+      <AutoActivationConfigError
+        message='Could not read the on-chain configuration.'
+        onRetry={refetchCMAConfig}
+      />
+    );
+  }
+
+  return (
+    <AutoActivationConfigForm
+      contractAddress={contractAddress}
+      chainId={chainId}
+      chainName={chainName}
+      cmaAddress={cmaAddress}
+      isRegistered={isRegistered}
+      onChainAutoActivate={onChainConfig?.autoActivate ?? false}
+      onChainMaxActivationCost={onChainConfig?.maxActivationCost ?? ZERO_WEI}
+      // Registered → echo the current `maxBid`. Not registered →
+      // fall back to `minMaxBidAmount`, the CMA-enforced floor. `0n`
+      // would revert with `InvalidBid()` even with `enabled = false`,
+      // so this nominal value is the only safe seed for the
+      // Activation-first insertContract path.
+      onChainMaxBid={onChainConfig?.maxBid ?? minMaxBidAmount}
+      onChainBiddingEnabled={onChainConfig?.enabled ?? false}
+      refetchCMAConfig={refetchCMAConfig}
+      onSaved={onSaved}
+    />
+  );
+}
+
+interface AutoActivationConfigFormProps {
+  contractAddress: string;
+  chainId: number;
+  chainName: string | undefined;
+  cmaAddress: `0x${string}`;
+  isRegistered: boolean;
+  onChainAutoActivate: boolean;
+  onChainMaxActivationCost: bigint;
+  onChainMaxBid: bigint;
+  onChainBiddingEnabled: boolean;
+  refetchCMAConfig: () => void;
+  onSaved: (() => void) | undefined;
+}
+
+function AutoActivationConfigForm({
+  contractAddress,
+  chainId,
+  chainName,
+  cmaAddress,
+  isRegistered,
+  onChainAutoActivate,
+  onChainMaxActivationCost,
+  onChainMaxBid,
+  onChainBiddingEnabled,
+  refetchCMAConfig,
+  onSaved,
+}: AutoActivationConfigFormProps) {
+  // Baseline seeded from the on-chain read. Form state is user-owned once
+  // mounted; the baseline itself refetches after a successful save (see
+  // `onConfirmed` below) so `isDirty` is compared against fresh chain
+  // state, not the local snapshot pattern that COB-499's earlier commits
+  // used against the backend props.
+  const initialCostEth =
+    onChainMaxActivationCost === ZERO_WEI
+      ? ''
+      : formatEther(onChainMaxActivationCost);
+
+  const [enabled, setEnabled] = useState(onChainAutoActivate);
+  const [costEth, setCostEth] = useState(initialCostEth);
+  const [costError, setCostError] = useState<string | null>(null);
+
+  const parsedCost = useMemo<bigint | null>(() => {
+    if (!costEth.trim()) return ZERO_WEI;
+    try {
+      const wei = parseEther(costEth as `${number}`);
+      if (wei < ZERO_WEI) return null;
+      return wei;
+    } catch {
+      return null;
+    }
+  }, [costEth]);
+
+  // `parsedCost === null` after the regex passed (non-empty, decimal-ish
+  // input) means `parseEther` itself rejected it — usually because the
+  // decimal has more than 18 places or is otherwise out of range. Surface
+  // it explicitly so the disabled Save has a visible reason.
+  const hasCostParseError = costEth.trim() !== '' && parsedCost == null;
+
+  const isFormValid = parsedCost != null && (!enabled || parsedCost > ZERO_WEI);
+
+  // `refetchCMAConfig()` fires from `onConfirmed`, but wagmi's refetch has
+  // a network round-trip — for that window (typically a few hundred ms
+  // but can stretch on a slow RPC), `onChainAutoActivate` /
+  // `onChainMaxActivationCost` still reflect the pre-write state while
+  // the form already shows the just-submitted values, so `isDirty`
+  // computed naively would go true and re-enable Save. Snapshot the
+  // submitted values on confirm and use them as the dirtiness baseline
+  // until the chain read catches up.
+  const submittedSnapshotRef = useRef<{
+    enabled: boolean;
+    maxActivationCost: bigint;
+  } | null>(null);
+
+  useEffect(() => {
+    const snap = submittedSnapshotRef.current;
+    if (snap == null) return;
+    if (
+      snap.enabled === onChainAutoActivate &&
+      snap.maxActivationCost === onChainMaxActivationCost
+    ) {
+      submittedSnapshotRef.current = null;
+    }
+  }, [onChainAutoActivate, onChainMaxActivationCost]);
+
+  const snapshot = submittedSnapshotRef.current;
+  const baselineEnabled = snapshot?.enabled ?? onChainAutoActivate;
+  const baselineMaxCost =
+    snapshot?.maxActivationCost ?? onChainMaxActivationCost;
+  const isDirty =
+    enabled !== baselineEnabled ||
+    (parsedCost != null && parsedCost !== baselineMaxCost);
+
+  // Refs so `onConfirmed` (fires once via the hook's internal ref) reads
+  // the values the user just submitted, not stale render-time closures.
+  const enabledRef = useRef(enabled);
+  const parsedCostRef = useRef(parsedCost);
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+  useEffect(() => {
+    parsedCostRef.current = parsedCost;
+  }, [parsedCost]);
+
+  const {
+    isConnected,
+    isChainMismatch,
+    isSwitchingChain,
+    switchToTarget,
+    isSaving,
+    txHash,
+    save,
+    isSimulating,
+    simulationError,
+    refetchSimulation,
+  } = useConfigureAutoActivation({
+    contractAddress,
+    targetChainId: chainId,
+    cmaAddress,
+    isRegistered,
+    // Bidding fields sourced from the on-chain read, not from the
+    // backend — this is the whole point of the CMA read: the atomic
+    // write cannot silently clobber whatever the user set from the
+    // Bidding tab, because we're echoing the authoritative chain
+    // values back.
+    currentMaxBid: onChainMaxBid,
+    currentBiddingEnabled: onChainBiddingEnabled,
+    autoActivate: enabled,
+    maxActivationCost: parsedCost ?? ZERO_WEI,
+    onConfirmed: () => {
+      // Snapshot the just-submitted values as the dirtiness baseline
+      // so Save stays disabled through the refetch round-trip. The
+      // effect above clears the snapshot once the on-chain read
+      // reflects the new values.
+      submittedSnapshotRef.current = {
+        enabled: enabledRef.current,
+        maxActivationCost: parsedCostRef.current ?? ZERO_WEI,
+      };
+      refetchCMAConfig();
+      onSaved?.();
+    },
+    // Skip simulate calls while the form is pristine — no point burning
+    // RPC + a wagmi query key on args that are identical to what's
+    // already on-chain.
+    enabled: isDirty,
+  });
+
+  const txUrl = txHash ? explorerTxUrl(chainId, txHash) : null;
+  const targetChainLabel = chainName ?? 'the contract network';
+
+  const showSimulationFailure =
+    isConnected &&
+    !isChainMismatch &&
+    !isSaving &&
+    !isSimulating &&
+    simulationError != null &&
+    isDirty;
+
+  const handleCostChange = (value: string) => {
+    setCostEth(value);
+    if (!value.trim()) {
+      setCostError(null);
+      return;
+    }
+    // Only allow decimal-looking values so a paste of "abc" doesn't
+    // silently reset the button to enabled via the parsedCost null path.
+    if (!/^[0-9]*\.?[0-9]*$/.test(value)) {
+      setCostError('Enter a valid amount');
+      return;
+    }
+    setCostError(null);
+  };
+
+  let saveButton: ReactNode;
+  if (!isConnected) {
+    saveButton = (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <Button disabled className='bg-gray-800 text-gray-400 cursor-not-allowed'>
+              <Save className='h-4 w-4' />
+              Save
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Connect your wallet to save</TooltipContent>
+      </Tooltip>
+    );
+  } else if (isChainMismatch) {
+    saveButton = (
+      <Button
+        onClick={switchToTarget}
+        disabled={isSwitchingChain}
+        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+      >
+        {isSwitchingChain ? (
+          <Loader2 className='h-4 w-4 animate-spin' />
+        ) : (
+          <Save className='h-4 w-4' />
+        )}
+        {isSwitchingChain ? 'Switching network…' : `Switch to ${targetChainLabel}`}
+      </Button>
+    );
+  } else {
+    const cannotSave = isSaving || !isFormValid || !isDirty;
+    saveButton = (
+      <Button
+        onClick={save}
+        disabled={cannotSave}
+        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+      >
+        {isSaving ? (
+          <Loader2 className='h-4 w-4 animate-spin' />
+        ) : (
+          <Save className='h-4 w-4' />
+        )}
+        {isSaving ? 'Saving…' : 'Save'}
+      </Button>
+    );
+  }
+
+  return (
+    <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
+      <div className='flex items-start justify-between gap-4 flex-wrap'>
+        <div>
+          <h3 className='text-lg font-medium'>Auto-activation</h3>
+          <p className='text-gray-400 text-sm'>
+            Automatically re-activate this contract before it expires. Uses
+            your Gas Tank balance to pay for the activation fee.
+          </p>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Switch
+            id='auto-activate-switch'
+            checked={enabled}
+            onCheckedChange={setEnabled}
+            disabled={isSaving}
+            aria-label='Toggle auto-activation'
+            // Override the default `--primary` / `--input` theme colors:
+            // in this app's dark theme they render nearly identically, so
+            // the checked vs unchecked distinction is invisible. Use the
+            // Save button's blue for checked and a clear gray for
+            // unchecked. Same override could live at the primitive level
+            // for a codebase-wide fix — worth doing during the broader
+            // UX pass — but for now only this component uses the switch.
+            className='data-[state=checked]:bg-[#335CD7] data-[state=unchecked]:bg-gray-600'
+          />
+          <Label
+            htmlFor='auto-activate-switch'
+            className='text-sm text-gray-200 cursor-pointer'
+          >
+            {enabled ? 'Enabled' : 'Disabled'}
+          </Label>
+        </div>
+      </div>
+
+      <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4'>
+        <div>
+          <Label
+            htmlFor='auto-activate-cost'
+            className='text-[11px] uppercase tracking-wider text-gray-500'
+          >
+            Max activation cost (ETH)
+          </Label>
+          <Input
+            id='auto-activate-cost'
+            type='text'
+            inputMode='decimal'
+            value={costEth}
+            onChange={(e) => handleCostChange(e.target.value)}
+            placeholder='0.0'
+            disabled={isSaving}
+            className={`mt-1 bg-black border ${
+              costError ||
+              hasCostParseError ||
+              (enabled && parsedCost === ZERO_WEI)
+                ? 'border-red-500'
+                : 'border-[#2C2E30]'
+            } text-white`}
+          />
+          {costError && (
+            <p className='text-red-400 text-xs mt-1'>{costError}</p>
+          )}
+          {!costError && hasCostParseError && (
+            <p className='text-red-400 text-xs mt-1'>
+              Enter a valid ETH amount (max 18 decimal places).
+            </p>
+          )}
+          {!costError && !hasCostParseError && enabled && parsedCost === ZERO_WEI && (
+            <p className='text-red-400 text-xs mt-1'>
+              Max activation cost must be greater than 0 when auto-activation
+              is enabled.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className='mt-5 flex items-center justify-end gap-3 flex-wrap'>
+        {txHash && txUrl && (
+          <a
+            href={txUrl}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='text-[11px] text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
+          >
+            View on Arbiscan
+            <ExternalLink className='h-3 w-3' />
+          </a>
+        )}
+        {saveButton}
+      </div>
+
+      {showSimulationFailure && (
+        <div className='mt-3 flex items-start gap-2 text-[11px] text-red-300/90'>
+          <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
+          <span className='flex-1'>
+            Could not simulate the save transaction. Check your wallet is on
+            the correct network and retry.
+          </span>
+          <button
+            type='button'
+            onClick={() => refetchSimulation()}
+            className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0'
+          >
+            <RefreshCw className='h-3 w-3' />
+            Retry
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AutoActivationConfigSkeleton() {
+  return (
+    <div
+      className='rounded-lg border border-[#2C2E30] bg-black p-6 space-y-4 animate-pulse'
+      aria-busy='true'
+      aria-live='polite'
+    >
+      <div className='flex items-start justify-between gap-4 flex-wrap'>
+        <div className='space-y-2'>
+          <div className='h-5 w-40 rounded bg-gray-700' />
+          <div className='h-3 w-56 rounded bg-gray-800' />
+        </div>
+        <div className='h-6 w-16 rounded-full bg-gray-700' />
+      </div>
+      <div className='h-3 w-40 rounded bg-gray-800' />
+      <div className='h-10 w-full rounded bg-gray-800' />
+      <div className='flex justify-end'>
+        <div className='h-9 w-20 rounded bg-gray-700' />
+      </div>
+    </div>
+  );
+}
+
+function AutoActivationConfigError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className='rounded-lg border border-red-500/40 bg-red-500/10 p-6'>
+      <div className='flex items-start gap-2 text-sm text-red-200'>
+        <AlertTriangle className='h-4 w-4 shrink-0 mt-0.5' />
+        <div className='flex-1'>
+          <p className='font-medium'>{message}</p>
+          <p className='text-xs text-red-100/80 mt-1'>
+            The auto-activation editor needs to read the current config
+            directly from the CacheManagerAutomation contract before it can
+            let you save.
+          </p>
+        </div>
+        <button
+          type='button'
+          onClick={onRetry}
+          className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0 text-xs'
+        >
+          <RefreshCw className='h-3 w-3' />
+          Retry
+        </button>
+      </div>
     </div>
   );
 }

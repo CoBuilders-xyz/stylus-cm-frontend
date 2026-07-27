@@ -27,13 +27,18 @@ import {
 } from '@/components/Toast';
 
 import { useReadContract, useAccount } from 'wagmi';
+import { useUserCMAContract } from '@/hooks/useUserCMAContract';
 
 interface AutomatedBiddingSectionProps {
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
   setAutomationFunding?: (value: string) => void;
-  contract?: { address: string; maxBid?: string; isAutomated?: boolean };
+  contract?: {
+    address: string;
+    maxBid?: string;
+    isAutomated?: boolean;
+  };
   onSuccess?: () => void;
 }
 
@@ -54,7 +59,6 @@ export function AutomatedBiddingSection({
 
   // Separate state for controlling panel visibility
   const [showAutomationPanel, setShowAutomationPanel] = useState(false);
-  const [contractExists, setContractExists] = useState(false);
   const [originalMaxBid, setOriginalMaxBid] = useState('0');
 
   // Local state for the automated bidding toggle within the form - enabled by default
@@ -65,6 +69,22 @@ export function AutomatedBiddingSection({
 
   // Get the connected account
   const { address: userAddress, isConnected } = useAccount();
+
+  // Chain-authoritative read of this contract's CMA record. Sourcing the
+  // activation fields we must preserve (`autoActivate`, `maxActivationCost`)
+  // from the backend `contract` prop instead would let backend indexer lag
+  // silently clobber a just-submitted change from the Activation tab —
+  // exactly the COB-499 regression class. Refetches on write confirmation.
+  const {
+    data: cmaRecord,
+    refetch: refetchCMARecord,
+  } = useUserCMAContract({
+    chainId: currentBlockchain?.chainId,
+    cmaAddress: currentBlockchain?.cacheManagerAutomationAddress as
+      | `0x${string}`
+      | undefined,
+    contractAddress: contract?.address,
+  });
 
   // Get user balance from cache manager automation contract
   const { data: userBalance, refetch: refetchBalance } = useReadContract({
@@ -80,65 +100,35 @@ export function AutomatedBiddingSection({
     },
   });
 
-  // Get user's automated contracts
-  const { data: userContracts, refetch: refetchUserContracts } =
-    useReadContract({
-      address:
-        currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-      abi: cacheManagerAutomationAbi.abi as Abi,
-      functionName: 'getUserContracts',
-      account: userAddress,
-      query: {
-        enabled:
-          !!currentBlockchain?.cacheManagerAutomationAddress &&
-          isConnected &&
-          !!userAddress,
-      },
-    });
+  // `contractExists` used to be derived from a duplicate `getUserContracts`
+  // read that ran in parallel with `useUserCMAContract`. Now both derive
+  // from the same hook — wagmi dedupes the RPC call and both surfaces
+  // agree on the source of truth (COB-499 CodeRabbit finding).
+  const contractExists = cmaRecord != null;
 
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
-  // Check if current contract is automated
+  // Hydrate the form from the on-chain CMA record. `cmaRecord === undefined`
+  // means the read hasn't resolved yet — do nothing. `null` means the
+  // contract is not registered (defaults). Object means registered — echo
+  // the values into the form.
   useEffect(() => {
-    // Only proceed if we have the necessary data
-    if (
-      contract?.address &&
-      userContracts &&
-      Array.isArray(userContracts)
-      // Check if this is a new contract or different from the last checked one
-    ) {
-      console.log('Checking contract automation status for:', contract.address);
-
-      // Remember this contract address to detect future changes
-
-      // Look for the contract in user's automated contracts
-      const existingContract = userContracts.find(
-        (c) =>
-          c.contractAddress.toLowerCase() === contract.address.toLowerCase()
-      );
-
-      if (existingContract) {
-        // Update UI with the automated contract's values
-        setAutomatedBidding(existingContract.enabled);
-
-        // Format the max bid to ETH for display
-        const maxBidEth = formatEther(existingContract.maxBid.toString());
-        setMaxBidAmount(maxBidEth);
-        setOriginalMaxBid(maxBidEth);
-        setContractExists(true);
-      } else {
-        console.log('Contract is not automated:', contract.address);
-        // If not found, reset to default values
-        setAutomatedBidding(true);
-        setMaxBidAmount('');
-        setOriginalMaxBid('0');
-        setContractExists(false);
-      }
+    if (!contract?.address) return;
+    if (cmaRecord === undefined) return;
+    if (cmaRecord === null) {
+      setAutomatedBidding(true);
+      setMaxBidAmount('');
+      setOriginalMaxBid('0');
+      return;
     }
-  }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
+    setAutomatedBidding(cmaRecord.enabled);
+    const maxBidEth = formatEther(cmaRecord.maxBid);
+    setMaxBidAmount(maxBidEth);
+    setOriginalMaxBid(maxBidEth);
+  }, [contract?.address, cmaRecord, setAutomatedBidding, setMaxBidAmount]);
 
   // Store the last transaction parameters for retry functionality
   const [lastTxParams, setLastTxParams] = useState<{
@@ -239,9 +229,10 @@ export function AutomatedBiddingSection({
         // Reset transaction state
         reset();
 
-        // Immediately refetch the balance and contracts to get updated data
+        // Immediately refetch the balance and the CMA record so both this
+        // tab and the Activation tab see the just-updated values.
         refetchBalance();
-        refetchUserContracts();
+        refetchCMARecord();
 
         // Log the values we're keeping
         console.log('Keeping user values after successful transaction:', {
@@ -255,7 +246,7 @@ export function AutomatedBiddingSection({
     onSuccess,
     reset,
     refetchBalance,
-    refetchUserContracts,
+    refetchCMARecord,
     inputValue,
     automatedBidding,
     contract?.address,
@@ -360,6 +351,27 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    // Refuse to `insertContract` unless the on-chain read has definitively
+    // resolved to "not registered". `undefined` means the CMA read is
+    // still in flight — the button is visible because `contractExists`
+    // defaults to false while loading, but firing `insertContract`
+    // against an already-registered contract would revert on-chain and
+    // burn the user's gas.
+    if (cmaRecord === undefined) {
+      showErrorToast({
+        message:
+          'Still reading the on-chain configuration. Try again in a moment.',
+      });
+      return;
+    }
+    if (cmaRecord !== null) {
+      showErrorToast({
+        message:
+          'This contract is already automated. Refresh to see its current config, then use Update.',
+      });
+      return;
+    }
+
     try {
       console.log('Setting bid with values:', {
         contractAddress: contract.address,
@@ -367,7 +379,11 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
-      // Create transaction parameters
+      // `insertContract` is safe here — the guard above proved the
+      // contract is not yet in CMA. There's nothing on-chain to preserve,
+      // so the activation fields default to (false, 0) — same defaults
+      // an Activation-first flow would pass when it initialises a fresh
+      // record.
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
@@ -434,6 +450,18 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
+      // Preserve auto-activation fields from the chain-authoritative CMA
+      // read (COB-499). If the read hasn't resolved yet, we refuse the
+      // write — defaulting to (false, 0) here would silently wipe a
+      // config the user set from the Activation tab.
+      if (cmaRecord == null) {
+        showErrorToast({
+          message:
+            'Still reading the on-chain configuration. Try again in a moment.',
+        });
+        return;
+      }
+
       // Create transaction parameters for updateContract
       const txParams = {
         address:
@@ -444,8 +472,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(inputValue),
           automatedBidding,
-          false,
-          BigInt(0),
+          cmaRecord.autoActivate,
+          cmaRecord.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 
@@ -488,6 +516,15 @@ export function AutomatedBiddingSection({
         automatedBidding: newAutomatedBidding,
       });
 
+      // Same chain-read preservation as `handleUpdateAutomation` (COB-499).
+      if (cmaRecord == null) {
+        showErrorToast({
+          message:
+            'Still reading the on-chain configuration. Try again in a moment.',
+        });
+        return;
+      }
+
       // Create transaction parameters for updateContract with funding = 0
       const txParams = {
         address:
@@ -498,8 +535,8 @@ export function AutomatedBiddingSection({
           contract.address,
           parseEther(originalMaxBid),
           newAutomatedBidding,
-          false,
-          BigInt(0),
+          cmaRecord.autoActivate,
+          cmaRecord.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
       };
 

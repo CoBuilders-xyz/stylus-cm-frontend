@@ -697,7 +697,15 @@ export default function ContractDetails({
               </TabsContent>
 
               <TabsContent value='activation'>
+                {/*
+                  Key on the contract address so switching contracts inside
+                  the same side panel remounts the tab — the auto-activation
+                  form is user-owned local state (no re-sync from props by
+                  design) and would otherwise leak the previous contract's
+                  edits into a Save against the new contract.
+                */}
                 <ActivationTab
+                  key={contractData?.address}
                   activation={resolveActivationInfo(contractData, programReadingForTab)}
                   history={buildActivationHistory(contractData)}
                   autoActivate={contractData?.autoActivate}
@@ -708,15 +716,21 @@ export default function ContractDetails({
                     currentBlockchain?.name
                   }
                   contractAddress={contractData?.address}
+                  cmaAddress={
+                    contractData?.blockchain?.cacheManagerAutomationAddress as
+                      | `0x${string}`
+                      | undefined
+                  }
                   onActivated={() => {
-                    // Chain state moves immediately; backend rollup of the
-                    // direct-to-precompile tx can lag by ~1 minute (only
-                    // CMA-driven activations flow through the indexer until
-                    // COB-499 lands), but re-fetching both keeps the badge
-                    // and history in sync as fast as possible.
+                    // On-chain state moves immediately (the detail endpoint
+                    // does a live ArbWasm call), backend rollup for direct
+                    // activations lags because they do not flow through CMA
+                    // — refetch both to keep the badge, history, and
+                    // config in sync as fast as possible.
                     refetchProgramTimeLeftForTab();
                     reloadContractData();
                   }}
+                  onConfigSaved={reloadContractData}
                   isLoading={isActivationTabLoading}
                 />
               </TabsContent>
