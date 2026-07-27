@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { formatEther } from 'viem';
 import { formatDate, formatRoundedEth } from '@/utils/formatting';
 import { Contract, Alert } from '@/services/contractService';
@@ -54,32 +54,24 @@ import {
   type ActivationEvent,
   type ActivationInfo,
 } from '@/lib/activation';
-import {
-  useProgramTimeLeft,
-  type ProgramTimeLeftReading,
-} from '@/hooks/useProgramTimeLeft';
 import { explorerAddressUrl } from '@/utils/explorer';
 
 /**
- * Compose an {@link ActivationInfo} from the enriched contract detail
- * combined with the on-chain `programTimeLeft` multicall — same pattern the
- * contracts table uses. Backend value wins when present; otherwise we fall
- * back to the on-chain reading (which also decodes the typed reverts into
- * a `reason`, so contracts that need reactivation surface the right
- * sublabel — "Needs upgrade to current Stylus version" and friends —
- * instead of a generic "Unknown").
+ * Compose an {@link ActivationInfo} from the enriched contract detail. The
+ * backend detail endpoint returns both `programTimeLeft` and the decoded
+ * `programTimeLeftReason` since COB-490, so no FE multicall is needed —
+ * `buildActivationInfo` reads the reason off the contract directly.
  */
 function resolveActivationInfo(
-  contract: Contract | null | undefined,
-  onChainReading: ProgramTimeLeftReading | undefined
+  contract: Contract | null | undefined
 ): ActivationInfo {
   if (!contract) {
     return { status: 'unknown', secondsRemaining: null, lastActivatedAt: null };
   }
-  const fromBackend = backendProgramTimeLeft(contract.programTimeLeft);
-  const seconds =
-    fromBackend !== null ? fromBackend : (onChainReading?.seconds ?? null);
-  return buildActivationInfo(contract, seconds, onChainReading?.reason);
+  return buildActivationInfo(
+    contract,
+    backendProgramTimeLeft(contract.programTimeLeft)
+  );
 }
 
 function buildActivationHistory(
@@ -257,46 +249,23 @@ export default function ContractDetails({
     fetchContractData();
   }, [contractService, contractId, viewType, initialContractData]);
 
-  // Multicall `programTimeLeft` for the currently open contract so the
-  // Activation tab can distinguish "never activated" / "expired" /
-  // "needs upgrade" reverts from a genuine "backend has no reading yet",
-  // matching what the contracts table does per row. The backend value
-  // still wins when present; this hook only fills the gap when
-  // `contract.programTimeLeft` is null (list endpoints pre-COB-490, RPC
-  // hiccup, or contracts whose `activationStatus` has never rolled up).
-  //
-  // Chain id preference: read the chain off the contract itself first,
-  // then fall back to the header selector. The contract carries its own
-  // `blockchain.chainId` from the backend, so the hook can fire even
-  // before `useBlockchainService()` finishes hydrating — otherwise the
-  // tab briefly shows "Unknown" while the row already renders "Active"
-  // (the row is memoised after chainId is available).
+  // Chain id used by the Activation tab for its on-chain writes (Activate
+  // now, auto-activation config). Prefer the contract's own chain over the
+  // header selector so writes target the right chain even before the
+  // header selector settles.
   const activationChainId =
     contractData?.blockchain?.chainId ?? currentBlockchain?.chainId;
-  const programAddressesForTab = useMemo(
-    () => (contractData?.address ? [contractData.address] : undefined),
-    [contractData?.address]
-  );
-  const {
-    data: programTimeLeftMap,
-    isLoading: isProgramTimeLeftLoading,
-    refetch: refetchProgramTimeLeftForTab,
-  } = useProgramTimeLeft(programAddressesForTab, activationChainId);
-  const programReadingForTab = contractData?.address
-    ? programTimeLeftMap[contractData.address.toLowerCase()]
-    : undefined;
 
-  // The Activation tab is "loading" while either input the status header
-  // depends on is still resolving: the detail-endpoint response (recognised
-  // by `activationHistory` transitioning from `undefined` → `[]`), or the
-  // on-chain multicall when the backend did not supply `programTimeLeft`
-  // and we therefore need the multicall to derive the effective status.
-  // Otherwise the skeleton stops early and the badge flashes "Unknown"
-  // for a beat before flipping to the real state.
-  const isActivationTabLoading =
-    contractData?.activationHistory === undefined ||
-    (isProgramTimeLeftLoading &&
-      backendProgramTimeLeft(contractData?.programTimeLeft ?? null) === null);
+  // The Activation tab is "loading" while the enriched contract fetch is
+  // in flight. `isLoadingContract` is the honest signal — the previous
+  // proxy (`activationHistory === undefined`) left the tab stuck on the
+  // skeleton in the explore-contracts view, where `initialContractData`
+  // comes from the list endpoint (no `activationHistory` field) and no
+  // detail fetch ever runs. Post-COB-490 all badge-relevant fields
+  // (`programTimeLeft`, `programTimeLeftReason`, `activationStatus`)
+  // arrive on both endpoints, so gating on `activationHistory` was
+  // over-eager anyway.
+  const isActivationTabLoading = isLoadingContract;
 
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
@@ -706,7 +675,7 @@ export default function ContractDetails({
                 */}
                 <ActivationTab
                   key={contractData?.address}
-                  activation={resolveActivationInfo(contractData, programReadingForTab)}
+                  activation={resolveActivationInfo(contractData)}
                   history={buildActivationHistory(contractData)}
                   autoActivate={contractData?.autoActivate}
                   maxActivationCost={contractData?.maxActivationCost}
@@ -721,15 +690,7 @@ export default function ContractDetails({
                       | `0x${string}`
                       | undefined
                   }
-                  onActivated={() => {
-                    // On-chain state moves immediately (the detail endpoint
-                    // does a live ArbWasm call), backend rollup for direct
-                    // activations lags because they do not flow through CMA
-                    // — refetch both to keep the badge, history, and
-                    // config in sync as fast as possible.
-                    refetchProgramTimeLeftForTab();
-                    reloadContractData();
-                  }}
+                  onActivated={reloadContractData}
                   onConfigSaved={reloadContractData}
                   isLoading={isActivationTabLoading}
                 />
@@ -779,7 +740,7 @@ export default function ContractDetails({
 
               <TabsContent value='activation'>
                 <ActivationTab
-                  activation={resolveActivationInfo(contractData, programReadingForTab)}
+                  activation={resolveActivationInfo(contractData)}
                   history={buildActivationHistory(contractData)}
                   chainId={activationChainId}
                   isLoading={isActivationTabLoading}

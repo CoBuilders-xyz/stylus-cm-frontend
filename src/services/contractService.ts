@@ -83,6 +83,17 @@ export interface Alert {
 export type PersistedActivationStatus = 'unknown' | 'active' | 'error';
 
 /**
+ * Decoded revert reason from the ArbWasm precompile's `programTimeLeft` call.
+ * Returned by the backend alongside `programTimeLeft` on both list and detail
+ * endpoints (COB-490). Mirrors the union used by the on-chain hook in
+ * `useProgramTimeLeft` and by `ActivationDetail` in `lib/activation.ts`.
+ */
+export type ProgramTimeLeftReason =
+  | 'never_activated'
+  | 'expired'
+  | 'needs_upgrade';
+
+/**
  * A single activation-related event indexed from the CacheManagerAutomation
  * contract. Returned by the backend's user-contract detail endpoint (not on
  * list endpoints). Wei-denominated amounts (`dataFee`, `spent`, `refund`,
@@ -134,9 +145,15 @@ export interface Contract {
   lastActivationTimestamp: string | null;
   lastActivationBlockNumber: number | null;
   activationRetryCount: number;
-  // Present on detail endpoints today. COB-490 will add it to list endpoints,
-  // at which point the FE multicall fallback can be dropped.
-  programTimeLeft?: string | null;
+  // Returned by both list and detail endpoints. Backend computes it via a
+  // live `ArbWasm.programTimeLeft` call per request (cached ~30s server-side),
+  // so the value is authoritative for both surfaces and no FE multicall
+  // fallback is needed for these contexts (COB-490).
+  programTimeLeft: string | null;
+  // The decoded revert reason when `programTimeLeft` is `null`. `null` when
+  // the program is active or when the reader could not classify the failure.
+  // Same three cases the ArbWasm precompile can revert with.
+  programTimeLeftReason: ProgramTimeLeftReason | null;
   // Populated by the backend detail endpoint only. `undefined` = list-endpoint
   // response (not requested yet). `[]` = detail-endpoint response with no
   // events indexed for this contract.
