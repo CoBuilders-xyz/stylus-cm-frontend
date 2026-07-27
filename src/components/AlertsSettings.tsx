@@ -89,6 +89,58 @@ export default function AlertsSettings({
   const [bidSafetySlackEnabled, setBidSafetySlackEnabled] = useState(false);
   const [bidSafetyWebhookEnabled, setBidSafetyWebhookEnabled] = useState(false);
 
+  // Approaching Expiration alert (days threshold)
+  const [
+    approachingExpirationAlertEnabled,
+    setApproachingExpirationAlertEnabled,
+  ] = useState(false);
+  const [approachingExpirationThreshold, setApproachingExpirationThreshold] =
+    useState<number | string>('');
+  const [
+    approachingExpirationTelegramEnabled,
+    setApproachingExpirationTelegramEnabled,
+  ] = useState(false);
+  const [
+    approachingExpirationSlackEnabled,
+    setApproachingExpirationSlackEnabled,
+  ] = useState(false);
+  const [
+    approachingExpirationWebhookEnabled,
+    setApproachingExpirationWebhookEnabled,
+  ] = useState(false);
+
+  // Expired alert
+  const [expiredAlertEnabled, setExpiredAlertEnabled] = useState(false);
+  const [expiredTelegramEnabled, setExpiredTelegramEnabled] = useState(false);
+  const [expiredSlackEnabled, setExpiredSlackEnabled] = useState(false);
+  const [expiredWebhookEnabled, setExpiredWebhookEnabled] = useState(false);
+
+  // Reactivation Succeeded alert
+  const [reactivationSucceededAlertEnabled, setReactivationSucceededAlertEnabled] =
+    useState(false);
+  const [
+    reactivationSucceededTelegramEnabled,
+    setReactivationSucceededTelegramEnabled,
+  ] = useState(false);
+  const [
+    reactivationSucceededSlackEnabled,
+    setReactivationSucceededSlackEnabled,
+  ] = useState(false);
+  const [
+    reactivationSucceededWebhookEnabled,
+    setReactivationSucceededWebhookEnabled,
+  ] = useState(false);
+
+  // Reactivation Failed alert
+  const [reactivationFailedAlertEnabled, setReactivationFailedAlertEnabled] =
+    useState(false);
+  const [reactivationFailedTelegramEnabled, setReactivationFailedTelegramEnabled] =
+    useState(false);
+  const [reactivationFailedSlackEnabled, setReactivationFailedSlackEnabled] =
+    useState(false);
+  const [reactivationFailedWebhookEnabled, setReactivationFailedWebhookEnabled] =
+    useState(false);
+
   // Set initial alert states based on provided alerts
   useEffect(() => {
     if (initialAlerts && initialAlerts.length > 0) {
@@ -104,6 +156,18 @@ export default function AlertsSettings({
       );
       const bidSafetyAlert = initialAlerts.find(
         (alert) => alert.type === AlertType.BID_SAFETY
+      );
+      const approachingExpirationAlert = initialAlerts.find(
+        (alert) => alert.type === AlertType.APPROACHING_EXPIRATION
+      );
+      const expiredAlert = initialAlerts.find(
+        (alert) => alert.type === AlertType.EXPIRED
+      );
+      const reactivationSucceededAlert = initialAlerts.find(
+        (alert) => alert.type === AlertType.REACTIVATION_SUCCEEDED
+      );
+      const reactivationFailedAlert = initialAlerts.find(
+        (alert) => alert.type === AlertType.REACTIVATION_FAILED
       );
 
       if (evictionAlert) {
@@ -153,6 +217,69 @@ export default function AlertsSettings({
         setBidSafetySlackEnabled(bidSafetyAlert.slackChannelEnabled);
         setBidSafetyWebhookEnabled(bidSafetyAlert.webhookChannelEnabled);
       }
+
+      if (approachingExpirationAlert) {
+        setApproachingExpirationAlertEnabled(
+          approachingExpirationAlert.isActive
+        );
+        // Parse value as an integer number of days (1-365)
+        if (approachingExpirationAlert.value) {
+          const numericValue = parseInt(approachingExpirationAlert.value, 10);
+          if (
+            !isNaN(numericValue) &&
+            numericValue >= 1 &&
+            numericValue <= 365
+          ) {
+            setApproachingExpirationThreshold(numericValue);
+          } else {
+            setApproachingExpirationThreshold(''); // Invalid value, reset
+          }
+        } else {
+          setApproachingExpirationThreshold(''); // No value, reset
+        }
+        setApproachingExpirationTelegramEnabled(
+          approachingExpirationAlert.telegramChannelEnabled
+        );
+        setApproachingExpirationSlackEnabled(
+          approachingExpirationAlert.slackChannelEnabled
+        );
+        setApproachingExpirationWebhookEnabled(
+          approachingExpirationAlert.webhookChannelEnabled
+        );
+      }
+
+      if (expiredAlert) {
+        setExpiredAlertEnabled(expiredAlert.isActive);
+        setExpiredTelegramEnabled(expiredAlert.telegramChannelEnabled);
+        setExpiredSlackEnabled(expiredAlert.slackChannelEnabled);
+        setExpiredWebhookEnabled(expiredAlert.webhookChannelEnabled);
+      }
+
+      if (reactivationSucceededAlert) {
+        setReactivationSucceededAlertEnabled(reactivationSucceededAlert.isActive);
+        setReactivationSucceededTelegramEnabled(
+          reactivationSucceededAlert.telegramChannelEnabled
+        );
+        setReactivationSucceededSlackEnabled(
+          reactivationSucceededAlert.slackChannelEnabled
+        );
+        setReactivationSucceededWebhookEnabled(
+          reactivationSucceededAlert.webhookChannelEnabled
+        );
+      }
+
+      if (reactivationFailedAlert) {
+        setReactivationFailedAlertEnabled(reactivationFailedAlert.isActive);
+        setReactivationFailedTelegramEnabled(
+          reactivationFailedAlert.telegramChannelEnabled
+        );
+        setReactivationFailedSlackEnabled(
+          reactivationFailedAlert.slackChannelEnabled
+        );
+        setReactivationFailedWebhookEnabled(
+          reactivationFailedAlert.webhookChannelEnabled
+        );
+      }
     }
   }, [initialAlerts]);
 
@@ -175,6 +302,29 @@ export default function AlertsSettings({
       // If it's not a valid positive number, keep the input as is
       // This allows the user to type partial valid numbers
       setLowGasThreshold(e.target.value);
+    }
+  };
+
+  // Handler for approachingExpirationThreshold input (integer 1-365)
+  const handleApproachingExpirationThresholdChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (e.target.value === '') {
+      setApproachingExpirationThreshold('');
+      return;
+    }
+
+    // Only accept integer digits — reject decimals / scientific notation
+    if (!/^\d+$/.test(e.target.value)) {
+      setApproachingExpirationThreshold(e.target.value);
+      return;
+    }
+
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value >= 1 && value <= 365) {
+      setApproachingExpirationThreshold(value);
+    } else {
+      setApproachingExpirationThreshold(e.target.value);
     }
   };
 
@@ -209,6 +359,32 @@ export default function AlertsSettings({
 
       if (isNaN(lowGasValueNumeric) || lowGasValueNumeric <= 0) {
         setError('Low Gas threshold must be a positive number');
+        return;
+      }
+    }
+
+    // Validate approachingExpirationThreshold: integer 1-365
+    let approachingExpirationValueNumeric: number | undefined;
+    if (approachingExpirationAlertEnabled) {
+      if (approachingExpirationThreshold === '') {
+        setError('Approaching Expiration threshold is required');
+        return;
+      }
+
+      approachingExpirationValueNumeric =
+        typeof approachingExpirationThreshold === 'string'
+          ? parseInt(approachingExpirationThreshold, 10)
+          : approachingExpirationThreshold;
+
+      if (
+        isNaN(approachingExpirationValueNumeric) ||
+        !Number.isInteger(approachingExpirationValueNumeric) ||
+        approachingExpirationValueNumeric < 1 ||
+        approachingExpirationValueNumeric > 365
+      ) {
+        setError(
+          'Approaching Expiration threshold must be an integer between 1 and 365'
+        );
         return;
       }
     }
@@ -256,6 +432,43 @@ export default function AlertsSettings({
           slackChannelEnabled: bidSafetySlackEnabled,
           telegramChannelEnabled: bidSafetyTelegramEnabled,
           webhookChannelEnabled: bidSafetyWebhookEnabled,
+        },
+        // Approaching Expiration alert - value = integer days (1-365)
+        {
+          type: AlertType.APPROACHING_EXPIRATION,
+          value: approachingExpirationValueNumeric,
+          isActive: approachingExpirationAlertEnabled,
+          userContractId: contractId,
+          slackChannelEnabled: approachingExpirationSlackEnabled,
+          telegramChannelEnabled: approachingExpirationTelegramEnabled,
+          webhookChannelEnabled: approachingExpirationWebhookEnabled,
+        },
+        // Expired alert - no value
+        {
+          type: AlertType.EXPIRED,
+          isActive: expiredAlertEnabled,
+          userContractId: contractId,
+          slackChannelEnabled: expiredSlackEnabled,
+          telegramChannelEnabled: expiredTelegramEnabled,
+          webhookChannelEnabled: expiredWebhookEnabled,
+        },
+        // Reactivation Succeeded alert - no value
+        {
+          type: AlertType.REACTIVATION_SUCCEEDED,
+          isActive: reactivationSucceededAlertEnabled,
+          userContractId: contractId,
+          slackChannelEnabled: reactivationSucceededSlackEnabled,
+          telegramChannelEnabled: reactivationSucceededTelegramEnabled,
+          webhookChannelEnabled: reactivationSucceededWebhookEnabled,
+        },
+        // Reactivation Failed alert - no value
+        {
+          type: AlertType.REACTIVATION_FAILED,
+          isActive: reactivationFailedAlertEnabled,
+          userContractId: contractId,
+          slackChannelEnabled: reactivationFailedSlackEnabled,
+          telegramChannelEnabled: reactivationFailedTelegramEnabled,
+          webhookChannelEnabled: reactivationFailedWebhookEnabled,
         },
       ];
 
@@ -322,6 +535,42 @@ export default function AlertsSettings({
     }
   };
 
+  const handleApproachingExpirationAlertToggle = (checked: boolean) => {
+    setApproachingExpirationAlertEnabled(checked);
+    if (checked) {
+      setApproachingExpirationTelegramEnabled(true);
+      setApproachingExpirationSlackEnabled(true);
+      setApproachingExpirationWebhookEnabled(true);
+    }
+  };
+
+  const handleExpiredAlertToggle = (checked: boolean) => {
+    setExpiredAlertEnabled(checked);
+    if (checked) {
+      setExpiredTelegramEnabled(true);
+      setExpiredSlackEnabled(true);
+      setExpiredWebhookEnabled(true);
+    }
+  };
+
+  const handleReactivationSucceededAlertToggle = (checked: boolean) => {
+    setReactivationSucceededAlertEnabled(checked);
+    if (checked) {
+      setReactivationSucceededTelegramEnabled(true);
+      setReactivationSucceededSlackEnabled(true);
+      setReactivationSucceededWebhookEnabled(true);
+    }
+  };
+
+  const handleReactivationFailedAlertToggle = (checked: boolean) => {
+    setReactivationFailedAlertEnabled(checked);
+    if (checked) {
+      setReactivationFailedTelegramEnabled(true);
+      setReactivationFailedSlackEnabled(true);
+      setReactivationFailedWebhookEnabled(true);
+    }
+  };
+
   // Helper function to determine which notification channels are available
   const getAvailableChannels = () => {
     if (!validationResult) return [];
@@ -344,7 +593,15 @@ export default function AlertsSettings({
             ? noGasTelegramEnabled
             : alertType === AlertType.LOW_GAS
             ? lowGasTelegramEnabled
-            : bidSafetyTelegramEnabled,
+            : alertType === AlertType.BID_SAFETY
+            ? bidSafetyTelegramEnabled
+            : alertType === AlertType.APPROACHING_EXPIRATION
+            ? approachingExpirationTelegramEnabled
+            : alertType === AlertType.EXPIRED
+            ? expiredTelegramEnabled
+            : alertType === AlertType.REACTIVATION_SUCCEEDED
+            ? reactivationSucceededTelegramEnabled
+            : reactivationFailedTelegramEnabled,
         onChange:
           alertType === AlertType.EVICTION
             ? setEvictionTelegramEnabled
@@ -352,7 +609,15 @@ export default function AlertsSettings({
             ? setNoGasTelegramEnabled
             : alertType === AlertType.LOW_GAS
             ? setLowGasTelegramEnabled
-            : setBidSafetyTelegramEnabled,
+            : alertType === AlertType.BID_SAFETY
+            ? setBidSafetyTelegramEnabled
+            : alertType === AlertType.APPROACHING_EXPIRATION
+            ? setApproachingExpirationTelegramEnabled
+            : alertType === AlertType.EXPIRED
+            ? setExpiredTelegramEnabled
+            : alertType === AlertType.REACTIVATION_SUCCEEDED
+            ? setReactivationSucceededTelegramEnabled
+            : setReactivationFailedTelegramEnabled,
       },
       slack: {
         id: `${alertType}Slack`,
@@ -364,7 +629,15 @@ export default function AlertsSettings({
             ? noGasSlackEnabled
             : alertType === AlertType.LOW_GAS
             ? lowGasSlackEnabled
-            : bidSafetySlackEnabled,
+            : alertType === AlertType.BID_SAFETY
+            ? bidSafetySlackEnabled
+            : alertType === AlertType.APPROACHING_EXPIRATION
+            ? approachingExpirationSlackEnabled
+            : alertType === AlertType.EXPIRED
+            ? expiredSlackEnabled
+            : alertType === AlertType.REACTIVATION_SUCCEEDED
+            ? reactivationSucceededSlackEnabled
+            : reactivationFailedSlackEnabled,
         onChange:
           alertType === AlertType.EVICTION
             ? setEvictionSlackEnabled
@@ -372,7 +645,15 @@ export default function AlertsSettings({
             ? setNoGasSlackEnabled
             : alertType === AlertType.LOW_GAS
             ? setLowGasSlackEnabled
-            : setBidSafetySlackEnabled,
+            : alertType === AlertType.BID_SAFETY
+            ? setBidSafetySlackEnabled
+            : alertType === AlertType.APPROACHING_EXPIRATION
+            ? setApproachingExpirationSlackEnabled
+            : alertType === AlertType.EXPIRED
+            ? setExpiredSlackEnabled
+            : alertType === AlertType.REACTIVATION_SUCCEEDED
+            ? setReactivationSucceededSlackEnabled
+            : setReactivationFailedSlackEnabled,
       },
       webhook: {
         id: `${alertType}Webhook`,
@@ -384,7 +665,15 @@ export default function AlertsSettings({
             ? noGasWebhookEnabled
             : alertType === AlertType.LOW_GAS
             ? lowGasWebhookEnabled
-            : bidSafetyWebhookEnabled,
+            : alertType === AlertType.BID_SAFETY
+            ? bidSafetyWebhookEnabled
+            : alertType === AlertType.APPROACHING_EXPIRATION
+            ? approachingExpirationWebhookEnabled
+            : alertType === AlertType.EXPIRED
+            ? expiredWebhookEnabled
+            : alertType === AlertType.REACTIVATION_SUCCEEDED
+            ? reactivationSucceededWebhookEnabled
+            : reactivationFailedWebhookEnabled,
         onChange:
           alertType === AlertType.EVICTION
             ? setEvictionWebhookEnabled
@@ -392,7 +681,15 @@ export default function AlertsSettings({
             ? setNoGasWebhookEnabled
             : alertType === AlertType.LOW_GAS
             ? setLowGasWebhookEnabled
-            : setBidSafetyWebhookEnabled,
+            : alertType === AlertType.BID_SAFETY
+            ? setBidSafetyWebhookEnabled
+            : alertType === AlertType.APPROACHING_EXPIRATION
+            ? setApproachingExpirationWebhookEnabled
+            : alertType === AlertType.EXPIRED
+            ? setExpiredWebhookEnabled
+            : alertType === AlertType.REACTIVATION_SUCCEEDED
+            ? setReactivationSucceededWebhookEnabled
+            : setReactivationFailedWebhookEnabled,
       },
     };
 
@@ -745,6 +1042,170 @@ export default function AlertsSettings({
 
                 {renderChannelCheckboxes(AlertType.BID_SAFETY)}
               </>
+            )}
+          </div>
+
+          {/* Divider between cache/bid alerts and activation alerts */}
+          <div
+            className='border-t border-gray-800 pt-4'
+            role='separator'
+            aria-label='Activation alerts'
+          >
+            <h4 className='text-xs uppercase tracking-wider text-gray-500 mb-2'>
+              Activation alerts
+            </h4>
+          </div>
+
+          {/* Approaching Expiration Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Approaching Expiration</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me N days before my contract&apos;s activation expires.
+                </p>
+              </div>
+              <SwitchPrimitive.Root
+                checked={approachingExpirationAlertEnabled}
+                onCheckedChange={handleApproachingExpirationAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+
+            {approachingExpirationAlertEnabled && (
+              <>
+                <div className='mt-4 mb-4'>
+                  <label className='block text-sm mb-1'>
+                    Days before expiration (1–365)
+                  </label>
+                  <Input
+                    type='number'
+                    inputMode='numeric'
+                    min={1}
+                    max={365}
+                    step={1}
+                    placeholder='e.g. 30'
+                    value={approachingExpirationThreshold}
+                    onChange={handleApproachingExpirationThresholdChange}
+                    className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
+                  />
+                </div>
+
+                {renderChannelCheckboxes(AlertType.APPROACHING_EXPIRATION)}
+              </>
+            )}
+          </div>
+
+          {/* Expired Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Expired</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when my contract&apos;s activation has expired.
+                </p>
+              </div>
+              <SwitchPrimitive.Root
+                checked={expiredAlertEnabled}
+                onCheckedChange={handleExpiredAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+
+            {expiredAlertEnabled && (
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.EXPIRED)}
+              </div>
+            )}
+          </div>
+
+          {/* Reactivation Succeeded Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Reactivation Succeeded</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when an automatic reactivation succeeds.
+                </p>
+              </div>
+              <SwitchPrimitive.Root
+                checked={reactivationSucceededAlertEnabled}
+                onCheckedChange={handleReactivationSucceededAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+
+            {reactivationSucceededAlertEnabled && (
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.REACTIVATION_SUCCEEDED)}
+              </div>
+            )}
+          </div>
+
+          {/* Reactivation Failed Alerts */}
+          <div className='mb-8 rounded-lg bg-black p-6'>
+            <div className='flex items-center justify-between mb-2'>
+              <div>
+                <h3 className='text-lg font-medium'>Reactivation Failed</h3>
+                <p className='text-gray-400 text-sm'>
+                  Alert me when an automatic reactivation fails.
+                </p>
+              </div>
+              <SwitchPrimitive.Root
+                checked={reactivationFailedAlertEnabled}
+                onCheckedChange={handleReactivationFailedAlertToggle}
+                className={cn(
+                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
+                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                )}
+              >
+                <SwitchPrimitive.Thumb
+                  className={cn(
+                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  )}
+                />
+              </SwitchPrimitive.Root>
+            </div>
+
+            {reactivationFailedAlertEnabled && (
+              <div className='mt-4'>
+                {renderChannelCheckboxes(AlertType.REACTIVATION_FAILED)}
+              </div>
             )}
           </div>
 
