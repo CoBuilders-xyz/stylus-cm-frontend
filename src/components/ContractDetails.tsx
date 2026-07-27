@@ -655,6 +655,12 @@ export default function ContractDetails({
                     automationFunding={automationFunding}
                     setAutomationFunding={setAutomationFunding}
                     contract={contractData}
+                    cmaAddress={
+                      contractData?.blockchain?.cacheManagerAutomationAddress as
+                        | `0x${string}`
+                        | undefined
+                    }
+                    chainId={activationChainId}
                     onSuccess={reloadContractData}
                   />
                 </div>
