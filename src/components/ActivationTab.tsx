@@ -572,6 +572,7 @@ function AutoActivationConfig({
   const {
     data: onChainConfig,
     isRegistered,
+    minMaxBidAmount,
     isLoading: isCMAReadLoading,
     error: cmaReadError,
     refetch: refetchCMAConfig,
@@ -580,8 +581,9 @@ function AutoActivationConfig({
   // Skeleton the config card until the on-chain read resolves — form state
   // needs the on-chain values as its baseline, and initialising from
   // "unknown" and re-syncing later reintroduces the flicker we deliberately
-  // avoid elsewhere.
-  if (isCMAReadLoading) {
+  // avoid elsewhere. Also wait for `minMaxBidAmount` because Activation-
+  // first flows need it as the `maxBid` seed for `insertContract`.
+  if (isCMAReadLoading || minMaxBidAmount === undefined) {
     return <AutoActivationConfigSkeleton />;
   }
   if (cmaReadError) {
@@ -602,7 +604,12 @@ function AutoActivationConfig({
       isRegistered={isRegistered}
       onChainAutoActivate={onChainConfig?.autoActivate ?? false}
       onChainMaxActivationCost={onChainConfig?.maxActivationCost ?? ZERO_WEI}
-      onChainMaxBid={onChainConfig?.maxBid ?? ZERO_WEI}
+      // Registered → echo the current `maxBid`. Not registered →
+      // fall back to `minMaxBidAmount`, the CMA-enforced floor. `0n`
+      // would revert with `InvalidBid()` even with `enabled = false`,
+      // so this nominal value is the only safe seed for the
+      // Activation-first insertContract path.
+      onChainMaxBid={onChainConfig?.maxBid ?? minMaxBidAmount}
       onChainBiddingEnabled={onChainConfig?.enabled ?? false}
       refetchCMAConfig={refetchCMAConfig}
       onSaved={onSaved}

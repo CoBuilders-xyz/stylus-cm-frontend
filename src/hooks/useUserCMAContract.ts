@@ -25,6 +25,14 @@ export interface UseUserCMAContractResult {
   data: CMAUserContract | null | undefined;
   /** Convenience — true when `data` exists (the contract is registered on-chain). */
   isRegistered: boolean;
+  /**
+   * CMA-enforced floor for the `maxBid` field on every write. `insertContract`
+   * / `updateContract` revert with `InvalidBid()` when `maxBid` is below this
+   * value, *even when `enabled === false`* — so Activation-first flows must
+   * seed `maxBid` with this floor (nominal, never executes because bidding
+   * is off) instead of `0n`. `undefined` while the read has not resolved.
+   */
+  minMaxBidAmount: bigint | undefined;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -92,6 +100,21 @@ export function useUserCMAContract({
     },
   });
 
+  // Public CMA constant — independent of the connected wallet. Reads
+  // through the same wagmi cache so parallel consumers of this hook
+  // dedupe to a single RPC call.
+  const { data: rawMinMaxBid } = useReadContract({
+    address: cmaAddress,
+    abi: cacheManagerAutomationAbi.abi as Abi,
+    functionName: 'minMaxBidAmount',
+    chainId,
+    query: {
+      enabled: cmaAddress != null && chainId != null,
+    },
+  });
+  const minMaxBidAmount =
+    typeof rawMinMaxBid === 'bigint' ? rawMinMaxBid : undefined;
+
   const data = useMemo<CMAUserContract | null | undefined>(() => {
     if (rawContracts == null) return undefined;
     if (contractAddress == null) return null;
@@ -117,6 +140,7 @@ export function useUserCMAContract({
   return {
     data,
     isRegistered: data != null,
+    minMaxBidAmount,
     isLoading,
     error: (error as Error | null) ?? null,
     refetch: refetchStable,
