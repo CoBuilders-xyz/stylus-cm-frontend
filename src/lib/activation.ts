@@ -156,12 +156,23 @@ export function buildActivationInfo(
   contract: ActivationInfoInput,
   programTimeLeftSeconds: number | null
 ): ActivationInfo {
-  const status = getEffectiveActivationStatus(contract, programTimeLeftSeconds);
+  const reason = contract.programTimeLeftReason ?? undefined;
+  // A decoded revert reason from ArbWasm ("never_activated", "expired",
+  // "needs_upgrade") is direct evidence the program is not currently
+  // executable — feed it into the status derivation as `seconds = 0` so
+  // the result is `'inactive'` (with `detail` supplying the sublabel)
+  // rather than `'unknown'`. Matches the pre-COB-490 multicall behavior
+  // where `useProgramTimeLeft` returned `{ seconds: 0, reason }` for
+  // every revert. `secondsRemaining` keeps the raw value so display
+  // helpers don't lie about the actual number.
+  const secondsForStatus =
+    programTimeLeftSeconds ?? (reason != null ? 0 : null);
+  const status = getEffectiveActivationStatus(contract, secondsForStatus);
   return {
     status,
     secondsRemaining: programTimeLeftSeconds,
     lastActivatedAt: contract.lastActivationTimestamp ?? null,
-    detail: contract.programTimeLeftReason ?? undefined,
+    detail: reason,
   };
 }
 
