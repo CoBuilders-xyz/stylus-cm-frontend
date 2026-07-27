@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
-import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { Abi } from 'viem';
 import {
   AlertTriangle,
@@ -10,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  RefreshCw,
 } from 'lucide-react';
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { formatEther, parseEther } from 'viem';
@@ -20,14 +19,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  showSuccessToast,
-  showErrorToast,
-  showSomethingWentWrongToast,
-} from '@/components/Toast';
 
 import { useReadContract, useAccount } from 'wagmi';
 import { useUserCMAContract } from '@/hooks/useUserCMAContract';
+import { useConfigureBidding } from '@/hooks/useConfigureBidding';
 
 interface AutomatedBiddingSectionProps {
   maxBidAmount?: string;
@@ -39,35 +34,40 @@ interface AutomatedBiddingSectionProps {
     maxBid?: string;
     isAutomated?: boolean;
   };
+  /**
+   * CMA contract address on the contract's chain. Sourced from
+   * `contractData.blockchain.cacheManagerAutomationAddress` — mirror of
+   * the pattern the Activation tab adopted in COB-499, replacing the
+   * old "read from header selector" approach that could silently target
+   * the wrong CMA if the selector and the contract's chain desynced.
+   */
+  cmaAddress?: `0x${string}`;
+  /** Chain the CMA writes must happen on. */
+  chainId?: number;
   onSuccess?: () => void;
 }
 
 export function AutomatedBiddingSection({
   maxBidAmount = '',
   setMaxBidAmount = () => {},
-  automationFunding = '0', // Default to 0 for automation funding - initial amount to deposit when setting up automated bidding
+  automationFunding = '0',
   setAutomationFunding = () => {},
   contract,
+  cmaAddress,
+  chainId,
   onSuccess,
 }: AutomatedBiddingSectionProps) {
-  // Local state for input values to ensure they update immediately
   const [inputValue, setInputValue] = useState(maxBidAmount);
   const [fundingValue, setFundingValue] = useState(automationFunding);
   const [inputError, setInputError] = useState<string | null>(null);
   const [fundingError, setFundingError] = useState<string | null>(null);
   const [disclaimerChecked, setDisclaimerChecked] = useState(false);
 
-  // Separate state for controlling panel visibility
   const [showAutomationPanel, setShowAutomationPanel] = useState(false);
   const [originalMaxBid, setOriginalMaxBid] = useState('0');
 
-  // Local state for the automated bidding toggle within the form - enabled by default
   const [automatedBidding, setAutomatedBidding] = useState(true);
 
-  // Get the current blockchain
-  const { currentBlockchain } = useBlockchainService();
-
-  // Get the connected account
   const { address: userAddress, isConnected } = useAccount();
 
   // Chain-authoritative read of this contract's CMA record. Sourcing the
@@ -75,38 +75,34 @@ export function AutomatedBiddingSection({
   // from the backend `contract` prop instead would let backend indexer lag
   // silently clobber a just-submitted change from the Activation tab —
   // exactly the COB-499 regression class. Refetches on write confirmation.
-  const {
-    data: cmaRecord,
-    refetch: refetchCMARecord,
-  } = useUserCMAContract({
-    chainId: currentBlockchain?.chainId,
-    cmaAddress: currentBlockchain?.cacheManagerAutomationAddress as
-      | `0x${string}`
-      | undefined,
+  const { data: cmaRecord, refetch: refetchCMARecord } = useUserCMAContract({
+    chainId,
+    cmaAddress,
     contractAddress: contract?.address,
   });
 
-  // Get user balance from cache manager automation contract
+  // Get user balance from cache manager automation contract. Gated on
+  // `chainId != null` too — without it, wagmi falls back to the connected
+  // chain before `chainId` resolves and reads `cmaAddress` (a chain-scoped
+  // contract) on the wrong chain, surfacing a stale zero balance.
   const { data: userBalance, refetch: refetchBalance } = useReadContract({
-    address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
+    address: cmaAddress,
     abi: cacheManagerAutomationAbi.abi as Abi,
     functionName: 'getUserBalance',
-    account: userAddress, // Include the user's address to properly sign the request
+    account: userAddress,
+    chainId,
     query: {
       enabled:
-        !!currentBlockchain?.cacheManagerAutomationAddress &&
+        cmaAddress != null &&
+        chainId != null &&
         isConnected &&
         !!userAddress,
     },
   });
 
-  // `contractExists` used to be derived from a duplicate `getUserContracts`
-  // read that ran in parallel with `useUserCMAContract`. Now both derive
-  // from the same hook — wagmi dedupes the RPC call and both surfaces
-  // agree on the source of truth (COB-499 CodeRabbit finding).
   const contractExists = cmaRecord != null;
+  const isRegistered = contractExists;
 
-  // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
@@ -128,131 +124,90 @@ export function AutomatedBiddingSection({
     const maxBidEth = formatEther(cmaRecord.maxBid);
     setMaxBidAmount(maxBidEth);
     setOriginalMaxBid(maxBidEth);
-  }, [contract?.address, cmaRecord, setAutomatedBidding, setMaxBidAmount]);
-
-  // Store the last transaction parameters for retry functionality
-  const [lastTxParams, setLastTxParams] = useState<{
-    address: `0x${string}`;
-    abi: Abi;
-    functionName: string;
-    args: [string, bigint, boolean, boolean, bigint];
-    value: string;
-  } | null>(null);
-
-  // Use the web3 hook
-  const { writeContract, status, error, reset, gasPriceGwei, isGasPriceHigh } =
-    useWeb3({
-      // Set gas protection configuration
-      gasProtection: {
-        maxGasPriceGwei: 500, // Maximum gas price in Gwei
-        gasLimit: BigInt(500000), // Gas limit
-      },
-    });
-
-  // Track if transaction is in progress
-  const isTransactionInProgress =
-    status === TransactionStatus.PENDING ||
-    status === TransactionStatus.PREPARING;
-
-  // Track if transaction is complete
-  const isSuccess = status === TransactionStatus.SUCCESS;
-
-  // Track if there was an error
-  const isError = status === TransactionStatus.ERROR;
+  }, [contract?.address, cmaRecord, setMaxBidAmount]);
 
   // Sync local state with prop values when they change
   useEffect(() => {
-    // Only update local state if maxBidAmount changes after initialization
     if (contract?.address) {
       setInputValue(maxBidAmount);
     }
   }, [maxBidAmount, contract?.address]);
 
   useEffect(() => {
-    // Only update local state if automationFunding changes after initialization
     if (contract?.address) {
       setAutomationFunding(automationFunding);
     }
   }, [setAutomationFunding, automationFunding, contract?.address]);
 
-  // Function to handle retry of the last transaction
-  const handleRetry = useCallback(() => {
-    if (!lastTxParams) {
-      console.error('No previous transaction parameters found to retry');
-      showSomethingWentWrongToast();
-      return;
+  // Parse form inputs into the wei values the hook expects. Guarded by
+  // the button-level validation below, but parseEther still needs a
+  // best-effort default for the simulate gate — `0n` for empty/invalid
+  // input keeps the sim disabled (via `enabled` below) rather than
+  // throwing on render.
+  const safeParseEther = (value: string): bigint => {
+    if (!value || !/^[0-9]*\.?[0-9]*$/.test(value) || parseFloat(value) < 0) {
+      return BigInt(0);
     }
-
-    // Reset any previous error states
-    reset();
-
-    // Re-submit the transaction with the same parameters
-    writeContract(lastTxParams, (hash) => {
-      console.log(`Retry transaction submitted with hash: ${hash}`);
-    });
-  }, [lastTxParams, writeContract, reset]);
-
-  // Show error toast if transaction fails
-  useEffect(() => {
-    if (isError && error) {
-      showErrorToast({
-        message: 'An error occurred while setting up automated bidding',
-        onRetry: handleRetry,
-      });
-
-      reset();
+    try {
+      return parseEther(value);
+    } catch {
+      return BigInt(0);
     }
-  }, [isError, error, reset, handleRetry]);
+  };
 
-  // Show success toast when transaction completes
-  useEffect(() => {
-    if (isSuccess) {
-      showSuccessToast({
-        message: 'Automated bidding configured successfully',
-      });
+  const parsedMaxBid = safeParseEther(inputValue);
+  const parsedFunding = safeParseEther(fundingValue);
+  // Persisted on-chain `maxBid` (from `originalMaxBid`, rehydrated from
+  // the CMA record). Kept alongside `parsedMaxBid` because the toggle
+  // path writes the persisted value and must remain functional even
+  // when the user has cleared the max-bid input.
+  const persistedMaxBid = safeParseEther(originalMaxBid);
 
-      // Call the onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
+  // Activation-side fields to preserve on the atomic write. When
+  // registered, echo the live on-chain values; on fresh insert, seed
+  // (false, 0n) — nothing to preserve.
+  const preserveAutoActivate = cmaRecord?.autoActivate ?? false;
+  const preserveMaxActivationCost = cmaRecord?.maxActivationCost ?? BigInt(0);
 
-      // Instead of just refetching, first update our local state with the values we just set
-      // This ensures that the values stay consistent with what the user just set
-      if (contract?.address) {
-        // If we just completed a successful transaction, we should keep the user's input value
-        // rather than allowing it to be overwritten by outdated contract data
+  // Gate the DECLARATIVE simulate only: CMA record resolved + a
+  // usable input maxBid. The toggle path is intentionally not covered
+  // here — with an empty input, sim stays disabled (no doomed RPCs)
+  // but `save({maxBid: persistedMaxBid, ...})` still works, because
+  // the hook does not gate `save()` on `enabled` and falls through to
+  // the imperative-simulate branch when the declarative snapshot is
+  // absent.
+  const isFormReady =
+    cmaRecord !== undefined && parsedMaxBid > BigInt(0);
 
-        // Store current values before reset
-        const currentInputValue = inputValue;
-        const currentAutomatedBidding = automatedBidding;
+  const {
+    isChainMismatch,
+    isSwitchingChain,
+    switchToTarget,
+    isSaving,
+    isSimulating,
+    simulationError,
+    refetchSimulation,
+    save,
+  } = useConfigureBidding({
+    contractAddress: contract?.address,
+    targetChainId: chainId,
+    cmaAddress,
+    isRegistered,
+    currentAutoActivate: preserveAutoActivate,
+    currentMaxActivationCost: preserveMaxActivationCost,
+    maxBid: parsedMaxBid,
+    biddingEnabled: automatedBidding,
+    insertFundingValue: parsedFunding,
+    onConfirmed: () => {
+      // Refetch balance + CMA record so both this tab and the Activation
+      // tab see the just-updated values.
+      refetchBalance();
+      refetchCMARecord();
+      onSuccess?.();
+    },
+    enabled: isFormReady,
+  });
 
-        // Reset transaction state
-        reset();
-
-        // Immediately refetch the balance and the CMA record so both this
-        // tab and the Activation tab see the just-updated values.
-        refetchBalance();
-        refetchCMARecord();
-
-        // Log the values we're keeping
-        console.log('Keeping user values after successful transaction:', {
-          maxBidAmount: currentInputValue,
-          automatedBidding: currentAutomatedBidding,
-        });
-      }
-    }
-  }, [
-    isSuccess,
-    onSuccess,
-    reset,
-    refetchBalance,
-    refetchCMARecord,
-    inputValue,
-    automatedBidding,
-    contract?.address,
-  ]);
-
-  // Validate numeric input - only validate format, don't set error for empty values
   const validateNumericInput = (
     value: string,
     setError: (error: string | null) => void
@@ -260,301 +215,94 @@ export function AutomatedBiddingSection({
     if (!value) {
       return false;
     }
-
-    // Check if the input is a valid number
     const isValidNumber = /^[0-9]*\.?[0-9]*$/.test(value);
     if (!isValidNumber) {
       setError('Enter a valid amount');
       return false;
     }
-
     if (parseFloat(value) < 0) {
       setError('Amount cannot be negative');
       return false;
     }
-
     setError(null);
     return true;
   };
 
-  // Handle max bid amount input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
-    // Update local state immediately to show typing in real-time
     setInputValue(value);
-
-    // Clear the error if input is emptied
     if (!value) {
       setInputError(null);
     } else {
-      // Only validate the format for non-empty values
       validateNumericInput(value, setInputError);
     }
-
     setMaxBidAmount(value);
   };
 
-  // Handle automation funding input change
   const handleFundingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
-    // Update local state immediately to show typing in real-time
     setFundingValue(value);
-
-    // Clear the error if input is emptied
     if (!value) {
       setFundingError(null);
     } else {
-      // Only validate the format for non-empty values
       validateNumericInput(value, setFundingError);
     }
-
     setAutomationFunding(value);
   };
 
-  // Handle set bid button click
+  // Set / Update handlers — inputs are already reflected in hook params
+  // via state; just fire save().
   const handleSetAutomation = () => {
     let hasError = false;
-
-    // When button is clicked, check for empty values and show error if needed
     if (!inputValue) {
       setInputError('Enter a valid Bid Amount');
       hasError = true;
     }
-
     if (!fundingValue) {
       setFundingError('Enter a valid Amount');
       hasError = true;
     }
-
     if (hasError) return;
-
-    const isMaxBidValid = validateNumericInput(inputValue, setInputError);
-    const isFundingValid = validateNumericInput(fundingValue, setFundingError);
-
-    if (!isMaxBidValid || !isFundingValid) {
-      return;
-    }
-
-    if (!currentBlockchain) {
-      console.error(
-        'No blockchain connected. Please connect your wallet to the correct network.'
-      );
-      showSomethingWentWrongToast();
-      return;
-    }
-
-    if (!contract || !contract.address) {
-      console.error('No contract address provided');
-      showSomethingWentWrongToast();
-      return;
-    }
-
-    // Refuse to `insertContract` unless the on-chain read has definitively
-    // resolved to "not registered". `undefined` means the CMA read is
-    // still in flight — the button is visible because `contractExists`
-    // defaults to false while loading, but firing `insertContract`
-    // against an already-registered contract would revert on-chain and
-    // burn the user's gas.
-    if (cmaRecord === undefined) {
-      showErrorToast({
-        message:
-          'Still reading the on-chain configuration. Try again in a moment.',
-      });
-      return;
-    }
-    if (cmaRecord !== null) {
-      showErrorToast({
-        message:
-          'This contract is already automated. Refresh to see its current config, then use Update.',
-      });
-      return;
-    }
-
-    try {
-      console.log('Setting bid with values:', {
-        contractAddress: contract.address,
-        maxBidAmount: inputValue,
-        automatedBidding: automatedBidding,
-      });
-
-      // `insertContract` is safe here — the guard above proved the
-      // contract is not yet in CMA. There's nothing on-chain to preserve,
-      // so the activation fields default to (false, 0) — same defaults
-      // an Activation-first flow would pass when it initialises a fresh
-      // record.
-      const txParams = {
-        address:
-          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'insertContract',
-        args: [
-          contract.address,
-          parseEther(inputValue),
-          automatedBidding,
-          false,
-          BigInt(0),
-        ] as [string, bigint, boolean, boolean, bigint],
-        value: fundingValue,
-      };
-
-      // Store the parameters for retry functionality
-      setLastTxParams(txParams);
-
-      // Send the transaction
-      writeContract(txParams, (hash) => {
-        console.log(`Transaction submitted with hash: ${hash}`);
-      });
-    } catch (err) {
-      console.error('Error submitting transaction:', err);
-      showSomethingWentWrongToast();
-    }
+    if (!validateNumericInput(inputValue, setInputError)) return;
+    if (!validateNumericInput(fundingValue, setFundingError)) return;
+    save();
   };
 
   const handleUpdateAutomation = () => {
-    let hasError = false;
-
-    // When button is clicked, check for empty values and show error if needed
     if (!inputValue) {
       setInputError('Enter a valid Bid Amount');
-      hasError = true;
-    }
-
-    if (hasError) return;
-
-    const isMaxBidValid = validateNumericInput(inputValue, setInputError);
-
-    if (!isMaxBidValid) {
       return;
     }
-
-    if (!currentBlockchain) {
-      console.error(
-        'No blockchain connected. Please connect your wallet to the correct network.'
-      );
-      showSomethingWentWrongToast();
-      return;
-    }
-
-    if (!contract || !contract.address) {
-      console.error('No contract address provided');
-      showSomethingWentWrongToast();
-      return;
-    }
-
-    try {
-      console.log('Updating automation with values:', {
-        contractAddress: contract.address,
-        maxBidAmount: inputValue,
-        automatedBidding: automatedBidding,
-      });
-
-      // Preserve auto-activation fields from the chain-authoritative CMA
-      // read (COB-499). If the read hasn't resolved yet, we refuse the
-      // write — defaulting to (false, 0) here would silently wipe a
-      // config the user set from the Activation tab.
-      if (cmaRecord == null) {
-        showErrorToast({
-          message:
-            'Still reading the on-chain configuration. Try again in a moment.',
-        });
-        return;
-      }
-
-      // Create transaction parameters for updateContract
-      const txParams = {
-        address:
-          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'updateContract',
-        args: [
-          contract.address,
-          parseEther(inputValue),
-          automatedBidding,
-          cmaRecord.autoActivate,
-          cmaRecord.maxActivationCost,
-        ] as [string, bigint, boolean, boolean, bigint],
-      };
-
-      // Store the parameters for retry functionality
-      setLastTxParams({
-        ...txParams,
-        value: '0', // updateContract is nonpayable, so no ETH value needed
-      });
-
-      // Send the transaction
-      writeContract(txParams, (hash) => {
-        console.log(`Update transaction submitted with hash: ${hash}`);
-      });
-    } catch (err) {
-      console.error('Error submitting update transaction:', err);
-      showSomethingWentWrongToast();
-    }
+    if (!validateNumericInput(inputValue, setInputError)) return;
+    save();
   };
 
+  // Toggle: pass explicit overrides so the write uses the
+  // previously-persisted `maxBid` (ignoring any unsaved input edits)
+  // and the flipped `biddingEnabled`. Local `automatedBidding` state
+  // is NOT flipped here — the `onConfirmed` refetch re-hydrates from
+  // the on-chain CMA record via the effect above, matching the
+  // pre-COB-504 behaviour where the UI reflected the persisted value
+  // only after tx confirmation. See `SaveOverrides` in
+  // `useConfigureBidding` for why the overrides are needed.
   const handleToggleAutomation = () => {
-    if (!currentBlockchain) {
-      console.error(
-        'No blockchain connected. Please connect your wallet to the correct network.'
-      );
-      showSomethingWentWrongToast();
-      return;
-    }
-
-    if (!contract || !contract.address) {
-      console.error('No contract address provided');
-      showSomethingWentWrongToast();
-      return;
-    }
-
-    try {
-      const newAutomatedBidding = !automatedBidding;
-      console.log('Toggling automation with values:', {
-        contractAddress: contract.address,
-        maxBidAmount: originalMaxBid,
-        automatedBidding: newAutomatedBidding,
-      });
-
-      // Same chain-read preservation as `handleUpdateAutomation` (COB-499).
-      if (cmaRecord == null) {
-        showErrorToast({
-          message:
-            'Still reading the on-chain configuration. Try again in a moment.',
-        });
-        return;
-      }
-
-      // Create transaction parameters for updateContract with funding = 0
-      const txParams = {
-        address:
-          currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
-        functionName: 'updateContract',
-        args: [
-          contract.address,
-          parseEther(originalMaxBid),
-          newAutomatedBidding,
-          cmaRecord.autoActivate,
-          cmaRecord.maxActivationCost,
-        ] as [string, bigint, boolean, boolean, bigint],
-      };
-
-      // Store the parameters for retry functionality
-      setLastTxParams({
-        ...txParams,
-        value: '0', // updateContract is nonpayable, so no ETH value needed
-      });
-
-      // Send the transaction
-      writeContract(txParams, (hash) => {
-        console.log(`Toggle transaction submitted with hash: ${hash}`);
-      });
-    } catch (err) {
-      console.error('Error submitting toggle transaction:', err);
-      showSomethingWentWrongToast();
-    }
+    save({
+      maxBid: persistedMaxBid,
+      biddingEnabled: !automatedBidding,
+    });
   };
+
+  const targetChainLabel = 'the contract network';
+
+  const showSimulationFailure =
+    isConnected &&
+    !isChainMismatch &&
+    !isSaving &&
+    !isSimulating &&
+    simulationError != null &&
+    isFormReady;
+
+  const controlsDisabled = isSaving;
 
   return (
     <div
@@ -573,18 +321,6 @@ export function AutomatedBiddingSection({
         }}
       />
 
-      {/* Gas Price Warning */}
-      {isGasPriceHigh && (
-        <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center relative z-10'>
-          <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
-          <span className='text-sm'>
-            Warning: Network fees are extremely high{' '}
-            {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
-            lower gas prices.
-          </span>
-        </div>
-      )}
-
       <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
         <div className='min-w-0 flex-1'>
           <p className='font-bold'>Automated Bidding Configuration</p>
@@ -596,7 +332,7 @@ export function AutomatedBiddingSection({
         <button
           onClick={() => setShowAutomationPanel(!showAutomationPanel)}
           className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
-          disabled={isTransactionInProgress}
+          disabled={controlsDisabled}
         >
           {showAutomationPanel ? (
             <ChevronUp className='w-5 h-5 text-white' />
@@ -625,21 +361,35 @@ export function AutomatedBiddingSection({
               </span>
             </div>
             <div className='flex items-center px-2'>
-              <Button
-                onClick={handleToggleAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
-                disabled={isTransactionInProgress || isSuccess}
-              >
-                {isTransactionInProgress ? (
-                  <div className='flex items-center'>
+              {isChainMismatch ? (
+                <Button
+                  onClick={switchToTarget}
+                  disabled={isSwitchingChain}
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
+                >
+                  {isSwitchingChain ? (
                     <Loader2 className='h-3 w-3 animate-spin' />
-                  </div>
-                ) : automatedBidding ? (
-                  'Disable'
-                ) : (
-                  'Enable'
-                )}
-              </Button>
+                  ) : (
+                    `Switch to ${targetChainLabel}`
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleToggleAutomation}
+                  className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
+                  disabled={controlsDisabled}
+                >
+                  {isSaving ? (
+                    <div className='flex items-center'>
+                      <Loader2 className='h-3 w-3 animate-spin' />
+                    </div>
+                  ) : automatedBidding ? (
+                    'Disable'
+                  ) : (
+                    'Enable'
+                  )}
+                </Button>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className='w-4 h-4 cursor-help' />
@@ -705,11 +455,11 @@ export function AutomatedBiddingSection({
                         className={`pr-12 bg-white border-none text-gray-500 ${
                           fundingError ? 'border-red-500' : ''
                         } ${
-                          isTransactionInProgress
+                          controlsDisabled
                             ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
                             : ''
                         }`}
-                        disabled={isTransactionInProgress}
+                        disabled={controlsDisabled}
                       />
                       <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                         ETH
@@ -762,11 +512,11 @@ export function AutomatedBiddingSection({
                     className={`pr-12 bg-white border-none text-gray-500 ${
                       inputError ? 'border-red-500' : ''
                     } ${
-                      isTransactionInProgress
+                      controlsDisabled
                         ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
                         : ''
                     }`}
-                    disabled={isTransactionInProgress}
+                    disabled={controlsDisabled}
                   />
                   <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
                     ETH
@@ -782,76 +532,46 @@ export function AutomatedBiddingSection({
             <div></div>
           </div>
 
-          {/* Disclaimer and Set Automation button for new contracts */}
-          {!contractExists && (
-            <div className='flex items-start justify-between space-x-4 mt-6'>
-              <div className='flex items-start space-x-2'>
-                <Checkbox
-                  id='disclaimer'
-                  checked={disclaimerChecked}
-                  onCheckedChange={(checked) =>
-                    setDisclaimerChecked(checked === true)
-                  }
-                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
-                />
-                <Label
-                  htmlFor='disclaimer'
-                  className='text-sm font-medium leading-tight'
-                >
-                  I understand this is an experimental feature pending audit
-                  completion, and I accept the associated risks of using
-                  automated bidding. Performance may vary, and I acknowledge
-                  that I am solely responsible for monitoring my account.
-                </Label>
-              </div>
-              <Button
-                onClick={handleSetAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
-                disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
+          {/* Set / Update button + disclaimer */}
+          <div className='flex items-start justify-between space-x-4 mt-6'>
+            <div className='flex items-start space-x-2'>
+              <Checkbox
+                id='disclaimer'
+                checked={disclaimerChecked}
+                onCheckedChange={(checked) =>
+                  setDisclaimerChecked(checked === true)
                 }
+                className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+              />
+              <Label
+                htmlFor='disclaimer'
+                className='text-sm font-medium leading-tight'
               >
-                {isTransactionInProgress ? (
-                  <div className='flex items-center'>
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                  </div>
+                I understand this is an experimental feature pending audit
+                completion, and I accept the associated risks of using
+                automated bidding. Performance may vary, and I acknowledge
+                that I am solely responsible for monitoring my account.
+              </Label>
+            </div>
+            {isChainMismatch ? (
+              <Button
+                onClick={switchToTarget}
+                disabled={isSwitchingChain}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+              >
+                {isSwitchingChain ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
                 ) : (
-                  'Set Automation'
+                  `Switch to ${targetChainLabel}`
                 )}
               </Button>
-            </div>
-          )}
-
-          {/* Update button for existing contracts */}
-          {contractExists && (
-            <div className='flex items-start justify-between space-x-4 mt-6'>
-              <div className='flex items-start space-x-2'>
-                <Checkbox
-                  id='disclaimer'
-                  checked={disclaimerChecked}
-                  onCheckedChange={(checked) =>
-                    setDisclaimerChecked(checked === true)
-                  }
-                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
-                />
-                <Label
-                  htmlFor='disclaimer'
-                  className='text-sm font-medium leading-tight'
-                >
-                  I understand this is an experimental feature pending audit
-                  completion, and I accept the associated risks of using
-                  automated bidding. Performance may vary, and I acknowledge
-                  that I am solely responsible for monitoring my account.
-                </Label>
-              </div>
+            ) : contractExists ? (
               <Button
                 onClick={handleUpdateAutomation}
                 className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
-                disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
-                }
+                disabled={controlsDisabled || !disclaimerChecked}
               >
-                {isTransactionInProgress ? (
+                {isSaving ? (
                   <div className='flex items-center'>
                     <Loader2 className='h-4 w-4 animate-spin' />
                   </div>
@@ -859,6 +579,38 @@ export function AutomatedBiddingSection({
                   'Update Automation'
                 )}
               </Button>
+            ) : (
+              <Button
+                onClick={handleSetAutomation}
+                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                disabled={controlsDisabled || !disclaimerChecked}
+              >
+                {isSaving ? (
+                  <div className='flex items-center'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  </div>
+                ) : (
+                  'Set Automation'
+                )}
+              </Button>
+            )}
+          </div>
+
+          {showSimulationFailure && (
+            <div className='mt-3 flex items-start gap-2 text-[11px] text-red-100'>
+              <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
+              <span className='flex-1'>
+                Could not simulate the save transaction. Check your inputs
+                and retry.
+              </span>
+              <button
+                type='button'
+                onClick={() => refetchSimulation()}
+                className='inline-flex items-center gap-1 text-white hover:text-blue-100 shrink-0'
+              >
+                <RefreshCw className='h-3 w-3' />
+                Retry
+              </button>
             </div>
           )}
         </div>
