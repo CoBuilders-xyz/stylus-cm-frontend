@@ -79,9 +79,9 @@ export function useUserCMAContract({
 
   const {
     data: rawContracts,
-    error,
-    isLoading,
-    refetch,
+    error: contractsError,
+    isLoading: isContractsLoading,
+    refetch: refetchContracts,
   } = useReadContract({
     address: cmaAddress,
     abi: cacheManagerAutomationAbi.abi as Abi,
@@ -103,7 +103,12 @@ export function useUserCMAContract({
   // Public CMA constant — independent of the connected wallet. Reads
   // through the same wagmi cache so parallel consumers of this hook
   // dedupe to a single RPC call.
-  const { data: rawMinMaxBid } = useReadContract({
+  const {
+    data: rawMinMaxBid,
+    error: minMaxBidError,
+    isLoading: isMinMaxBidLoading,
+    refetch: refetchMinMaxBid,
+  } = useReadContract({
     address: cmaAddress,
     abi: cacheManagerAutomationAbi.abi as Abi,
     functionName: 'minMaxBidAmount',
@@ -134,15 +139,23 @@ export function useUserCMAContract({
   }, [rawContracts, contractAddress]);
 
   const refetchStable = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    refetchContracts();
+    refetchMinMaxBid();
+  }, [refetchContracts, refetchMinMaxBid]);
 
   return {
     data,
     isRegistered: data != null,
     minMaxBidAmount,
-    isLoading,
-    error: (error as Error | null) ?? null,
+    // Combined so callers gate their skeleton / error UI on the whole
+    // hook resolving, not just one of the two reads. Without this a
+    // failure in `minMaxBidAmount` would leave the config editor
+    // stuck on the skeleton forever with no path to recover.
+    isLoading: isContractsLoading || isMinMaxBidLoading,
+    error:
+      (contractsError as Error | null) ??
+      (minMaxBidError as Error | null) ??
+      null,
     refetch: refetchStable,
   };
 }

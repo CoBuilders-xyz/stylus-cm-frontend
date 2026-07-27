@@ -578,15 +578,16 @@ function AutoActivationConfig({
     refetch: refetchCMAConfig,
   } = useUserCMAContract({ chainId, cmaAddress, contractAddress });
 
-  // Skeleton the config card until the on-chain read resolves — form state
-  // needs the on-chain values as its baseline, and initialising from
-  // "unknown" and re-syncing later reintroduces the flicker we deliberately
-  // avoid elsewhere. Also wait for `minMaxBidAmount` because Activation-
-  // first flows need it as the `maxBid` seed for `insertContract`.
-  if (isCMAReadLoading || minMaxBidAmount === undefined) {
+  // Skeleton the config card until BOTH on-chain reads resolve — form
+  // state needs `getUserContracts` for the baseline and Activation-first
+  // flows need `minMaxBidAmount` as the `maxBid` seed for `insertContract`.
+  // The hook's `isLoading` is now the combined state, so one gate covers
+  // both. Any failure surfaces through the error path with a retry that
+  // hits both reads.
+  if (isCMAReadLoading) {
     return <AutoActivationConfigSkeleton />;
   }
-  if (cmaReadError) {
+  if (cmaReadError || minMaxBidAmount === undefined) {
     return (
       <AutoActivationConfigError
         message='Could not read the on-chain configuration.'
@@ -854,6 +855,14 @@ function AutoActivationConfigForm({
             onCheckedChange={setEnabled}
             disabled={isSaving}
             aria-label='Toggle auto-activation'
+            // Override the default `--primary` / `--input` theme colors:
+            // in this app's dark theme they render nearly identically, so
+            // the checked vs unchecked distinction is invisible. Use the
+            // Save button's blue for checked and a clear gray for
+            // unchecked. Same override could live at the primitive level
+            // for a codebase-wide fix — worth doing during the broader
+            // UX pass — but for now only this component uses the switch.
+            className='data-[state=checked]:bg-[#335CD7] data-[state=unchecked]:bg-gray-600'
           />
           <Label
             htmlFor='auto-activate-switch'
