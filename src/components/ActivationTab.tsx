@@ -196,12 +196,16 @@ export default function ActivationTab({
       ) : null}
 
       {/* Activation history — same borderless Table treatment as the Bid
-          History section on the Cache tab. */}
-      <ActivationHistory
-        isLoading={false}
-        events={history}
-        chainId={chainId}
-      />
+          History section on the Cache tab. Hidden on the explore-contracts
+          (read-only) view to match the Cache tab, which also hides its Bid
+          History there until the user adds the contract. */}
+      {!readOnly && (
+        <ActivationHistory
+          isLoading={false}
+          events={history}
+          chainId={chainId}
+        />
+      )}
     </div>
   );
 }
@@ -733,64 +737,64 @@ function AutoActivationConfigForm({
         </div>
       </div>
 
-      <div className='mt-4 grid grid-cols-[auto_1fr_auto] gap-y-5 relative z-10'>
-        <div className='self-center'>
-          <Label
-            htmlFor='auto-activate-cost'
-            className='font-bold text-white'
-          >
-            Max activation cost
-          </Label>
-        </div>
-        <div className='flex justify-end'>
-          <div className='flex flex-col w-full max-w-[200px]'>
-            <div className='relative'>
-              <Input
-                id='auto-activate-cost'
-                type='text'
-                inputMode='decimal'
-                value={costEth}
-                onChange={(e) => handleCostChange(e.target.value)}
-                placeholder='Enter amount'
-                disabled={isSaving}
-                className={`pr-12 bg-white border-none text-gray-500 ${
-                  costError ||
-                  hasCostParseError ||
-                  (enabled && parsedCost === ZERO_WEI)
-                    ? 'border border-red-500'
-                    : ''
-                } ${
-                  isSaving
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                    : ''
-                }`}
-              />
-              <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
-                ETH
-              </div>
+      {/* Narrow (side-panel on phones): stack label above the input so the
+          absolutely-positioned input never lands on top of the label — that
+          was the mobile-overlap bug in the first iteration. On the container's
+          @md/panel breakpoint (same one the hero uses), flip to inline: label
+          left, input right. */}
+      <div className='mt-4 flex flex-col @md/panel:flex-row @md/panel:items-center @md/panel:justify-between gap-2 @md/panel:gap-4 relative z-10'>
+        <Label
+          htmlFor='auto-activate-cost'
+          className='font-bold text-white'
+        >
+          Max activation cost
+        </Label>
+        <div className='flex flex-col w-full @md/panel:w-auto @md/panel:max-w-[200px]'>
+          <div className='relative'>
+            <Input
+              id='auto-activate-cost'
+              type='text'
+              inputMode='decimal'
+              value={costEth}
+              onChange={(e) => handleCostChange(e.target.value)}
+              placeholder='Enter amount'
+              disabled={isSaving}
+              className={`pr-12 bg-white border-none text-gray-500 ${
+                costError ||
+                hasCostParseError ||
+                (enabled && parsedCost === ZERO_WEI)
+                  ? 'border border-red-500'
+                  : ''
+              } ${
+                isSaving
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                  : ''
+              }`}
+            />
+            <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+              ETH
             </div>
-            {costError && (
-              <div className='text-white text-xs italic text-left mt-1'>
-                {costError}
-              </div>
-            )}
-            {!costError && hasCostParseError && (
-              <div className='text-white text-xs italic text-left mt-1'>
-                Enter a valid ETH amount (max 18 decimal places).
-              </div>
-            )}
-            {!costError &&
-              !hasCostParseError &&
-              enabled &&
-              parsedCost === ZERO_WEI && (
-                <div className='text-white text-xs italic text-left mt-1'>
-                  Max activation cost must be greater than 0 when
-                  auto-activation is enabled.
-                </div>
-              )}
           </div>
+          {costError && (
+            <div className='text-white text-xs italic text-left mt-1'>
+              {costError}
+            </div>
+          )}
+          {!costError && hasCostParseError && (
+            <div className='text-white text-xs italic text-left mt-1'>
+              Enter a valid ETH amount (max 18 decimal places).
+            </div>
+          )}
+          {!costError &&
+            !hasCostParseError &&
+            enabled &&
+            parsedCost === ZERO_WEI && (
+              <div className='text-white text-xs italic text-left mt-1'>
+                Max activation cost must be greater than 0 when
+                auto-activation is enabled.
+              </div>
+            )}
         </div>
-        <div></div>
       </div>
 
       <div className='mt-5 flex items-center justify-end gap-3 flex-wrap relative z-10'>
