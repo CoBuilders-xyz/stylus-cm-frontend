@@ -371,22 +371,126 @@ export default function AlertsSettings({
         return;
       }
 
-      approachingExpirationValueNumeric =
+      // Reject decimals / non-digits at the raw-string level. parseInt('12.2')
+      // would silently truncate to 12 and pass Number.isInteger, letting the
+      // backend do the rejection with a generic toast.
+      const rawThreshold =
         typeof approachingExpirationThreshold === 'string'
-          ? parseInt(approachingExpirationThreshold, 10)
-          : approachingExpirationThreshold;
+          ? approachingExpirationThreshold
+          : String(approachingExpirationThreshold);
 
+      if (!/^\d+$/.test(rawThreshold)) {
+        setError(
+          'Approaching Expiration threshold must be a whole number between 1 and 365 (no decimals)'
+        );
+        return;
+      }
+
+      approachingExpirationValueNumeric = parseInt(rawThreshold, 10);
       if (
         isNaN(approachingExpirationValueNumeric) ||
-        !Number.isInteger(approachingExpirationValueNumeric) ||
         approachingExpirationValueNumeric < 1 ||
         approachingExpirationValueNumeric > 365
       ) {
         setError(
-          'Approaching Expiration threshold must be an integer between 1 and 365'
+          'Approaching Expiration threshold must be a whole number between 1 and 365'
         );
         return;
       }
+    }
+
+    // Enabled alerts must have at least one notification channel selected.
+    // Backend rejects with a generic error otherwise — catch it here so the
+    // user gets an actionable message instead of "please try again".
+    const enabledAlertsWithoutChannels: string[] = [];
+    const hasAnyChannel = (t: boolean, s: boolean, w: boolean) => t || s || w;
+    if (
+      evictionAlertEnabled &&
+      !hasAnyChannel(
+        evictionTelegramEnabled,
+        evictionSlackEnabled,
+        evictionWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Eviction');
+    }
+    if (
+      noGasAlertEnabled &&
+      !hasAnyChannel(
+        noGasTelegramEnabled,
+        noGasSlackEnabled,
+        noGasWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('No Gas');
+    }
+    if (
+      lowGasAlertEnabled &&
+      !hasAnyChannel(
+        lowGasTelegramEnabled,
+        lowGasSlackEnabled,
+        lowGasWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Low Gas');
+    }
+    if (
+      bidSafetyAlertEnabled &&
+      !hasAnyChannel(
+        bidSafetyTelegramEnabled,
+        bidSafetySlackEnabled,
+        bidSafetyWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Bid Safety');
+    }
+    if (
+      approachingExpirationAlertEnabled &&
+      !hasAnyChannel(
+        approachingExpirationTelegramEnabled,
+        approachingExpirationSlackEnabled,
+        approachingExpirationWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Approaching Expiration');
+    }
+    if (
+      expiredAlertEnabled &&
+      !hasAnyChannel(
+        expiredTelegramEnabled,
+        expiredSlackEnabled,
+        expiredWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Expired');
+    }
+    if (
+      reactivationSucceededAlertEnabled &&
+      !hasAnyChannel(
+        reactivationSucceededTelegramEnabled,
+        reactivationSucceededSlackEnabled,
+        reactivationSucceededWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Reactivation Succeeded');
+    }
+    if (
+      reactivationFailedAlertEnabled &&
+      !hasAnyChannel(
+        reactivationFailedTelegramEnabled,
+        reactivationFailedSlackEnabled,
+        reactivationFailedWebhookEnabled
+      )
+    ) {
+      enabledAlertsWithoutChannels.push('Reactivation Failed');
+    }
+    if (enabledAlertsWithoutChannels.length > 0) {
+      setError(
+        `Select at least one notification channel for: ${enabledAlertsWithoutChannels.join(
+          ', '
+        )}`
+      );
+      return;
     }
 
     setIsLoading(true);
