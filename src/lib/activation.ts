@@ -234,14 +234,6 @@ export function activationHistoryItemToEvent(
   };
 }
 
-export interface CacheEvent {
-  id: string;
-  date: string;
-  type: 'cached' | 'evicted' | 'bid_placed';
-  description: string;
-  txHash?: string;
-}
-
 export const DEFAULT_AUTO_ACTIVATION = {
   enabled: false,
   maxActivationCostEth: 0.005,

@@ -45,7 +45,6 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import ActivationTab from '@/components/ActivationTab';
-import ContractHistoryTab from '@/components/ContractHistoryTab';
 import CacheHero from '@/components/CacheHero';
 import {
   activationHistoryItemToEvent,
@@ -614,12 +613,6 @@ export default function ContractDetails({
                 >
                   Activation
                 </TabsTrigger>
-                <TabsTrigger
-                  value='history'
-                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
-                >
-                  History
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value='cache'>
@@ -696,12 +689,6 @@ export default function ContractDetails({
                 />
               </TabsContent>
 
-              <TabsContent value='history'>
-                <ContractHistoryTab
-                  activationHistory={[]}
-                  cacheEvents={[]}
-                />
-              </TabsContent>
             </Tabs>
           ) : (
             /* Explore Contracts View */
