@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -15,10 +16,9 @@ import {
 import {
   ActivationEvent,
   ActivationInfo,
-  formatRelativeTime,
 } from '@/lib/activation';
-import ActivationBadge from '@/components/ActivationBadge';
-import { formatDate } from '@/utils/formatting';
+import ActivationHero from '@/components/ActivationHero';
+import ActivationHistory from '@/components/ActivationHistory';
 import { explorerTxUrl } from '@/utils/explorer';
 import { useActivateProgram } from '@/hooks/useActivateProgram';
 import { useConfigureAutoActivation } from '@/hooks/useConfigureAutoActivation';
@@ -57,9 +57,6 @@ interface Props {
   isLoading?: boolean;
 }
 
-const truncate = (hash: string) =>
-  hash.length > 14 ? `${hash.slice(0, 8)}…${hash.slice(-6)}` : hash;
-
 function formatMaxActivationCost(wei: string | null | undefined): string {
   if (wei == null || wei === '') return '—';
   try {
@@ -69,6 +66,62 @@ function formatMaxActivationCost(wei: string | null | undefined): string {
     // stray non-numeric value should not crash the whole tab.
     return '—';
   }
+}
+
+interface AutoActivationReadonlyProps {
+  autoActivate: boolean | undefined;
+  maxActivationCost: string | null | undefined;
+}
+
+/**
+ * Read-only summary card used on the explore-contracts view where the user
+ * cannot edit the CMA config. Kept dark-bordered rather than gradient — the
+ * gradient action-card styling is reserved for interactive controls, matching
+ * the Cache tab's split between the (interactive) Bidding cards and the
+ * (informational) contract-info rows.
+ */
+function AutoActivationReadonly({
+  autoActivate,
+  maxActivationCost,
+}: AutoActivationReadonlyProps) {
+  return (
+    <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
+      <div className='flex items-start justify-between gap-4 flex-wrap'>
+        <div>
+          <h3 className='text-lg font-medium'>Auto-activation</h3>
+          <p className='text-gray-400 text-sm'>
+            Automatically re-activate this contract before it expires.
+          </p>
+        </div>
+        <span
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+            autoActivate
+              ? 'border-green-500/40 bg-green-500/10 text-green-300'
+              : 'border-gray-600/60 bg-gray-500/10 text-gray-300'
+          }`}
+        >
+          <span
+            aria-hidden
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              autoActivate ? 'bg-green-400' : 'bg-gray-400'
+            }`}
+          />
+          {autoActivate ? 'Enabled' : 'Disabled'}
+        </span>
+      </div>
+
+      <dl className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
+        <div>
+          <dt className='text-[11px] uppercase tracking-wider text-gray-500'>
+            Max activation cost
+          </dt>
+          <dd className='mt-0.5 text-gray-100 tabular-nums'>
+            {formatMaxActivationCost(maxActivationCost)}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
 }
 
 export default function ActivationTab({
@@ -99,33 +152,11 @@ export default function ActivationTab({
   }
 
   return (
-    <div className='space-y-6'>
-      {/* Status header — the badge is the same component the contracts
-          table uses on each row, so the visual language stays consistent. */}
-      <div
-        className={`relative overflow-hidden rounded-lg border border-[#2C2E30] bg-gradient-to-br p-6 ${
-          activation.status === 'active'
-            ? 'from-green-500/5 to-transparent'
-            : activation.status === 'expiring'
-              ? 'from-amber-500/8 to-transparent'
-              : activation.status === 'error'
-                ? 'from-red-500/8 to-transparent'
-                : activation.status === 'unknown'
-                  ? 'from-gray-500/8 to-transparent'
-                  : 'from-red-500/8 to-transparent'
-        }`}
-      >
-        <div className='flex items-start justify-between gap-4 flex-wrap'>
-          <div className='flex items-start gap-4'>
-            <ActivationBadge info={activation} />
-            {activation.lastActivatedAt && (
-              <div className='text-xs text-gray-500 self-end'>
-                Last activated {formatRelativeTime(activation.lastActivatedAt)}
-              </div>
-            )}
-          </div>
-
-          {canActivate && (
+    <div>
+      <ActivationHero
+        info={activation}
+        actionSlot={
+          canActivate ? (
             <ActivateNowControl
               contractAddress={contractAddress as string}
               chainId={chainId as number}
@@ -133,228 +164,49 @@ export default function ActivationTab({
               isActive={isActive}
               onActivated={onActivated}
             />
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
-      {/* Auto-activation config — interactive when the parent supplies the
-          CMA state, otherwise a read-only summary (explore view). */}
-      {canConfigure ? (
-        <AutoActivationConfig
-          contractAddress={contractAddress as string}
-          chainId={chainId as number}
-          chainName={chainName}
-          cmaAddress={cmaAddress as `0x${string}`}
-          onSaved={onConfigSaved}
-        />
-      ) : !readOnly ? (
-        <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
-          <div className='flex items-start justify-between gap-4 flex-wrap'>
-            <div>
-              <h3 className='text-lg font-medium'>Auto-activation</h3>
-              <p className='text-gray-400 text-sm'>
-                Automatically re-activate this contract before it expires.
-              </p>
-            </div>
-            <span
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
-                autoActivate
-                  ? 'border-green-500/40 bg-green-500/10 text-green-300'
-                  : 'border-gray-600/60 bg-gray-500/10 text-gray-300'
-              }`}
-            >
-              <span
-                aria-hidden
-                className={`inline-block h-1.5 w-1.5 rounded-full ${
-                  autoActivate ? 'bg-green-400' : 'bg-gray-400'
-                }`}
-              />
-              {autoActivate ? 'Enabled' : 'Disabled'}
-            </span>
+      {/* Auto-activation section — mirrors the "Bidding" section on the
+          Cache tab (h3 heading + gradient action card underneath) so both
+          tabs share the same visual rhythm. */}
+      {canConfigure || (!readOnly && autoActivate !== undefined) ? (
+        <>
+          <div className='mb-3'>
+            <h3 className='text-lg'>Auto-activation</h3>
           </div>
 
-          <dl className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
-            <div>
-              <dt className='text-[11px] uppercase tracking-wider text-gray-500'>
-                Max activation cost
-              </dt>
-              <dd className='mt-0.5 text-gray-100 tabular-nums'>
-                {formatMaxActivationCost(maxActivationCost)}
-              </dd>
-            </div>
-          </dl>
-        </div>
+          <div className='space-y-4 mb-8'>
+            {canConfigure ? (
+              <AutoActivationConfig
+                contractAddress={contractAddress as string}
+                chainId={chainId as number}
+                chainName={chainName}
+                cmaAddress={cmaAddress as `0x${string}`}
+                onSaved={onConfigSaved}
+              />
+            ) : (
+              <AutoActivationReadonly
+                autoActivate={autoActivate}
+                maxActivationCost={maxActivationCost}
+              />
+            )}
+          </div>
+        </>
       ) : null}
 
-      {/* Activation history — indexed from the CacheManagerAutomation
-          `ActivationPerformed` and `ActivationError` events by the backend. */}
-      <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
-        <h3 className='text-lg font-medium mb-3'>Activation history</h3>
-        {history.length === 0 ? (
-          <p className='text-sm text-gray-400'>
-            No activation events recorded for this contract yet.
-          </p>
-        ) : (
-          <>
-            {/* Narrow-container card stack */}
-            <ul className='@lg/panel:hidden flex flex-col gap-2'>
-              {history.map((evt) => {
-                const url = explorerTxUrl(chainId, evt.txHash);
-                return (
-                  <li
-                    key={evt.id}
-                    className='rounded-md border border-[#1f1f1f] p-3 text-sm'
-                  >
-                    <div className='flex items-center justify-between gap-3 mb-2'>
-                      <span
-                        className={`inline-flex items-center gap-2 text-xs ${
-                          evt.status === 'success'
-                            ? 'text-green-400'
-                            : 'text-red-400'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-2 w-2 rounded-full ${
-                            evt.status === 'success'
-                              ? 'bg-green-500'
-                              : 'bg-red-500'
-                          }`}
-                        />
-                        <span>
-                          {evt.status === 'success'
-                            ? 'Activated'
-                            : 'Failed'}
-                        </span>
-                      </span>
-                      <span className='text-xs text-gray-400 whitespace-nowrap'>
-                        {formatDate(evt.date)}
-                      </span>
-                    </div>
-                    {evt.note && (
-                      <div className='text-[11px] text-red-300/80 mb-2'>
-                        {evt.note}
-                      </div>
-                    )}
-                    {evt.status === 'success' && evt.valueConsumedEth && (
-                      <div className='mb-2'>
-                        <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-                          Spent
-                        </div>
-                        <div className='text-gray-200 tabular-nums text-xs'>
-                          {evt.valueConsumedEth} ETH
-                        </div>
-                      </div>
-                    )}
-                    <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-                      Tx hash
-                    </div>
-                    {url ? (
-                      <a
-                        href={url}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='font-mono text-xs text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
-                      >
-                        {truncate(evt.txHash)}
-                        <ExternalLink className='h-3 w-3' />
-                      </a>
-                    ) : (
-                      <span className='font-mono text-xs text-gray-300'>
-                        {truncate(evt.txHash)}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-
-            {/* Wide-container full table */}
-            <div className='hidden @lg/panel:block -mx-6 px-6 overflow-x-auto'>
-              <table className='min-w-[560px] w-full text-sm'>
-                <thead>
-                  <tr className='border-b border-[#2C2E30]'>
-                    <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
-                      Date
-                    </th>
-                    <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
-                      Event
-                    </th>
-                    <th className='text-right py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
-                      Spent (ETH)
-                    </th>
-                    <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
-                      Tx
-                    </th>
-                    <th className='text-left py-2 px-2 text-[11px] uppercase tracking-wider font-medium text-gray-500'>
-                      Reason
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((evt) => {
-                    const url = explorerTxUrl(chainId, evt.txHash);
-                    return (
-                      <tr
-                        key={evt.id}
-                        className='border-b border-[#1f1f1f] last:border-0 hover:bg-white/[0.02] transition-colors'
-                      >
-                        <td className='py-3 px-2 whitespace-nowrap text-gray-300'>
-                          {formatDate(evt.date)}
-                        </td>
-                        <td className='py-3 px-2'>
-                          <span
-                            className={`inline-flex items-center gap-2 ${
-                              evt.status === 'success'
-                                ? 'text-green-400'
-                                : 'text-red-400'
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-2 w-2 rounded-full ${
-                                evt.status === 'success'
-                                  ? 'bg-green-500'
-                                  : 'bg-red-500'
-                              }`}
-                            />
-                            <span>
-                              {evt.status === 'success'
-                                ? 'Activated'
-                                : 'Failed'}
-                            </span>
-                          </span>
-                        </td>
-                        <td className='py-3 px-2 text-right tabular-nums text-gray-300'>
-                          {evt.status === 'success' && evt.valueConsumedEth
-                            ? evt.valueConsumedEth
-                            : '—'}
-                        </td>
-                        <td className='py-3 px-2 font-mono text-xs'>
-                          {url ? (
-                            <a
-                              href={url}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
-                            >
-                              {truncate(evt.txHash)}
-                              <ExternalLink className='h-3 w-3' />
-                            </a>
-                          ) : (
-                            truncate(evt.txHash)
-                          )}
-                        </td>
-                        <td className='py-3 px-2 text-xs text-red-300/80 max-w-[220px] truncate'>
-                          {evt.note ?? ''}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Activation history — same borderless Table treatment as the Bid
+          History section on the Cache tab. Hidden on the explore-contracts
+          (read-only) view to match the Cache tab, which also hides its Bid
+          History there until the user adds the contract. */}
+      {!readOnly && (
+        <ActivationHistory
+          isLoading={false}
+          events={history}
+          chainId={chainId}
+        />
+      )}
     </div>
   );
 }
@@ -790,13 +642,16 @@ function AutoActivationConfigForm({
     setCostError(null);
   };
 
+  const saveButtonBaseClass =
+    'bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed';
+
   let saveButton: ReactNode;
   if (!isConnected) {
     saveButton = (
       <Tooltip>
         <TooltipTrigger asChild>
           <span>
-            <Button disabled className='bg-gray-800 text-gray-400 cursor-not-allowed'>
+            <Button disabled className={saveButtonBaseClass}>
               <Save className='h-4 w-4' />
               Save
             </Button>
@@ -810,7 +665,7 @@ function AutoActivationConfigForm({
       <Button
         onClick={switchToTarget}
         disabled={isSwitchingChain}
-        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+        className={saveButtonBaseClass}
       >
         {isSwitchingChain ? (
           <Loader2 className='h-4 w-4 animate-spin' />
@@ -826,7 +681,7 @@ function AutoActivationConfigForm({
       <Button
         onClick={save}
         disabled={cannotSave}
-        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+        className={saveButtonBaseClass}
       >
         {isSaving ? (
           <Loader2 className='h-4 w-4 animate-spin' />
@@ -839,11 +694,28 @@ function AutoActivationConfigForm({
   }
 
   return (
-    <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
-      <div className='flex items-start justify-between gap-4 flex-wrap'>
-        <div>
-          <h3 className='text-lg font-medium'>Auto-activation</h3>
-          <p className='text-gray-400 text-sm'>
+    <div
+      className='relative rounded-md p-4 overflow-hidden'
+      style={{
+        background:
+          'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 103.8%)',
+      }}
+    >
+      {/* Noise texture overlay — mirrors AutomatedBiddingSection so both
+          "configure an automated behavior" cards share the same surface. */}
+      <div
+        className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
+          backgroundSize: '100px 100px',
+          backgroundRepeat: 'repeat',
+        }}
+      />
+
+      <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
+        <div className='min-w-0 flex-1'>
+          <p className='font-bold'>Auto-activation</p>
+          <p className='text-sm text-blue-200'>
             Automatically re-activate this contract before it expires. Uses
             your Gas Tank balance to pay for the activation fee.
           </p>
@@ -855,72 +727,94 @@ function AutoActivationConfigForm({
             onCheckedChange={setEnabled}
             disabled={isSaving}
             aria-label='Toggle auto-activation'
-            // Override the default `--primary` / `--input` theme colors:
-            // in this app's dark theme they render nearly identically, so
-            // the checked vs unchecked distinction is invisible. Use the
-            // Save button's blue for checked and a clear gray for
-            // unchecked. Same override could live at the primitive level
-            // for a codebase-wide fix — worth doing during the broader
-            // UX pass — but for now only this component uses the switch.
-            className='data-[state=checked]:bg-[#335CD7] data-[state=unchecked]:bg-gray-600'
+            className='data-[state=checked]:bg-white/90 data-[state=unchecked]:bg-white/25'
           />
           <Label
             htmlFor='auto-activate-switch'
-            className='text-sm text-gray-200 cursor-pointer'
+            className='text-sm text-white cursor-pointer'
           >
             {enabled ? 'Enabled' : 'Disabled'}
           </Label>
         </div>
       </div>
 
-      <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4'>
-        <div>
-          <Label
-            htmlFor='auto-activate-cost'
-            className='text-[11px] uppercase tracking-wider text-gray-500'
-          >
-            Max activation cost (ETH)
-          </Label>
-          <Input
-            id='auto-activate-cost'
-            type='text'
-            inputMode='decimal'
-            value={costEth}
-            onChange={(e) => handleCostChange(e.target.value)}
-            placeholder='0.0'
-            disabled={isSaving}
-            className={`mt-1 bg-black border ${
-              costError ||
-              hasCostParseError ||
-              (enabled && parsedCost === ZERO_WEI)
-                ? 'border-red-500'
-                : 'border-[#2C2E30]'
-            } text-white`}
-          />
+      {/* Narrow (side-panel on phones): stack label above the input so the
+          absolutely-positioned input never lands on top of the label — that
+          was the mobile-overlap bug in the first iteration. On the container's
+          @md/panel breakpoint (same one the hero uses), flip to inline: label
+          left, input right. */}
+      <div className='mt-4 flex flex-col @md/panel:flex-row @md/panel:items-center @md/panel:justify-between gap-2 @md/panel:gap-4 relative z-10'>
+        <Label
+          htmlFor='auto-activate-cost'
+          className='font-bold text-white'
+        >
+          Max activation cost
+        </Label>
+        <div className='flex flex-col w-full @md/panel:w-auto @md/panel:max-w-[200px]'>
+          <div className='relative'>
+            <Input
+              id='auto-activate-cost'
+              type='text'
+              inputMode='decimal'
+              value={costEth}
+              onChange={(e) => handleCostChange(e.target.value)}
+              placeholder='Enter amount'
+              disabled={isSaving}
+              aria-invalid={
+                Boolean(
+                  costError ||
+                    hasCostParseError ||
+                    (enabled && parsedCost === ZERO_WEI)
+                ) || undefined
+              }
+              // `cn` (twMerge) resolves Tailwind conflicts by rightmost-wins
+              // rather than stylesheet order — critical here because the
+              // base `bg-white border-none` would otherwise silently override
+              // the `border-red-500` invalid state and the `bg-gray-700`
+              // saving state.
+              className={cn(
+                'pr-12 border-none bg-white text-gray-500',
+                (costError ||
+                  hasCostParseError ||
+                  (enabled && parsedCost === ZERO_WEI)) &&
+                  'border border-red-500',
+                isSaving &&
+                  'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+              )}
+            />
+            <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+              ETH
+            </div>
+          </div>
           {costError && (
-            <p className='text-red-400 text-xs mt-1'>{costError}</p>
+            <div className='text-white text-xs italic text-left mt-1'>
+              {costError}
+            </div>
           )}
           {!costError && hasCostParseError && (
-            <p className='text-red-400 text-xs mt-1'>
+            <div className='text-white text-xs italic text-left mt-1'>
               Enter a valid ETH amount (max 18 decimal places).
-            </p>
+            </div>
           )}
-          {!costError && !hasCostParseError && enabled && parsedCost === ZERO_WEI && (
-            <p className='text-red-400 text-xs mt-1'>
-              Max activation cost must be greater than 0 when auto-activation
-              is enabled.
-            </p>
-          )}
+          {!costError &&
+            !hasCostParseError &&
+            enabled &&
+            parsedCost === ZERO_WEI && (
+              <div className='text-white text-xs italic text-left mt-1'>
+                Max activation cost must be greater than 0 when
+                auto-activation is enabled.
+              </div>
+            )}
         </div>
       </div>
 
-      <div className='mt-5 flex items-center justify-end gap-3 flex-wrap'>
+      <div className='mt-5 flex items-center justify-end gap-3 flex-wrap relative z-10'>
         {txHash && txUrl && (
           <a
             href={txUrl}
             target='_blank'
             rel='noopener noreferrer'
-            className='text-[11px] text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
+            className='text-[11px] text-white/90 hover:text-white inline-flex items-center gap-1 underline underline-offset-2'
           >
             View on Arbiscan
             <ExternalLink className='h-3 w-3' />
@@ -930,7 +824,7 @@ function AutoActivationConfigForm({
       </div>
 
       {showSimulationFailure && (
-        <div className='mt-3 flex items-start gap-2 text-[11px] text-red-300/90'>
+        <div className='mt-3 flex items-start gap-2 text-[11px] text-white/90 relative z-10'>
           <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
           <span className='flex-1'>
             Could not simulate the save transaction. Check your wallet is on
@@ -939,7 +833,7 @@ function AutoActivationConfigForm({
           <button
             type='button'
             onClick={() => refetchSimulation()}
-            className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0'
+            className='inline-flex items-center gap-1 text-white hover:text-white/80 shrink-0 underline underline-offset-2'
           >
             <RefreshCw className='h-3 w-3' />
             Retry
@@ -953,21 +847,20 @@ function AutoActivationConfigForm({
 function AutoActivationConfigSkeleton() {
   return (
     <div
-      className='rounded-lg border border-[#2C2E30] bg-black p-6 space-y-4 animate-pulse'
+      className='rounded-md p-4 space-y-4 animate-pulse bg-[#3E71C6]/40'
       aria-busy='true'
       aria-live='polite'
     >
       <div className='flex items-start justify-between gap-4 flex-wrap'>
-        <div className='space-y-2'>
-          <div className='h-5 w-40 rounded bg-gray-700' />
-          <div className='h-3 w-56 rounded bg-gray-800' />
+        <div className='space-y-2 flex-1'>
+          <div className='h-4 w-40 rounded bg-white/30' />
+          <div className='h-3 w-56 rounded bg-white/20' />
         </div>
-        <div className='h-6 w-16 rounded-full bg-gray-700' />
+        <div className='h-6 w-20 rounded-full bg-white/30' />
       </div>
-      <div className='h-3 w-40 rounded bg-gray-800' />
-      <div className='h-10 w-full rounded bg-gray-800' />
+      <div className='h-10 w-full rounded bg-white/70' />
       <div className='flex justify-end'>
-        <div className='h-9 w-20 rounded bg-gray-700' />
+        <div className='h-8 w-20 rounded bg-white/30' />
       </div>
     </div>
   );
@@ -1007,18 +900,19 @@ function AutoActivationConfigError({
 
 /**
  * Skeleton mirroring the three main blocks of {@link ActivationTab} — status
- * header, auto-activation summary, and history — so the layout does not jump
- * once the enriched contract detail arrives.
+ * hero, auto-activation section (heading + card), and history table — so the
+ * layout does not jump once the enriched contract detail arrives.
  */
 function ActivationTabSkeleton({ readOnly }: { readOnly: boolean }) {
   return (
-    <div className='space-y-6 animate-pulse' aria-busy='true' aria-live='polite'>
-      <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
-        <div className='flex items-start justify-between gap-4 flex-wrap'>
-          <div className='flex items-start gap-4'>
-            <div className='h-3 w-3 rounded-full bg-gray-700 mt-1' />
+    <div className='animate-pulse' aria-busy='true' aria-live='polite'>
+      <div className='rounded-lg border border-[#2C2E30] bg-black p-6 mb-6'>
+        <div className='flex flex-col @md/panel:flex-row @md/panel:items-start @md/panel:justify-between gap-4 @md/panel:gap-6'>
+          <div className='flex items-center gap-4'>
+            <div className='h-3.5 w-3.5 rounded-full bg-gray-700' />
             <div className='space-y-2'>
-              <div className='h-4 w-24 rounded bg-gray-700' />
+              <div className='h-3 w-24 rounded bg-gray-800' />
+              <div className='h-7 w-32 rounded bg-gray-700' />
               <div className='h-3 w-40 rounded bg-gray-800' />
             </div>
           </div>
@@ -1027,24 +921,30 @@ function ActivationTabSkeleton({ readOnly }: { readOnly: boolean }) {
       </div>
 
       {!readOnly && (
-        <div className='rounded-lg border border-[#2C2E30] bg-black p-6 space-y-4'>
-          <div className='flex items-start justify-between gap-4 flex-wrap'>
-            <div className='space-y-2'>
-              <div className='h-5 w-40 rounded bg-gray-700' />
-              <div className='h-3 w-56 rounded bg-gray-800' />
-            </div>
-            <div className='h-6 w-20 rounded-full bg-gray-700' />
+        <>
+          <div className='mb-3'>
+            <div className='h-5 w-32 rounded bg-gray-700' />
           </div>
-          <div className='h-3 w-32 rounded bg-gray-800' />
-          <div className='h-4 w-24 rounded bg-gray-700' />
-        </div>
+          <div className='rounded-md p-4 mb-8 bg-[#3E71C6]/40 space-y-4'>
+            <div className='flex items-start justify-between gap-4 flex-wrap'>
+              <div className='space-y-2 flex-1'>
+                <div className='h-4 w-40 rounded bg-white/30' />
+                <div className='h-3 w-56 rounded bg-white/20' />
+              </div>
+              <div className='h-6 w-20 rounded-full bg-white/30' />
+            </div>
+            <div className='h-10 w-full rounded bg-white/70' />
+          </div>
+        </>
       )}
 
-      <div className='rounded-lg border border-[#2C2E30] bg-black p-6 space-y-3'>
+      <div className='mb-4'>
         <div className='h-5 w-40 rounded bg-gray-700' />
-        <div className='h-4 w-full rounded bg-gray-800' />
-        <div className='h-4 w-11/12 rounded bg-gray-800' />
-        <div className='h-4 w-10/12 rounded bg-gray-800' />
+      </div>
+      <div className='space-y-2'>
+        <div className='h-10 w-full rounded bg-[#121212]' />
+        <div className='h-10 w-full rounded bg-[#121212]' />
+        <div className='h-10 w-full rounded bg-[#121212]' />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { formatEther } from 'viem';
-import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { formatRoundedEth } from '@/utils/formatting';
 import { Contract, Alert } from '@/services/contractService';
 import {
   MoreHorizontal,
@@ -45,7 +45,6 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import ActivationTab from '@/components/ActivationTab';
-import ContractHistoryTab from '@/components/ContractHistoryTab';
 import CacheHero from '@/components/CacheHero';
 import {
   activationHistoryItemToEvent,
@@ -289,8 +288,11 @@ export default function ContractDetails({
         historyItem.originAddress.substring(
           historyItem.originAddress.length - 4
         );
-      // Format the date using the formatDate utility for consistency
-      const formattedDate = formatDate(historyItem.timestamp);
+      // Keep the raw ISO timestamp — `BiddingHistory` renders it with
+      // locale-safe `Intl.DateTimeFormat` helpers, so pre-formatting with
+      // `toLocaleString()` here would only make it re-parse a locale
+      // string it can't reliably decode.
+      const formattedDate = historyItem.timestamp;
 
       // Format bid amount
       const bidAmount = formatRoundedEth(
@@ -614,12 +616,6 @@ export default function ContractDetails({
                 >
                   Activation
                 </TabsTrigger>
-                <TabsTrigger
-                  value='history'
-                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
-                >
-                  History
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value='cache'>
@@ -696,12 +692,6 @@ export default function ContractDetails({
                 />
               </TabsContent>
 
-              <TabsContent value='history'>
-                <ContractHistoryTab
-                  activationHistory={[]}
-                  cacheEvents={[]}
-                />
-              </TabsContent>
             </Tabs>
           ) : (
             /* Explore Contracts View */
