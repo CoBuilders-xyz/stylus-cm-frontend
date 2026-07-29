@@ -49,12 +49,12 @@ export default function Header() {
             >
               {/* Mobile: compact wordmark (logo asset is too wide for 375px) */}
               <span className='sm:hidden text-sm font-bold tracking-tight whitespace-nowrap text-white'>
-                Stylus CM
+                Stylus Manager
               </span>
               {/* Desktop: full logo */}
               <Image
                 src={logo}
-                alt='Stylus Cache Manager logo'
+                alt='Stylus Manager logo'
                 className='hidden sm:block'
               />
             </Link>
