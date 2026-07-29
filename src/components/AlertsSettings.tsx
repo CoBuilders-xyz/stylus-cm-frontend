@@ -497,84 +497,136 @@ export default function AlertsSettings({
     setError(null);
 
     try {
-      // Create an array of alert settings to save
-      const alertSettings: AlertSettings[] = [
-        // Eviction alert
-        {
-          type: AlertType.EVICTION,
-          isActive: evictionAlertEnabled,
-          userContractId: contractId,
-          slackChannelEnabled: evictionSlackEnabled,
-          telegramChannelEnabled: evictionTelegramEnabled,
-          webhookChannelEnabled: evictionWebhookEnabled,
-        },
-        // No Gas alert
-        {
-          type: AlertType.NO_GAS,
-          isActive: noGasAlertEnabled,
-          userContractId: contractId,
-          slackChannelEnabled: noGasSlackEnabled,
-          telegramChannelEnabled: noGasTelegramEnabled,
-          webhookChannelEnabled: noGasWebhookEnabled,
-        },
-        // Low Gas alert - value as a number
-        {
+      const findInitial = (type: AlertType) =>
+        initialAlerts.find((a) => a.type === type);
+
+      // Backend requires `value` for lowGas / bidSafety / approachingExpiration
+      // even when isActive=false. For these types, when the user disables an
+      // alert we must reuse the previously stored value; if the alert never
+      // existed we skip the POST entirely to avoid a 400.
+      const alertSettings: AlertSettings[] = [];
+
+      // Eviction — no value required
+      alertSettings.push({
+        type: AlertType.EVICTION,
+        isActive: evictionAlertEnabled,
+        userContractId: contractId,
+        slackChannelEnabled: evictionSlackEnabled,
+        telegramChannelEnabled: evictionTelegramEnabled,
+        webhookChannelEnabled: evictionWebhookEnabled,
+      });
+
+      // No Gas — no value required
+      alertSettings.push({
+        type: AlertType.NO_GAS,
+        isActive: noGasAlertEnabled,
+        userContractId: contractId,
+        slackChannelEnabled: noGasSlackEnabled,
+        telegramChannelEnabled: noGasTelegramEnabled,
+        webhookChannelEnabled: noGasWebhookEnabled,
+      });
+
+      // Low Gas — value required
+      if (lowGasAlertEnabled) {
+        alertSettings.push({
           type: AlertType.LOW_GAS,
-          value: lowGasValueNumeric, // Use the validated number
-          isActive: lowGasAlertEnabled,
+          value: lowGasValueNumeric,
+          isActive: true,
           userContractId: contractId,
           slackChannelEnabled: lowGasSlackEnabled,
           telegramChannelEnabled: lowGasTelegramEnabled,
           webhookChannelEnabled: lowGasWebhookEnabled,
-        },
-        // Bid Safety alert - value as a number
-        {
+        });
+      } else {
+        const existing = findInitial(AlertType.LOW_GAS);
+        const existingValue = existing ? parseFloat(existing.value) : NaN;
+        if (existing && !isNaN(existingValue) && existingValue > 0) {
+          alertSettings.push({
+            type: AlertType.LOW_GAS,
+            value: existingValue,
+            isActive: false,
+            userContractId: contractId,
+            slackChannelEnabled: lowGasSlackEnabled,
+            telegramChannelEnabled: lowGasTelegramEnabled,
+            webhookChannelEnabled: lowGasWebhookEnabled,
+          });
+        }
+      }
+
+      // Bid Safety — value required (slider defaults to 50 so always positive)
+      if (bidSafetyAlertEnabled || findInitial(AlertType.BID_SAFETY)) {
+        alertSettings.push({
           type: AlertType.BID_SAFETY,
-          value: bidSafetyThreshold, // Already a number
+          value: bidSafetyThreshold,
           isActive: bidSafetyAlertEnabled,
           userContractId: contractId,
           slackChannelEnabled: bidSafetySlackEnabled,
           telegramChannelEnabled: bidSafetyTelegramEnabled,
           webhookChannelEnabled: bidSafetyWebhookEnabled,
-        },
-        // Approaching Expiration alert - value = integer days (1-365)
-        {
+        });
+      }
+
+      // Approaching Expiration — value required (integer 1-365)
+      if (approachingExpirationAlertEnabled) {
+        alertSettings.push({
           type: AlertType.APPROACHING_EXPIRATION,
           value: approachingExpirationValueNumeric,
-          isActive: approachingExpirationAlertEnabled,
+          isActive: true,
           userContractId: contractId,
           slackChannelEnabled: approachingExpirationSlackEnabled,
           telegramChannelEnabled: approachingExpirationTelegramEnabled,
           webhookChannelEnabled: approachingExpirationWebhookEnabled,
-        },
-        // Expired alert - no value
-        {
-          type: AlertType.EXPIRED,
-          isActive: expiredAlertEnabled,
-          userContractId: contractId,
-          slackChannelEnabled: expiredSlackEnabled,
-          telegramChannelEnabled: expiredTelegramEnabled,
-          webhookChannelEnabled: expiredWebhookEnabled,
-        },
-        // Reactivation Succeeded alert - no value
-        {
-          type: AlertType.REACTIVATION_SUCCEEDED,
-          isActive: reactivationSucceededAlertEnabled,
-          userContractId: contractId,
-          slackChannelEnabled: reactivationSucceededSlackEnabled,
-          telegramChannelEnabled: reactivationSucceededTelegramEnabled,
-          webhookChannelEnabled: reactivationSucceededWebhookEnabled,
-        },
-        // Reactivation Failed alert - no value
-        {
-          type: AlertType.REACTIVATION_FAILED,
-          isActive: reactivationFailedAlertEnabled,
-          userContractId: contractId,
-          slackChannelEnabled: reactivationFailedSlackEnabled,
-          telegramChannelEnabled: reactivationFailedTelegramEnabled,
-          webhookChannelEnabled: reactivationFailedWebhookEnabled,
-        },
-      ];
+        });
+      } else {
+        const existing = findInitial(AlertType.APPROACHING_EXPIRATION);
+        const existingValue = existing ? parseInt(existing.value, 10) : NaN;
+        if (
+          existing &&
+          !isNaN(existingValue) &&
+          existingValue >= 1 &&
+          existingValue <= 365
+        ) {
+          alertSettings.push({
+            type: AlertType.APPROACHING_EXPIRATION,
+            value: existingValue,
+            isActive: false,
+            userContractId: contractId,
+            slackChannelEnabled: approachingExpirationSlackEnabled,
+            telegramChannelEnabled: approachingExpirationTelegramEnabled,
+            webhookChannelEnabled: approachingExpirationWebhookEnabled,
+          });
+        }
+      }
+
+      // Expired — no value required
+      alertSettings.push({
+        type: AlertType.EXPIRED,
+        isActive: expiredAlertEnabled,
+        userContractId: contractId,
+        slackChannelEnabled: expiredSlackEnabled,
+        telegramChannelEnabled: expiredTelegramEnabled,
+        webhookChannelEnabled: expiredWebhookEnabled,
+      });
+
+      // Reactivation Succeeded — no value required
+      alertSettings.push({
+        type: AlertType.REACTIVATION_SUCCEEDED,
+        isActive: reactivationSucceededAlertEnabled,
+        userContractId: contractId,
+        slackChannelEnabled: reactivationSucceededSlackEnabled,
+        telegramChannelEnabled: reactivationSucceededTelegramEnabled,
+        webhookChannelEnabled: reactivationSucceededWebhookEnabled,
+      });
+
+      // Reactivation Failed — no value required
+      alertSettings.push({
+        type: AlertType.REACTIVATION_FAILED,
+        isActive: reactivationFailedAlertEnabled,
+        userContractId: contractId,
+        slackChannelEnabled: reactivationFailedSlackEnabled,
+        telegramChannelEnabled: reactivationFailedTelegramEnabled,
+        webhookChannelEnabled: reactivationFailedWebhookEnabled,
+      });
 
       // Save each alert individually
       const promises = alertSettings.map((settings) =>

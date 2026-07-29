@@ -125,6 +125,14 @@ export function ContractInfo({
                         return `Low gas: ${alert.value} ETH`;
                       case AlertType.BID_SAFETY:
                         return `Bid Safety: ${alert.value}%`;
+                      case AlertType.APPROACHING_EXPIRATION:
+                        return `Approaching Expiration: ${alert.value} days`;
+                      case AlertType.EXPIRED:
+                        return 'Expired';
+                      case AlertType.REACTIVATION_SUCCEEDED:
+                        return 'Reactivation Succeeded';
+                      case AlertType.REACTIVATION_FAILED:
+                        return 'Reactivation Failed';
                       default:
                         return alert.type;
                     }
