@@ -1242,10 +1242,14 @@ export default function AlertsSettings({
             {approachingExpirationAlertEnabled && (
               <>
                 <div className='mt-4 mb-4'>
-                  <label className='block text-sm mb-1'>
+                  <label
+                    htmlFor='approachingExpirationThreshold'
+                    className='block text-sm mb-1'
+                  >
                     Days before expiration (1–365)
                   </label>
                   <Input
+                    id='approachingExpirationThreshold'
                     type='number'
                     inputMode='numeric'
                     min={1}
