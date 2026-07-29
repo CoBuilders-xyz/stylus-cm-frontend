@@ -5,7 +5,7 @@ import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { ActivationEvent } from '@/lib/activation';
-import { formatDate } from '@/utils/formatting';
+import { formatEventDate, formatEventTime } from '@/utils/formatting';
 import { explorerTxUrl } from '@/utils/explorer';
 
 interface ActivationHistoryProps {
@@ -87,10 +87,12 @@ export default function ActivationHistory({
               const dotClass = isSuccess ? 'bg-green-500' : 'bg-red-500';
               const iconBg = isSuccess ? 'bg-green-600' : 'bg-red-600';
               const eventLabel = isSuccess ? 'Activated' : 'Failed';
+              // `||` (not `??`) because backend `error` events can carry an
+              // empty `note` — `'' ?? '—'` would render a blank cell.
               const spent =
                 isSuccess && evt.valueConsumedEth
                   ? `Spent ${evt.valueConsumedEth} ETH`
-                  : evt.note ?? '—';
+                  : evt.note || '—';
 
               return (
                 <TableRow
@@ -147,17 +149,10 @@ export default function ActivationHistory({
                   <TableCell className='p-2 w-1/4 text-center'>
                     <div className='text-right text-gray-400 min-w-[70px]'>
                       <div className='text-xs font-medium'>
-                        {evt.date
-                          ? formatDate(evt.date).split(',')[1]?.split(' ')[1]?.trim() ||
-                            ''
-                          : ''}
+                        {formatEventTime(evt.date)}
                       </div>
                       <div className='text-xs'>
-                        {evt.date
-                          ? formatDate(evt.date)
-                              .split(',')[0]
-                              ?.replace(/\//g, '-') || ''
-                          : ''}
+                        {formatEventDate(evt.date)}
                       </div>
                     </div>
                   </TableCell>

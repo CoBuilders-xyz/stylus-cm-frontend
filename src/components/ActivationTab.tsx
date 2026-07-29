@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -759,17 +760,27 @@ function AutoActivationConfigForm({
               onChange={(e) => handleCostChange(e.target.value)}
               placeholder='Enter amount'
               disabled={isSaving}
-              className={`pr-12 bg-white border-none text-gray-500 ${
-                costError ||
-                hasCostParseError ||
-                (enabled && parsedCost === ZERO_WEI)
-                  ? 'border border-red-500'
-                  : ''
-              } ${
-                isSaving
-                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
-                  : ''
-              }`}
+              aria-invalid={
+                Boolean(
+                  costError ||
+                    hasCostParseError ||
+                    (enabled && parsedCost === ZERO_WEI)
+                ) || undefined
+              }
+              // `cn` (twMerge) resolves Tailwind conflicts by rightmost-wins
+              // rather than stylesheet order — critical here because the
+              // base `bg-white border-none` would otherwise silently override
+              // the `border-red-500` invalid state and the `bg-gray-700`
+              // saving state.
+              className={cn(
+                'pr-12 border-none bg-white text-gray-500',
+                (costError ||
+                  hasCostParseError ||
+                  (enabled && parsedCost === ZERO_WEI)) &&
+                  'border border-red-500',
+                isSaving &&
+                  'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+              )}
             />
             <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
               ETH

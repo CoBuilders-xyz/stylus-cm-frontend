@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { formatEther } from 'viem';
-import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { formatRoundedEth } from '@/utils/formatting';
 import { Contract, Alert } from '@/services/contractService';
 import {
   MoreHorizontal,
@@ -288,8 +288,11 @@ export default function ContractDetails({
         historyItem.originAddress.substring(
           historyItem.originAddress.length - 4
         );
-      // Format the date using the formatDate utility for consistency
-      const formattedDate = formatDate(historyItem.timestamp);
+      // Keep the raw ISO timestamp — `BiddingHistory` renders it with
+      // locale-safe `Intl.DateTimeFormat` helpers, so pre-formatting with
+      // `toLocaleString()` here would only make it re-parse a locale
+      // string it can't reliably decode.
+      const formattedDate = historyItem.timestamp;
 
       // Format bid amount
       const bidAmount = formatRoundedEth(

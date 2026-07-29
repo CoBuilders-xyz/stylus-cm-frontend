@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { formatEventDate, formatEventTime } from '@/utils/formatting';
 
 // Bidding history item interface
 export interface BiddingHistoryItem {
@@ -131,11 +132,10 @@ export function BiddingHistory({
                 <TableCell className='p-2 w-1/4 text-center'>
                   <div className='text-right text-gray-400 min-w-[70px]'>
                     <div className='text-xs font-medium'>
-                      {bid.date.split(',')[1]?.split(' ')[1]?.trim() || ''}
+                      {formatEventTime(bid.date)}
                     </div>
                     <div className='text-xs'>
-                      {bid.date.split(',')[0]?.replace(/\//g, '-') ||
-                        '2024-02-04'}
+                      {formatEventDate(bid.date)}
                     </div>
                   </div>
                 </TableCell>
