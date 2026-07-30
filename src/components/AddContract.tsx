@@ -377,37 +377,21 @@ export default function AddContract({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919]'>
-      {/* Title header with gradient background and noise texture */}
-      <div
-        className='relative overflow-hidden'
-        style={{
-          background:
-            'linear-gradient(88.8deg, #275A93 0.24%, #2D99DD 24.41%, #FA9647 59.66%, #E0445B 100.95%)',
-        }}
-      >
-        {/* White noise texture overlay */}
-        <div
-          className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-            backgroundSize: '100px 100px',
-            backgroundRepeat: 'repeat',
-          }}
-        />
-
+    <div className='text-ink-1 flex flex-col h-full bg-surface-1'>
+      {/* Title header */}
+      <div className='bg-surface-1 border-b border-hairline'>
         {/* Header content */}
-        <div className='flex justify-between items-center p-6 relative z-10'>
+        <div className='flex justify-between items-center px-5 py-4'>
           <div>
-            <h2 className='text-2xl font-bold text-white'>Add Contract</h2>
-            <div className='text-white/80 mt-1'>Step {step} of 2</div>
+            <h2 className='text-[15px] font-semibold text-ink-1'>Add Contract</h2>
+            <div className='text-[12.5px] text-ink-2 mt-0.5'>Step {step} of 2</div>
           </div>
           <Button
+            variant='outline'
             size='icon'
             onClick={onClose}
-            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
           >
-            <X className='h-6 w-6' />
+            <X className='h-4 w-4' />
           </Button>
         </div>
       </div>
@@ -415,18 +399,18 @@ export default function AddContract({
       <div className='p-6 flex-1'>
         {step === 1 && (
           <div>
-            <h3 className='text-lg font-medium mb-2'>Set Contract Details</h3>
-            <p className='text-gray-400 mb-4'>
+            <h3 className='text-[13.5px] font-semibold text-ink-1 mb-2'>Set Contract Details</h3>
+            <p className='text-[12.5px] text-ink-2 mb-4'>
               Enter the contract address and select the active network to
               proceed.
             </p>
 
             <div className='mb-4'>
               <div className='flex items-center gap-2'>
-                <label className='block text-sm mb-1'>Contract Address</label>
+                <label className='block text-xs text-ink-2 mb-1'>Contract Address</label>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className='w-4 h-4 cursor-help mb-1' />
+                    <Info className='w-4 h-4 cursor-help mb-1 text-ink-3' />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className='max-w-xs'>
@@ -445,21 +429,21 @@ export default function AddContract({
                 placeholder='0x...'
                 value={contractAddress}
                 onChange={handleAddressChange}
-                className={`bg-black text-white border ${
-                  addressError ? 'border-red-500' : 'border-gray-700'
-                } rounded-md p-2 w-full`}
+                className={`w-full ${
+                  addressError ? 'border-crit' : ''
+                }`}
               />
               {addressError && (
-                <p className='text-red-500 text-sm mt-1'>{addressError}</p>
+                <p className='text-crit-text text-xs mt-1'>{addressError}</p>
               )}
               {validationState && validationState.type !== 'warning' && (
                 <p
-                  className={`text-sm mt-1 ${
+                  className={`text-xs mt-1 ${
                     validationState.type === 'loading'
-                      ? 'text-yellow-500'
+                      ? 'text-warn'
                       : validationState.type === 'success'
-                      ? 'text-green-500'
-                      : 'text-red-500'
+                      ? 'text-ok-text'
+                      : 'text-crit-text'
                   }`}
                 >
                   {validationState.message}
@@ -489,7 +473,7 @@ export default function AddContract({
 
             <div className='mt-6'>
               <Button
-                className='w-full px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                className='w-full h-9 rounded-lg'
                 disabled={
                   !contractAddress ||
                   !!addressError ||
@@ -505,8 +489,8 @@ export default function AddContract({
 
         {step === 2 && (
           <div>
-            <h3 className='text-lg font-medium mb-2'>Name Your Contract</h3>
-            <p className='text-gray-400 mb-4'>
+            <h3 className='text-[13.5px] font-semibold text-ink-1 mb-2'>Name Your Contract</h3>
+            <p className='text-[12.5px] text-ink-2 mb-4'>
               Assign a custom name for your contract. This name is private to
               you and can be updated anytime.
             </p>
@@ -514,10 +498,10 @@ export default function AddContract({
             {initialAddress && (
               <div className='mb-4'>
                 <div className='flex items-center gap-2'>
-                  <label className='block text-sm'>Contract Address</label>
+                  <label className='block text-xs text-ink-2'>Contract Address</label>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className='w-4 h-4 cursor-help' />
+                      <Info className='w-4 h-4 cursor-help text-ink-3' />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className='max-w-xs'>
@@ -535,19 +519,19 @@ export default function AddContract({
                   type='text'
                   value={contractAddress}
                   disabled
-                  className='bg-gray-800 text-gray-400 border border-gray-700 rounded-md p-2 w-full cursor-not-allowed'
+                  className='w-full text-ink-3 cursor-not-allowed'
                 />
                 {addressError && (
-                  <p className='text-red-500 text-sm mt-1'>{addressError}</p>
+                  <p className='text-crit-text text-xs mt-1'>{addressError}</p>
                 )}
                 {validationState && validationState.type !== 'warning' && (
                   <p
-                    className={`text-sm mt-1 ${
+                    className={`text-xs mt-1 ${
                       validationState.type === 'loading'
-                        ? 'text-yellow-500'
+                        ? 'text-warn'
                         : validationState.type === 'success'
-                        ? 'text-green-500'
-                        : 'text-red-500'
+                        ? 'text-ok-text'
+                        : 'text-crit-text'
                     }`}
                   >
                     {validationState.message}
@@ -582,22 +566,23 @@ export default function AddContract({
             )}
 
             <div className='mb-4'>
-              <label className='block text-sm mb-1'>Contract Name</label>
+              <label className='block text-xs text-ink-2 mb-1'>Contract Name</label>
               <Input
                 type='text'
                 placeholder='Protocol v1.5'
                 value={contractName}
                 onChange={handleNameChange}
-                className='bg-black text-white border border-gray-700 rounded-md p-2 w-full'
+                className='w-full'
               />
             </div>
 
-            {error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
+            {error && <p className='text-crit-text text-xs mb-4'>{error}</p>}
 
             <div className='flex space-x-4 mt-6'>
               {!initialAddress && (
                 <Button
-                  className='flex-1 px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                  variant='outline'
+                  className='flex-1 h-9 rounded-lg'
                   onClick={handlePrevStep}
                   disabled={isLoading}
                 >
@@ -608,7 +593,7 @@ export default function AddContract({
               <Button
                 className={`${
                   !initialAddress ? 'flex-1' : 'w-full'
-                } px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md`}
+                } h-9 rounded-lg`}
                 onClick={handleSubmit}
                 disabled={isLoading || validationState?.type !== 'success'}
               >

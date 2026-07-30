@@ -646,7 +646,7 @@ export default function CacheAverageBid() {
             Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
-          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-ink-3'>
             No data available for the selected filters.
           </div>
         ) : (

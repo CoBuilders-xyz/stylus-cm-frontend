@@ -25,7 +25,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
   return (
     <SidePanelContext.Provider value={{ onClose }}>
       <div
-        className={`@container/panel fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-x-hidden overflow-y-auto ${
+        className={`@container/panel fixed right-0 top-0 h-full bg-surface-1 border-s border-hairline-strong shadow-xl transition-all duration-300 ease-in-out overflow-x-hidden overflow-y-auto ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
@@ -39,7 +39,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
         {/* No header with title and close button anymore */}
         <div className='overflow-y-auto h-full'>
           {children || (
-            <div className='flex flex-col items-center justify-center h-80 text-gray-400 p-6'>
+            <div className='flex flex-col items-center justify-center h-80 text-ink-3 p-6'>
               <p>Select a contract to view details</p>
             </div>
           )}

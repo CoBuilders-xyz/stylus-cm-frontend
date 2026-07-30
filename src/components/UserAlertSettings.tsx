@@ -323,75 +323,60 @@ export default function UserAlertSettings({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919] shadow-xl overflow-hidden'>
-      {/* Title header with gradient background and noise texture */}
-      <div
-        className='relative overflow-hidden'
-        style={{
-          background:
-            'linear-gradient(88.8deg, #275A93 0.24%, #2D99DD 24.41%, #FA9647 59.66%, #E0445B 100.95%)',
-        }}
-      >
-        {/* White noise texture overlay */}
-        <div
-          className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-            backgroundSize: '100px 100px',
-            backgroundRepeat: 'repeat',
-          }}
-        />
-
+    <div className='text-ink-1 flex flex-col h-full bg-surface-1 overflow-hidden'>
+      {/* Title header */}
+      <div className='bg-surface-1 border-b border-hairline'>
         {/* Header content */}
-        <div className='flex justify-between items-center p-6 relative z-10'>
+        <div className='flex justify-between items-center px-5 py-4'>
           <div>
-            <h2 className='text-2xl font-bold text-white'>Alert Settings</h2>
-            <div className='text-white/80 mt-1'>
+            <h2 className='text-[15px] font-semibold text-ink-1'>Alert Settings</h2>
+            <div className='text-[12.5px] text-ink-2 mt-0.5'>
               Set up your notification channels for all contracts.
             </div>
           </div>
           <Button
+            variant='outline'
             size='icon'
             onClick={onClose}
-            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
           >
-            <X className='h-6 w-6' />
+            <X className='h-4 w-4' />
           </Button>
         </div>
       </div>
 
-      <div className='p-6 flex-1 overflow-auto'>
+      <div className='p-5 flex-1 overflow-auto'>
+        <div className='divide-y divide-hairline'>
         {/* Telegram Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <h3 className='text-lg font-medium'>Telegram Alerts</h3>
+        <div className='py-1'>
+          <div className='flex items-center justify-between min-h-[52px]'>
+            <h3 className='text-[13px] font-[550] text-ink-1'>Telegram Alerts</h3>
             <SwitchPrimitive.Root
               checked={telegramEnabled}
               onCheckedChange={handleTelegramEnabledChange}
               className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                'data-[state=unchecked]:bg-surface-3',
+                'data-[state=checked]:bg-accent-blue'
               )}
             >
               <SwitchPrimitive.Thumb
                 className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                 )}
               />
             </SwitchPrimitive.Root>
           </div>
 
           {telegramEnabled && (
-            <div className='mt-4'>
-              <label className='block text-sm text-gray-300 mb-1'>
+            <div className='mt-1 pb-4'>
+              <label className='block text-xs text-ink-2 mb-1'>
                 <div className='flex items-center gap-2'>
                   Telegram Chat ID{' '}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className='w-4 h-4 cursor-help' />
+                        <Info className='w-4 h-4 cursor-help text-ink-3' />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className='max-w-xs'>
@@ -420,65 +405,65 @@ export default function UserAlertSettings({
                   placeholder='0123456789'
                   value={telegramDestination}
                   onChange={handleTelegramDestinationChange}
-                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                  className='flex-grow'
                 />
                 <Button
                   onClick={() => testNotification(NotificationChannel.TELEGRAM)}
                   disabled={!telegramDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
+                  className='h-9 min-w-[100px]'
                 >
                   {hasChangedTelegram ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
-              <p className='text-gray-400 text-xs mt-2'>
+              <p className='text-ink-3 text-xs mt-2'>
                 Start a conversation with{' '}
                 <a
                   href='http://t.me/stylusCmNotifications_bot'
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='text-blue-400 hover:text-blue-300 underline'
+                  className='text-accent-blue hover:text-accent-blue-hover underline'
                 >
                   @stylusCmNotifications_bot
                 </a>{' '}
                 to receive your Telegram notifications
               </p>
               {telegramError && (
-                <p className='text-red-500 text-xs mt-1'>{telegramError}</p>
+                <p className='text-crit-text text-xs mt-1'>{telegramError}</p>
               )}
             </div>
           )}
         </div>
 
         {/* Slack Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <h3 className='text-lg font-medium'>Slack Alerts</h3>
+        <div className='py-1'>
+          <div className='flex items-center justify-between min-h-[52px]'>
+            <h3 className='text-[13px] font-[550] text-ink-1'>Slack Alerts</h3>
             <SwitchPrimitive.Root
               checked={slackEnabled}
               onCheckedChange={handleSlackEnabledChange}
               className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                'data-[state=unchecked]:bg-surface-3',
+                'data-[state=checked]:bg-accent-blue'
               )}
             >
               <SwitchPrimitive.Thumb
                 className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                 )}
               />
             </SwitchPrimitive.Root>
           </div>
 
           {slackEnabled && (
-            <div className='mt-4'>
-              <label className='block text-sm text-gray-300 mb-1'>
+            <div className='mt-1 pb-4'>
+              <label className='block text-xs text-ink-2 mb-1'>
                 <div className='flex items-center gap-2'>
                   Slack Webhook URL
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className='w-4 h-4 cursor-help' />
+                      <Info className='w-4 h-4 cursor-help text-ink-3' />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className='max-w-xs'>
@@ -508,12 +493,12 @@ export default function UserAlertSettings({
                   placeholder='https://slack-webhook.co/'
                   value={slackDestination}
                   onChange={handleSlackDestinationChange}
-                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                  className='flex-grow'
                 />
                 <Button
                   onClick={() => testNotification(NotificationChannel.SLACK)}
                   disabled={!slackDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
+                  className='h-9 min-w-[100px]'
                 >
                   {hasChangedSlack ? 'Save & Test' : 'Test'}
                 </Button>
@@ -523,36 +508,36 @@ export default function UserAlertSettings({
         </div>
 
         {/* Webhook Alerts */}
-        <div className='mb-8 rounded-lg bg-black p-6'>
-          <div className='flex items-center justify-between mb-2'>
-            <h3 className='text-lg font-medium'>Webhook Alerts</h3>
+        <div className='py-1'>
+          <div className='flex items-center justify-between min-h-[52px]'>
+            <h3 className='text-[13px] font-[550] text-ink-1'>Webhook Alerts</h3>
             <SwitchPrimitive.Root
               checked={webhookEnabled}
               onCheckedChange={handleWebhookEnabledChange}
               className={cn(
-                'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                'data-[state=unchecked]:bg-surface-3',
+                'data-[state=checked]:bg-accent-blue'
               )}
             >
               <SwitchPrimitive.Thumb
                 className={cn(
-                  'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                  'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                  'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                  'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                 )}
               />
             </SwitchPrimitive.Root>
           </div>
 
           {webhookEnabled && (
-            <div className='mt-4'>
-              <label className='block text-sm text-gray-300 mb-1'>
+            <div className='mt-1 pb-4'>
+              <label className='block text-xs text-ink-2 mb-1'>
                 <div className='flex items-center gap-2'>
                   Webhook URL
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className='w-4 h-4 cursor-help' />
+                        <Info className='w-4 h-4 cursor-help text-ink-3' />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className='max-w-xs'>
@@ -575,28 +560,30 @@ export default function UserAlertSettings({
                   placeholder='https://webhook.co/your-endpoint'
                   value={webhookDestination}
                   onChange={handleWebhookDestinationChange}
-                  className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 flex-grow'
+                  className='flex-grow'
                 />
                 <Button
                   onClick={() => testNotification(NotificationChannel.WEBHOOK)}
                   disabled={!webhookDestination}
-                  className='bg-[#335CD7] text-white hover:bg-[#4a6fe0] disabled:bg-[#335CD7]/50 min-w-[100px]'
+                  className='h-9 min-w-[100px]'
                 >
                   {hasChangedWebhook ? 'Save & Test' : 'Test'}
                 </Button>
               </div>
               {webhookError && (
-                <p className='text-red-500 text-xs mt-1'>{webhookError}</p>
+                <p className='text-crit-text text-xs mt-1'>{webhookError}</p>
               )}
             </div>
           )}
         </div>
 
-        {error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
+        </div>
+
+        {error && <p className='text-crit-text text-xs mb-4'>{error}</p>}
 
         <div className='mt-6 mb-4'>
           <Button
-            className='w-full px-4 py-2 bg-black text-white font-medium hover:bg-gray-900 rounded-md'
+            className='w-full h-9 rounded-lg'
             onClick={() => handleSaveSettings()}
             disabled={isLoading}
           >

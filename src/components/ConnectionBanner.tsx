@@ -49,14 +49,14 @@ export default function ConnectionBanner() {
 
   return (
     <div
-      className={`w-full mt-2 py-2 px-4 text-center font-medium text-sm transition-all duration-300 ease-in-out ${
+      className={`w-full mt-2 py-2 px-4 text-center font-medium text-[12.5px] transition-all duration-300 ease-in-out ${
         !isOnline
-          ? 'bg-[#FFC470] text-black'
+          ? 'bg-warn/10 text-warn'
           : isConnecting
-          ? 'bg-[#335CD7] text-white'
+          ? 'bg-accent-soft text-accent-blue'
           : isAuthLoading
-          ? 'bg-[#335CD7] text-white'
-          : 'bg-[#10B981] text-black'
+          ? 'bg-accent-soft text-accent-blue'
+          : 'bg-ok-soft text-ok-text'
       }`}
     >
       {!isOnline && (

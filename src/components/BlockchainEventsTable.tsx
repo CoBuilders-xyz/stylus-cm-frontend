@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
@@ -37,7 +36,6 @@ import {
   formatTransactionHash,
   formatEventTimestamp,
   formatRelativeTime,
-  getEventTypeBadgeVariant,
   formatEventType,
   formatBlockNumber,
   getBidAmountFromEventData,
@@ -262,7 +260,7 @@ const EventTypeFilter = React.memo(
   }) => {
     return (
       <div className='flex items-center gap-2 w-full sm:w-auto'>
-        <span className='text-sm text-gray-300 shrink-0'>Filter:</span>
+        <span className='text-[12.5px] text-ink-2 shrink-0'>Filter:</span>
         <Select
           value={currentFilter || 'all'}
           onValueChange={(value) =>

@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import {
   useContracts,
   ContractSortField,
@@ -21,7 +20,6 @@ import {
   formatSize,
   formatDate,
   formatRiskLevel,
-  getRiskBadgeVariant,
   formatRoundedEth,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';

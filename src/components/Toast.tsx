@@ -20,8 +20,8 @@ export const showSuccessToast = ({
 }: SuccessToastProps = {}) => {
   toast.custom(
     () => (
-      <div className='flex items-center justify-center bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg min-w-fit'>
-        <div className='text-sm text-center whitespace-nowrap'>{message}</div>
+      <div className='flex items-center justify-center bg-surface-2 text-ink-1 border border-hairline-strong p-3 rounded-lg shadow-lg min-w-fit'>
+        <div className='text-[13px] text-center whitespace-nowrap'>{message}</div>
       </div>
     ),
     {
@@ -47,8 +47,8 @@ export const showErrorToast = ({
 }: ErrorToastProps = {}) => {
   toast.custom(
     (t) => (
-      <div className='flex items-center justify-between bg-black text-white border border-white/10 p-3 rounded-lg shadow-lg gap-2 min-w-fit'>
-        <div className='flex-grow text-sm whitespace-nowrap'>{message}</div>
+      <div className='flex items-center justify-between bg-surface-2 text-ink-1 border border-hairline-strong p-3 rounded-lg shadow-lg gap-2 min-w-fit'>
+        <div className='flex-grow text-[13px] whitespace-nowrap'>{message}</div>
 
         {onRetry && (
           <Button
@@ -58,16 +58,17 @@ export const showErrorToast = ({
               onRetry();
               toast.dismiss(t);
             }}
-            className='flex-shrink-0 flex items-center justify-center gap-1 bg-transparent text-white border-white/30 hover:bg-white/10 whitespace-nowrap'
+            className='flex-shrink-0 flex items-center justify-center gap-1 whitespace-nowrap'
             size='sm'
           >
-            <RefreshCw className='h-3.5 w-3.5 mr-1' />
+            <RefreshCw className='h-3.5 w-3.5 me-1' />
             Retry
           </Button>
         )}
         <Button
           onClick={() => toast.dismiss(t)}
-          className='flex-shrink-0 bg-transparent text-white border-white/30 hover:bg-white/10'
+          variant='outline'
+          className='flex-shrink-0'
           size='sm'
           aria-label='Dismiss'
         >

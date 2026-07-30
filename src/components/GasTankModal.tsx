@@ -178,10 +178,10 @@ export function GasTankModal() {
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className='sm:max-w-[425px] bg-[#1a1d24] border-[#2a2d34] text-white'>
+        <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
             <DialogTitle>Gas Tank</DialogTitle>
-            <DialogDescription className='text-gray-400'>
+            <DialogDescription>
               Manage your gas balance for automated bidding transactions.
             </DialogDescription>
           </DialogHeader>
@@ -214,10 +214,10 @@ export function GasTankModal() {
           )}
         </Button>
       </DrawerTrigger>
-      <DrawerContent className='bg-[#1a1d24] text-white'>
-        <DrawerHeader className='text-left'>
-          <DrawerTitle>Gas Tank</DrawerTitle>
-          <DrawerDescription className='text-gray-400'>
+      <DrawerContent className='bg-surface-1 text-ink-1'>
+        <DrawerHeader className='text-start'>
+          <DrawerTitle className='text-[15px] font-semibold text-ink-1'>Gas Tank</DrawerTitle>
+          <DrawerDescription className='text-[12.5px] text-ink-2'>
             Manage your gas balance for automated bidding transactions.
           </DrawerDescription>
         </DrawerHeader>
@@ -239,7 +239,6 @@ export function GasTankModal() {
           <DrawerClose asChild>
             <Button
               variant='outline'
-              className='border-[#2a2d34] bg-[#252a33] hover:bg-[#2a2d34] hover:text-white'
               disabled={isTransactionInProgress}
             >
               Close
@@ -279,9 +278,9 @@ function GasTankContent({
   return (
     <div className='py-4'>
       <div className='mb-6 flex flex-col items-center justify-center'>
-        <div className='text-sm text-gray-400'>Current Balance</div>
+        <div className='tile-label'>Current Balance</div>
         <div className='flex flex-col items-center'>
-          <div className='flex items-center gap-2 text-3xl font-bold'>
+          <div className='stat-value flex items-center gap-2'>
             <GasStation className='h-8 w-8' />
             {isBalanceLoading ? (
               <Skeleton className='h-7 w-[157px] mt-2' />
@@ -290,7 +289,7 @@ function GasTankContent({
             )}
           </div>
           {!isBalanceLoading && (
-            <div className='text-xs text-gray-500 mt-1 self-end'>
+            <div className='text-xs text-ink-3 mt-1 self-end num'>
               {balance} ETH
             </div>
           )}
@@ -299,7 +298,7 @@ function GasTankContent({
           variant='ghost'
           size='sm'
           onClick={() => refreshBalance()}
-          className='mt-2 text-xs text-gray-400 hover:text-white'
+          className='mt-2 text-xs text-ink-3 hover:text-ink-1'
           disabled={isTransactionInProgress || isBalanceLoading}
         >
           Refresh
@@ -307,17 +306,15 @@ function GasTankContent({
       </div>
 
       <Tabs defaultValue='deposit' className='w-full'>
-        <TabsList className='grid w-full grid-cols-2 bg-[#252a33] rounded-md p-1'>
+        <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger
             value='deposit'
-            className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
             disabled={isTransactionInProgress}
           >
             Deposit
           </TabsTrigger>
           <TabsTrigger
             value='withdraw'
-            className='rounded-md data-[state=active]:bg-[#1a1d24] data-[state=active]:shadow-none'
             disabled={isTransactionInProgress}
           >
             Withdraw
@@ -327,7 +324,7 @@ function GasTankContent({
           <div className='space-y-2'>
             <Label htmlFor='deposit-amount'>Deposit Amount (ETH)</Label>
             <div className='flex items-center gap-2'>
-              <ArrowUpCircle className='h-5 w-5 text-green-500' />
+              <ArrowUpCircle className='h-5 w-5 text-ok-text' />
               <Input
                 id='deposit-amount'
                 type='number'
@@ -336,11 +333,11 @@ function GasTankContent({
                 onChange={(e) => setDepositAmount(e.target.value)}
                 min='0.001'
                 step='0.001'
-                className={`bg-[#252a33] border-[#2a2d34] ${
+                className={
                   isTransactionInProgress
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                    ? 'cursor-not-allowed opacity-60'
                     : ''
-                }`}
+                }
                 disabled={isTransactionInProgress || isBalanceLoading}
               />
             </div>
@@ -352,11 +349,11 @@ function GasTankContent({
               onCheckedChange={(checked) =>
                 setDisclaimerChecked(checked === true)
               }
-              className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+              className='mt-1 data-[state=checked]:bg-accent-blue data-[state=checked]:text-white border-hairline-strong'
             />
             <Label
               htmlFor='disclaimer'
-              className='text-sm font-medium leading-tight'
+              className='text-xs text-ink-2 font-normal leading-snug'
             >
               I understand this is an experimental feature pending audit
               completion, and I accept the associated risks of using automated
@@ -366,7 +363,7 @@ function GasTankContent({
           </div>
           <Button
             onClick={handleDeposit}
-            className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34]'
+            className='w-full h-9 rounded-lg'
             disabled={
               isTransactionInProgress ||
               !depositAmount ||
@@ -386,16 +383,16 @@ function GasTankContent({
           </Button>
         </TabsContent>
         <TabsContent value='withdraw' className='space-y-4 pt-4'>
-          <Alert className='bg-[#252a33] border-[#2a2d34] mb-4'>
-            <AlertCircle className='h-4 w-4 text-yellow-500' />
-            <AlertDescription className='text-sm text-gray-300 ml-2'>
+          <Alert className='bg-surface-2 border-hairline rounded-[10px] mb-4'>
+            <AlertCircle className='h-4 w-4 text-warn' />
+            <AlertDescription className='text-[12.5px] text-ink-2 ms-2'>
               Withdrawing will remove your entire balance of {balance} ETH.
             </AlertDescription>
           </Alert>
 
           <Button
             onClick={handleWithdraw}
-            className='w-full bg-[#252a33] hover:bg-[#2a2d34] border-[#2a2d34] mt-4'
+            className='w-full h-9 rounded-lg mt-4'
             disabled={
               isTransactionInProgress || balance <= 0 || isBalanceLoading
             }

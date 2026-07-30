@@ -17,11 +17,8 @@ export default function CacheHero({
   effectiveBid,
   lastBid,
 }: CacheHeroProps) {
-  const dotClass = isCached ? 'bg-green-500' : 'bg-red-500';
-  const textClass = isCached ? 'text-green-400' : 'text-red-400';
-  const gradient = isCached
-    ? 'from-green-500/5 to-transparent'
-    : 'from-red-500/8 to-transparent';
+  const dotClass = isCached ? 'bg-ok' : 'bg-crit';
+  const textClass = isCached ? 'text-ok-text' : 'text-crit-text';
   const statusLabel = isCached ? 'Cached' : 'Not Cached';
   const sub = bidBlockTimestamp
     ? `Last cached ${formatRelativeTime(bidBlockTimestamp)}`
@@ -33,9 +30,7 @@ export default function CacheHero({
   const bid = lastBid ? formatRoundedEth(formatEther(BigInt(lastBid))) : null;
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-lg border border-[#2C2E30] bg-gradient-to-br ${gradient} p-6 mb-6`}
-    >
+    <div className='app-card relative overflow-hidden p-6 mb-6'>
       <div className='flex flex-col @md/panel:flex-row @md/panel:items-start @md/panel:justify-between gap-4 @md/panel:gap-6'>
         <div className='flex items-center gap-4 min-w-0'>
           <span className='relative flex shrink-0 items-center justify-center'>
@@ -50,27 +45,25 @@ export default function CacheHero({
             />
           </span>
           <div className='min-w-0'>
-            <div className='text-[11px] uppercase tracking-wider text-gray-500 font-medium'>
+            <div className='tile-label'>
               Cache Status
             </div>
-            <div
-              className={`text-2xl @md/panel:text-3xl font-bold ${textClass}`}
-            >
+            <div className={`stat-value ${textClass}`}>
               {statusLabel}
             </div>
-            <div className='text-sm text-gray-400 mt-0.5 truncate'>{sub}</div>
+            <div className='text-[12.5px] text-ink-3 mt-0.5 truncate'>{sub}</div>
           </div>
         </div>
 
-        <div className='@md/panel:text-right border-t border-[#2C2E30] @md/panel:border-0 pt-3 @md/panel:pt-0'>
-          <div className='text-[11px] uppercase tracking-wider text-gray-500 font-medium'>
+        <div className='@md/panel:text-right border-t border-hairline @md/panel:border-0 pt-3 @md/panel:pt-0'>
+          <div className='tile-label'>
             Effective Bid
           </div>
-          <div className='text-2xl @md/panel:text-3xl font-bold text-white tabular-nums'>
+          <div className='stat-value'>
             {eff ? `${eff} ETH` : '—'}
           </div>
           {bid && (
-            <div className='text-sm text-gray-400 mt-0.5 tabular-nums'>
+            <div className='text-[12.5px] text-ink-3 mt-0.5 num'>
               bid {bid} ETH
             </div>
           )}

@@ -16,15 +16,14 @@ export function RemoveConfirmationModal({
   onConfirm,
 }: RemoveConfirmationModalProps) {
   return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-      <div className='bg-[#121212] p-6 rounded-lg max-w-md w-full'>
+    <div className='fixed inset-0 bg-page/70 flex items-center justify-center z-50'>
+      <div className='bg-surface-1 border border-hairline-strong p-6 rounded-xl shadow-lg max-w-md w-full'>
         {/* Close button */}
         <div className='flex justify-end mb-2'>
           <Button
             onClick={onCancel}
-            variant='ghost'
+            variant='outline'
             size='icon'
-            className='h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-800'
           >
             <X className='h-4 w-4' />
           </Button>
@@ -41,10 +40,10 @@ export function RemoveConfirmationModal({
         </div>
 
         {/* Title and description */}
-        <h3 className='text-xl font-bold text-center mb-2'>
+        <h3 className='text-[15px] font-semibold text-ink-1 text-center mb-2'>
           Remove Contract From Your List?
         </h3>
-        <p className='text-center text-gray-400 text-sm mb-6'>
+        <p className='text-center text-ink-2 text-[12.5px] mb-6'>
           This action will remove the contract from your managed list.
           <br />
           All historical data will remain intact.
@@ -54,19 +53,21 @@ export function RemoveConfirmationModal({
         <div className='flex justify-center gap-3'>
           <Button
             onClick={onCancel}
-            className='bg-transparent border border-gray-600 hover:bg-gray-800 text-white text-sm px-5 py-2 h-9 rounded-md'
+            variant='outline'
+            className='px-5 h-9 rounded-lg'
             disabled={isRemoving}
           >
             Cancel
           </Button>
           <Button
             onClick={onConfirm}
-            className='bg-white hover:bg-gray-200 text-black font-medium text-sm px-5 py-2 h-9 rounded-md'
+            variant='destructive'
+            className='px-5 h-9 rounded-lg'
             disabled={isRemoving}
           >
             {isRemoving ? (
               <>
-                <Loader2 className='h-4 w-4 mr-2 animate-spin text-black' />
+                <Loader2 className='h-4 w-4 me-2 animate-spin' />
                 Removing...
               </>
             ) : (

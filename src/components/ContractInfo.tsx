@@ -6,13 +6,25 @@ import { AlertType } from '@/types/alerts';
 import {
   formatSize,
   formatRiskLevel,
-  getRiskBadgeVariant,
   formatRoundedEth,
 } from '@/utils/formatting';
 import { PlusCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+
+// Styling-only mapping: eviction-risk level -> status pill class.
+const riskPillClass = (risk?: string | null): string => {
+  switch (risk?.toLowerCase()) {
+    case 'high':
+      return 'pill pill-crit';
+    case 'medium':
+      return 'pill pill-warn';
+    case 'low':
+      return 'pill pill-ok';
+    default:
+      return 'pill pill-muted';
+  }
+};
 
 interface ContractInfoProps {
   contractData: Contract;
@@ -35,12 +47,12 @@ export function ContractInfo({
             {Array(viewType === 'my-contracts' ? 4 : 3)
               .fill(0)
               .map((_, index) => (
-                <TableRow key={index} className='hover:bg-transparent'>
+                <TableRow key={index} className='hover:bg-transparent border-hairline'>
                   <TableCell className='p-2 w-1/3'>
-                    <div className='h-4 bg-gray-700 rounded w-24'></div>
+                    <div className='h-4 bg-surface-3 rounded w-24'></div>
                   </TableCell>
                   <TableCell className='p-2 w-2/3'>
-                    <div className='h-4 bg-gray-700 rounded w-24'></div>
+                    <div className='h-4 bg-surface-3 rounded w-24 ms-auto'></div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -57,19 +69,14 @@ export function ContractInfo({
       content: (
         <>
           {contractData.evictionRisk ? (
-            <Badge
-              variant={getRiskBadgeVariant(contractData.evictionRisk.riskLevel)}
-              className='px-3 py-1 text-sm font-semibold w-fit'
+            <span
+              className={riskPillClass(contractData.evictionRisk.riskLevel)}
             >
+              <i className='pill-dot' aria-hidden />
               {formatRiskLevel(contractData.evictionRisk.riskLevel)}
-            </Badge>
+            </span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='pill pill-muted'>N/A</span>
           )}
         </>
       ),
@@ -77,7 +84,7 @@ export function ContractInfo({
     {
       label: 'Total Spent',
       content: (
-        <span className='font-medium'>
+        <span className='font-medium text-ink-1 num'>
           {formatRoundedEth(
             formatEther(BigInt(contractData.totalBidInvestment))
           ) + ' ETH'}
@@ -87,7 +94,7 @@ export function ContractInfo({
     {
       label: 'Size',
       content: (
-        <span className='font-medium'>
+        <span className='font-medium text-ink-1 num'>
           {formatSize(contractData.bytecode.size)}
         </span>
       ),
@@ -99,12 +106,14 @@ export function ContractInfo({
     rows.push({
       label: 'Active Alerts',
       content: (
-        <div className='flex items-center gap-2 flex-wrap'>
+        <div className='flex items-center justify-end gap-2 flex-wrap'>
           {!contractData.alerts ||
           !contractData.alerts.some((alert) => alert.isActive) ? (
             <Button
+              variant='outline'
+              size='sm'
               onClick={onManageAlerts}
-              className='px-3 py-1 border border-dashed border-gray-600 text-gray-400 bg-transparent hover:bg-gray-800 rounded-md text-xs flex items-center gap-1'
+              className='border-dashed text-ink-3 hover:text-ink-1 gap-1'
             >
               <PlusCircle className='h-3 w-3' />
               Add alerts
@@ -139,19 +148,28 @@ export function ContractInfo({
                   };
 
                   return (
-                    <div
+                    <span
                       key={alert.id}
-                      className='px-3 py-2 text-white text-xs rounded-md inline-block bg-[#1A1A1A] border border-[#333]'
+                      className={`pill ${
+                        alert.type === AlertType.REACTIVATION_FAILED
+                          ? 'pill-crit'
+                          : 'pill-muted'
+                      }`}
                     >
+                      {alert.type === AlertType.REACTIVATION_FAILED && (
+                        <i className='pill-dot' aria-hidden />
+                      )}
                       {getAlertText(alert)}
-                    </div>
+                    </span>
                   );
                 })}
               <Button
-                className='p-1 rounded-md bg-transparent border border-gray-700 hover:bg-gray-900'
+                variant='outline'
+                size='icon'
+                className='size-7'
                 onClick={onManageAlerts}
               >
-                <Edit className='h-4 w-4' />
+                <Edit className='h-3.5 w-3.5' />
               </Button>
             </>
           )}
@@ -165,11 +183,13 @@ export function ContractInfo({
       <Table>
         <TableBody>
           {rows.map((row, index) => (
-            <TableRow key={index} className='hover:bg-transparent'>
-              <TableCell className='font-medium text-gray-400 w-1/3'>
+            <TableRow key={index} className='hover:bg-transparent border-hairline'>
+              <TableCell className='py-2.5 px-0 text-[13px] text-ink-3 w-1/3'>
                 {row.label}
               </TableCell>
-              <TableCell className='text-left w-2/3'>{row.content}</TableCell>
+              <TableCell className='py-2.5 px-0 text-end text-[13px] w-2/3'>
+                {row.content}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

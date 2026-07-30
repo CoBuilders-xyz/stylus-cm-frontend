@@ -41,7 +41,9 @@ export default function ActivationHistory({
   return (
     <>
       <div className='mb-4'>
-        <h3 className='text-lg'>Activation History</h3>
+        <h3 className='text-[15px] font-semibold text-ink-1'>
+          Activation History
+        </h3>
       </div>
 
       <Table className='table-fixed w-full'>
@@ -52,31 +54,31 @@ export default function ActivationHistory({
               .map((_, index) => (
                 <TableRow
                   key={index}
-                  className='animate-pulse border-b border-[#1A1A1A] bg-[#121212]'
+                  className='animate-pulse border-b border-hairline bg-surface-2'
                 >
                   <TableCell className='p-2 w-1/4'>
                     <div className='flex items-center'>
-                      <div className='w-8 h-8 bg-none rounded-full mr-3'></div>
+                      <div className='w-8 h-8 bg-none rounded-full me-3'></div>
                       <div>
-                        <div className='h-4 bg-gray-700 rounded w-24 mb-2'></div>
+                        <div className='h-4 bg-surface-3 rounded w-24 mb-2'></div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className='p-2 w-1/4 text-center'>
-                    <div className='h-4 bg-gray-700 rounded w-20 mx-auto'></div>
+                    <div className='h-4 bg-surface-3 rounded w-20 mx-auto'></div>
                   </TableCell>
                   <TableCell className='p-2 w-1/4'>
-                    <div className='h-4 bg-gray-700 rounded w-24 ml-auto'></div>
+                    <div className='h-4 bg-surface-3 rounded w-24 ms-auto'></div>
                   </TableCell>
-                  <TableCell className='p-2 w-1/4 text-right'>
-                    <div className='h-3 bg-gray-800 rounded w-16 ml-auto mb-1'></div>
-                    <div className='h-3 bg-gray-800 rounded w-20 ml-auto'></div>
+                  <TableCell className='p-2 w-1/4 text-end'>
+                    <div className='h-3 bg-surface-3 rounded w-16 ms-auto mb-1'></div>
+                    <div className='h-3 bg-surface-3 rounded w-20 ms-auto'></div>
                   </TableCell>
                 </TableRow>
               ))
           ) : events.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className='text-center py-4 text-gray-400'>
+              <TableCell colSpan={4} className='text-center py-4 text-ink-3'>
                 No activation events recorded for this contract yet.
               </TableCell>
             </TableRow>
@@ -84,8 +86,8 @@ export default function ActivationHistory({
             displayed.map((evt) => {
               const url = explorerTxUrl(chainId, evt.txHash);
               const isSuccess = evt.status === 'success';
-              const dotClass = isSuccess ? 'bg-green-500' : 'bg-red-500';
-              const iconBg = isSuccess ? 'bg-green-600' : 'bg-red-600';
+              const dotClass = isSuccess ? 'bg-ok' : 'bg-crit';
+              const iconBg = isSuccess ? 'bg-ok-soft' : 'bg-crit-soft';
               const eventLabel = isSuccess ? 'Activated' : 'Failed';
               // `||` (not `??`) because backend `error` events can carry an
               // empty `note` — `'' ?? '—'` would render a blank cell.
@@ -97,19 +99,19 @@ export default function ActivationHistory({
               return (
                 <TableRow
                   key={evt.id}
-                  className='py-2 hover:bg-transparent rounded'
+                  className='py-2 hover:bg-transparent rounded border-hairline'
                 >
                   {/* Icon + event label */}
                   <TableCell className='p-2 w-1/4'>
                     <div className='flex items-center min-w-0'>
                       <div
-                        className={`w-8 h-8 shrink-0 ${iconBg} rounded-full mr-3 flex items-center justify-center`}
+                        className={`w-8 h-8 shrink-0 ${iconBg} rounded-full me-3 flex items-center justify-center`}
                       >
                         <span
                           className={`inline-block h-2 w-2 rounded-full ${dotClass}`}
                         />
                       </div>
-                      <div className='font-medium text-sm truncate min-w-0'>
+                      <div className='font-medium text-[13px] text-ink-1 truncate min-w-0'>
                         {eventLabel}
                       </div>
                     </div>
@@ -118,8 +120,10 @@ export default function ActivationHistory({
                   {/* Spent / reason */}
                   <TableCell className='p-2 w-1/4 text-center'>
                     <span
-                      className={`font-medium ${
-                        isSuccess ? 'text-white' : 'text-red-300/80 text-xs'
+                      className={`font-medium num ${
+                        isSuccess
+                          ? 'text-[13px] text-ink-1'
+                          : 'text-crit-text text-xs'
                       }`}
                     >
                       {spent}
@@ -133,13 +137,13 @@ export default function ActivationHistory({
                         href={url}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='px-3 py-2 text-white text-xs rounded-md inline-flex items-center gap-1 bg-[#1A1A1A] border border-[#333] hover:bg-[#252525]'
+                        className='px-2.5 py-1.5 text-ink-2 text-[11.5px] font-mono rounded-md inline-flex items-center gap-1 bg-surface-2 border border-hairline hover:bg-surface-3 hover:text-ink-1'
                       >
                         {truncate(evt.txHash)}
                         <ExternalLink className='h-3 w-3' />
                       </a>
                     ) : (
-                      <div className='px-3 py-2 text-white text-xs rounded-md inline-block bg-[#1A1A1A] border border-[#333] font-mono'>
+                      <div className='px-2.5 py-1.5 text-ink-2 text-[11.5px] rounded-md inline-block bg-surface-2 border border-hairline font-mono'>
                         {truncate(evt.txHash)}
                       </div>
                     )}
@@ -147,11 +151,11 @@ export default function ActivationHistory({
 
                   {/* Date */}
                   <TableCell className='p-2 w-1/4 text-center'>
-                    <div className='text-right text-gray-400 min-w-[70px]'>
-                      <div className='text-xs font-medium'>
+                    <div className='text-end text-ink-3 min-w-[70px]'>
+                      <div className='text-xs font-medium num'>
                         {formatEventTime(evt.date)}
                       </div>
-                      <div className='text-xs'>
+                      <div className='text-xs num'>
                         {formatEventDate(evt.date)}
                       </div>
                     </div>
@@ -165,10 +169,7 @@ export default function ActivationHistory({
 
       {!isLoading && hasMoreEntries && (
         <div className='mt-4 flex justify-center'>
-          <Button
-            onClick={handleLoadMore}
-            className='px-4 py-2 bg-[#1A1A1A] border border-[#333] text-white hover:bg-[#252525] rounded-md text-sm'
-          >
+          <Button variant='outline' size='sm' onClick={handleLoadMore}>
             Load More Entries
           </Button>
         </div>

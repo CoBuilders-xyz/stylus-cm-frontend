@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import BlockchainEventsTable from '@/components/BlockchainEventsTable';
 import SidePanel from '@/components/SidePanel';
 import { BlockchainEvent } from '@/types/blockchainEvents';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -13,7 +12,6 @@ import {
   formatContractAddress,
   formatEventTimestamp,
   formatRelativeTime,
-  getEventTypeBadgeVariant,
   formatEventType,
   formatBlockNumber,
   getBidAmountFromEventData,
@@ -446,8 +444,8 @@ export default function BlockchainEventsPage() {
                           Raw Event Data
                         </TableCell>
                         <TableCell className='text-left w-2/3'>
-                          <div className='bg-black rounded p-3 border border-gray-700'>
-                            <pre className='text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto'>
+                          <div className='bg-surface-2 rounded-lg p-3 border border-hairline'>
+                            <pre className='text-xs text-ink-2 whitespace-pre-wrap overflow-x-auto'>
                               {JSON.stringify(selectedEvent.eventData, null, 2)}
                             </pre>
                           </div>

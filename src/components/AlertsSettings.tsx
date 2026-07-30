@@ -871,7 +871,7 @@ export default function AlertsSettings({
                         id={config.id}
                         checked={false}
                         disabled={true}
-                        className='data-[state=checked]:bg-gray-500 border-gray-500 cursor-not-allowed'
+                        className='data-[state=checked]:bg-surface-3 border-hairline-strong cursor-not-allowed'
                       />
                     </TooltipTrigger>
                     <TooltipContent side='top' className='max-w-xs p-2'>
@@ -885,7 +885,7 @@ export default function AlertsSettings({
                             e.stopPropagation();
                             openAlertSettings();
                           }}
-                          className='w-full text-xs h-6 bg-blue-600 hover:bg-blue-700'
+                          className='w-full text-xs h-6'
                         >
                           Configure
                         </Button>
@@ -895,7 +895,7 @@ export default function AlertsSettings({
                 </TooltipProvider>
                 <label
                   htmlFor={config.id}
-                  className='text-sm text-gray-500 cursor-not-allowed'
+                  className='text-[13px] text-ink-3 cursor-not-allowed'
                 >
                   {config.label}
                 </label>
@@ -910,9 +910,9 @@ export default function AlertsSettings({
                 id={config.id}
                 checked={config.checked}
                 onCheckedChange={handleCheckedChange(config.onChange)}
-                className='data-[state=checked]:bg-[#335CD7]'
+                className='data-[state=checked]:bg-accent-blue'
               />
-              <label htmlFor={config.id} className='text-sm cursor-pointer'>
+              <label htmlFor={config.id} className='text-[13px] text-ink-1 cursor-pointer'>
                 {config.label}
               </label>
             </div>
@@ -923,63 +923,48 @@ export default function AlertsSettings({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919] shadow-xl  overflow-hidden border-l border-gray-800'>
-      {/* Title header with gradient background and noise texture */}
-      <div
-        className='relative overflow-hidden'
-        style={{
-          background:
-            'linear-gradient(88.8deg, #275A93 0.24%, #2D99DD 24.41%, #FA9647 59.66%, #E0445B 100.95%)',
-        }}
-      >
-        {/* White noise texture overlay */}
-        <div
-          className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-            backgroundSize: '100px 100px',
-            backgroundRepeat: 'repeat',
-          }}
-        />
-
+    <div className='text-ink-1 flex flex-col h-full bg-surface-1 overflow-hidden border-s border-hairline'>
+      {/* Title header */}
+      <div className='bg-surface-1 border-b border-hairline'>
         {/* Header content */}
-        <div className='flex justify-between items-center p-6 relative z-10'>
+        <div className='flex justify-between items-center px-5 py-4'>
           <div>
-            <h2 className='text-2xl font-bold text-white'>
+            <h2 className='text-[15px] font-semibold text-ink-1'>
               Set Contract Alerts
             </h2>
-            <div className='text-white/80 mt-1'>{contractAddress}</div>
+            <div className='mono-addr mt-1'>{contractAddress}</div>
           </div>
           <Button
+            variant='outline'
             size='icon'
             onClick={onClose}
-            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
           >
-            <X className='h-6 w-6' />
+            <X className='h-4 w-4' />
           </Button>
         </div>
       </div>
 
-      <div className='p-6 flex-1 overflow-auto'>
+      <div className='p-5 flex-1 overflow-auto'>
         {/* Notification Channel Validation Warning */}
         {isValidating && !validationResult && (
-          <div className='mb-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg'>
-            <div className='flex items-center gap-2 text-gray-400'>
-              <div className='animate-spin w-4 h-4 border-2 border-gray-600 border-t-white rounded-full' />
-              <span className='text-sm'>Checking notification channels...</span>
+          <div className='mb-6 p-4 bg-surface-2 border border-hairline rounded-[10px]'>
+            <div className='flex items-center gap-2 text-ink-2'>
+              <div className='animate-spin w-4 h-4 border-2 border-hairline-strong border-t-ink-1 rounded-full' />
+              <span className='text-[12.5px]'>Checking notification channels...</span>
             </div>
           </div>
         )}
 
         {validationError && (
-          <div className='mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg'>
-            <p className='text-red-400 text-sm'>
+          <div className='mb-6 p-4 bg-crit-soft border border-crit/20 rounded-[10px]'>
+            <p className='text-crit-text text-[12.5px]'>
               Failed to check notification channels: {validationError}
             </p>
             <Button
               onClick={revalidate}
               size='sm'
-              className='mt-2 bg-red-500/20 text-red-400 hover:bg-red-500/30'
+              variant='outline'
+              className='mt-2'
             >
               Retry
             </Button>
@@ -1011,7 +996,7 @@ export default function AlertsSettings({
         {/* Alert Configuration Sections - Show immediately but with proper channel filtering */}
         <div
           className={cn(
-            'space-y-8',
+            'space-y-3',
             !hasValidChannels &&
               !isValidating &&
               validationResult &&
@@ -1019,11 +1004,11 @@ export default function AlertsSettings({
           )}
         >
           {/* Eviction Alerts */}
-          <div className='rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Eviction</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Eviction</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when my contract gets evicted from the cache.
                 </p>
               </div>
@@ -1031,15 +1016,15 @@ export default function AlertsSettings({
                 checked={evictionAlertEnabled}
                 onCheckedChange={handleEvictionAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1053,11 +1038,11 @@ export default function AlertsSettings({
           </div>
 
           {/* No Gas Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>No Gas</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>No Gas</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when my balance can&apos;t cover gas for auto-bids.
                 </p>
               </div>
@@ -1065,15 +1050,15 @@ export default function AlertsSettings({
                 checked={noGasAlertEnabled}
                 onCheckedChange={handleNoGasAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1087,11 +1072,11 @@ export default function AlertsSettings({
           </div>
 
           {/* Low Gas Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Low Gas</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Low Gas</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when my balance goes below the threshold.
                 </p>
               </div>
@@ -1099,15 +1084,15 @@ export default function AlertsSettings({
                 checked={lowGasAlertEnabled}
                 onCheckedChange={handleLowGasAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1116,7 +1101,7 @@ export default function AlertsSettings({
             {lowGasAlertEnabled && (
               <>
                 <div className='mt-4 mb-4'>
-                  <label className='block text-sm mb-1'>
+                  <label className='block text-xs text-ink-2 mb-1'>
                     Low gas threshold (ETH)
                   </label>
                   <Input
@@ -1124,7 +1109,7 @@ export default function AlertsSettings({
                     placeholder='e.g. 0.1'
                     value={lowGasThreshold}
                     onChange={handleLowGasThresholdChange}
-                    className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
+                    className='w-full'
                   />
                 </div>
 
@@ -1134,11 +1119,11 @@ export default function AlertsSettings({
           </div>
 
           {/* Bid Safety Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Bid Safety</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Bid Safety</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when the minimum bid nears contract bid.
                 </p>
               </div>
@@ -1146,15 +1131,15 @@ export default function AlertsSettings({
                 checked={bidSafetyAlertEnabled}
                 onCheckedChange={handleBidSafetyAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1173,19 +1158,19 @@ export default function AlertsSettings({
                       }
                       className={cn(
                         'w-full',
-                        '[&>span]:bg-black', // Black track
-                        '[&>span>span]:bg-white', // White fill
+                        '[&>span]:bg-surface-3', // Track
+                        '[&>span>span]:bg-accent-blue', // Accent fill
                         '[&_[data-slot=slider-thumb]]:bg-white' // White thumb
                       )}
                     />
-                    <div className='flex justify-between text-xs text-gray-400 mt-1 px-1'>
+                    <div className='flex justify-between text-xs text-ink-3 mt-1 px-1'>
                       <span>0%</span>
-                      <span className='text-center text-white font-medium'>
+                      <span className='text-center text-ink-1 font-medium num'>
                         {bidSafetyThreshold}%
                       </span>
                       <span>100%</span>
                     </div>
-                    <div className='text-xs text-center mt-3 text-gray-400 border-t border-gray-800 pt-3'>
+                    <div className='text-xs text-center mt-3 text-ink-3 border-t border-hairline pt-3'>
                       MinBid-to-EffectiveBid distance:{' '}
                       {bidSafetyThreshold < 30
                         ? 'Close'
@@ -1203,21 +1188,21 @@ export default function AlertsSettings({
 
           {/* Divider between cache/bid alerts and activation alerts */}
           <div
-            className='border-t border-gray-800 pt-4'
+            className='border-t border-hairline pt-4'
             role='separator'
             aria-label='Activation alerts'
           >
-            <h4 className='text-xs uppercase tracking-wider text-gray-500 mb-2'>
+            <h4 className='tile-label mb-2'>
               Activation alerts
             </h4>
           </div>
 
           {/* Approaching Expiration Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Approaching Expiration</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Approaching Expiration</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me N days before my contract&apos;s activation expires.
                 </p>
               </div>
@@ -1225,15 +1210,15 @@ export default function AlertsSettings({
                 checked={approachingExpirationAlertEnabled}
                 onCheckedChange={handleApproachingExpirationAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1244,7 +1229,7 @@ export default function AlertsSettings({
                 <div className='mt-4 mb-4'>
                   <label
                     htmlFor='approachingExpirationThreshold'
-                    className='block text-sm mb-1'
+                    className='block text-xs text-ink-2 mb-1'
                   >
                     Days before expiration (1–365)
                   </label>
@@ -1258,7 +1243,7 @@ export default function AlertsSettings({
                     placeholder='e.g. 30'
                     value={approachingExpirationThreshold}
                     onChange={handleApproachingExpirationThresholdChange}
-                    className='bg-[#1A1919] text-white border border-gray-700 rounded-md p-2 w-full'
+                    className='w-full'
                   />
                 </div>
 
@@ -1268,11 +1253,11 @@ export default function AlertsSettings({
           </div>
 
           {/* Expired Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Expired</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Expired</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when my contract&apos;s activation has expired.
                 </p>
               </div>
@@ -1280,15 +1265,15 @@ export default function AlertsSettings({
                 checked={expiredAlertEnabled}
                 onCheckedChange={handleExpiredAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1302,11 +1287,11 @@ export default function AlertsSettings({
           </div>
 
           {/* Reactivation Succeeded Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Reactivation Succeeded</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Reactivation Succeeded</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when an automatic reactivation succeeds.
                 </p>
               </div>
@@ -1314,15 +1299,15 @@ export default function AlertsSettings({
                 checked={reactivationSucceededAlertEnabled}
                 onCheckedChange={handleReactivationSucceededAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1336,11 +1321,11 @@ export default function AlertsSettings({
           </div>
 
           {/* Reactivation Failed Alerts */}
-          <div className='mb-8 rounded-lg bg-black p-6'>
+          <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <h3 className='text-lg font-medium'>Reactivation Failed</h3>
-                <p className='text-gray-400 text-sm'>
+                <h3 className='text-[13px] font-[550] text-ink-1'>Reactivation Failed</h3>
+                <p className='text-xs text-ink-3 mt-0.5'>
                   Alert me when an automatic reactivation fails.
                 </p>
               </div>
@@ -1348,15 +1333,15 @@ export default function AlertsSettings({
                 checked={reactivationFailedAlertEnabled}
                 onCheckedChange={handleReactivationFailedAlertToggle}
                 className={cn(
-                  'inline-flex h-[26px] w-[48px] shrink-0 items-center rounded-full border-transparent transition-all outline-none',
-                  'data-[state=unchecked]:border data-[state=unchecked]:border-[#73777A] data-[state=unchecked]:bg-[#2C2E30]',
-                  'data-[state=checked]:border-0 data-[state=checked]:bg-[#335CD7]'
+                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'data-[state=unchecked]:bg-surface-3',
+                  'data-[state=checked]:bg-accent-blue'
                 )}
               >
                 <SwitchPrimitive.Thumb
                   className={cn(
-                    'pointer-events-none block h-[20px] w-[20px] rounded-full bg-white shadow-lg ring-0 transition-transform',
-                    'data-[state=checked]:translate-x-[24px] data-[state=unchecked]:translate-x-0.5'
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white ring-0 transition-transform',
+                    'data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5'
                   )}
                 />
               </SwitchPrimitive.Root>
@@ -1372,11 +1357,11 @@ export default function AlertsSettings({
           {/* End of Alert Configuration Sections */}
         </div>
 
-        {error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
+        {error && <p className='text-crit-text text-xs mb-4'>{error}</p>}
 
         <div className='mt-6 mb-4'>
           <Button
-            className='w-full px-4 py-2 bg-black text-white font-medium hover:bg-gray-900 rounded-md'
+            className='w-full h-9 rounded-lg'
             onClick={handleSaveAlertSettings}
             disabled={isLoading}
           >

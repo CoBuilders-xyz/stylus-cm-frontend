@@ -32,51 +32,49 @@ export default function ActivationHero({
   const dotClass = activationDotClass(status);
   const textClass = activationTextClass(status);
   const showPulse = status === 'active' || status === 'expiring';
-  const gradient =
+  // The one permitted gradient: a faint status wash over the bordered card.
+  const statusWash =
     status === 'active'
-      ? 'from-green-500/5 to-transparent'
+      ? 'linear-gradient(180deg, rgba(12,163,12,0.06), transparent 70%)'
       : status === 'expiring'
-        ? 'from-amber-500/8 to-transparent'
-        : status === 'error'
-          ? 'from-red-500/8 to-transparent'
-          : status === 'unknown'
-            ? 'from-gray-500/8 to-transparent'
-            : 'from-red-500/8 to-transparent';
+        ? 'linear-gradient(180deg, rgba(250,178,25,0.06), transparent 70%)'
+        : status === 'unknown'
+          ? undefined
+          : 'linear-gradient(180deg, rgba(208,59,59,0.06), transparent 70%)';
   const statusLabel = activationStatusLabel(info);
   const sub = activationSubLabel(info);
 
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border border-[#2C2E30] bg-gradient-to-br ${gradient} p-6 mb-6`}
+      className='relative overflow-hidden rounded-[10px] border border-hairline bg-surface-1 p-4 mb-4'
+      style={statusWash ? { background: statusWash } : undefined}
     >
       <div className='flex flex-col @md/panel:flex-row @md/panel:items-start @md/panel:justify-between gap-4 @md/panel:gap-6'>
-        <div className='flex items-center gap-4 min-w-0'>
+        <div className='flex items-center gap-3 min-w-0'>
           <span className='relative flex shrink-0 items-center justify-center'>
             {showPulse && (
               <span
                 aria-hidden
-                className={`absolute inline-flex h-5 w-5 rounded-full opacity-50 animate-ping ${dotClass}`}
+                className={`absolute inline-flex h-4 w-4 rounded-full opacity-50 animate-ping ${dotClass}`}
               />
             )}
             <span
-              className={`relative inline-block h-3.5 w-3.5 rounded-full ${dotClass}`}
+              className={`relative inline-block h-2.5 w-2.5 rounded-full ${dotClass}`}
             />
           </span>
           <div className='min-w-0'>
-            <div className='text-[11px] uppercase tracking-wider text-gray-500 font-medium'>
-              Activation Status
-            </div>
+            <div className='tile-label'>Activation Status</div>
             <div
-              className={`text-2xl @md/panel:text-3xl font-bold ${textClass}`}
+              className={`text-[19px] font-semibold tracking-[-0.01em] ${textClass}`}
             >
               {statusLabel}
             </div>
-            <div className='text-sm text-gray-400 mt-0.5 truncate'>{sub}</div>
+            <div className='text-[12px] text-ink-3 mt-0.5 truncate'>{sub}</div>
           </div>
         </div>
 
         {actionSlot && (
-          <div className='@md/panel:text-right border-t border-[#2C2E30] @md/panel:border-0 pt-3 @md/panel:pt-0 flex @md/panel:justify-end'>
+          <div className='@md/panel:text-end border-t border-hairline @md/panel:border-0 pt-3 @md/panel:pt-0 flex @md/panel:justify-end'>
             {actionSlot}
           </div>
         )}
