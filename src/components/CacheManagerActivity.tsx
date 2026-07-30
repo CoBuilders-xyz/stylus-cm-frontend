@@ -89,7 +89,7 @@ export default function CacheManagerActivity() {
     timespan,
     setTimespan,
     currentBlockchainId,
-  } = useCacheManagerActivity('D');
+  } = useCacheManagerActivity('M');
 
   // Format X-axis ticks based on timespan
   const formatXAxisTick = (value: string) => {

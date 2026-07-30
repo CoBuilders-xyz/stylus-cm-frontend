@@ -70,9 +70,9 @@ export default function CacheAverageBid() {
   const [hoveredSize, setHoveredSize] = useState<ContractSize | null>(null);
 
   // Get data for all contract sizes
-  const smallData = useBidAverage('D', 'small');
-  const mediumData = useBidAverage('D', 'medium');
-  const largeData = useBidAverage('D', 'large');
+  const smallData = useBidAverage('M', 'small');
+  const mediumData = useBidAverage('M', 'medium');
+  const largeData = useBidAverage('M', 'large');
 
   // Use the first hook for timespan control
   const { timespan, currentBlockchainId } = smallData;
