@@ -359,7 +359,7 @@ function BlockchainEventsTable({
   return (
     <div className='overflow-hidden flex flex-col h-full'>
       <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8 flex-shrink-0'>
-        <h1 className='text-xl font-bold text-white'>Cache Events</h1>
+        <h1 className='page-title'>Cache Events</h1>
         <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto'>
           <EventTypeFilter
             currentFilter={eventTypeFilter}
