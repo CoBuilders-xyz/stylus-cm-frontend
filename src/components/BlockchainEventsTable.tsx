@@ -96,36 +96,36 @@ const SortableTableHead = React.memo(
 
       if (!isSorted) {
         return (
-          <span className='ml-1 text-gray-500'>
-            <ArrowUpDown className='w-4 h-4' />
+          <span className='ms-1 text-ink-3 opacity-60'>
+            <ArrowUpDown className='w-3.5 h-3.5' />
           </span>
         );
       }
 
       if (currentSortOrder === SortOrder.ASC) {
         return (
-          <span className='ml-1 text-green-400'>
-            <ArrowUp className='w-4 h-4' />
+          <span className='ms-1 text-accent-blue'>
+            <ArrowUp className='w-3.5 h-3.5' />
           </span>
         );
       }
 
       if (currentSortOrder === SortOrder.DESC) {
         return (
-          <span className='ml-1 text-red-400'>
-            <ArrowDown className='w-4 h-4' />
+          <span className='ms-1 text-accent-blue'>
+            <ArrowDown className='w-3.5 h-3.5' />
           </span>
         );
       }
 
-      return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
+      return <span className='ms-1 text-ink-3 opacity-50'>↕</span>;
     };
 
     return (
       <TableHead
         onClick={sortField ? handleSort : undefined}
-        className={`font-medium text-base py-6 ${
-          sortField ? 'cursor-pointer hover:bg-gray-900' : ''
+        className={`${
+          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
         } ${props.className || ''}`}
       >
         <div className='flex items-center'>
@@ -183,72 +183,65 @@ const EventRow = React.memo(
     const size = getSizeFromEventData(event.eventData, event.eventName);
 
     return (
-      <TableRow
-        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors hover:bg-gradient-to-r hover:from-[#0B436E] hover:to-[#1581D4] transition-colors duration-300'
-        onClick={handleRowClick}
-      >
-        <TableCell className='py-6 text-lg'>
-          <Badge
-            variant={getEventTypeBadgeVariant(event.eventName)}
-            className='px-3 py-1 text-sm font-semibold w-fit'
+      <TableRow className='cursor-pointer' onClick={handleRowClick}>
+        <TableCell>
+          <span
+            className={`pill ${
+              event.eventName === 'DeleteBid' ? 'pill-crit' : 'pill-muted'
+            }`}
           >
+            <span
+              className={`pill-dot ${
+                event.eventName === 'DeleteBid' ? 'bg-crit' : 'bg-ok'
+              }`}
+            />
             {formatEventType(event.eventName)}
-          </Badge>
+          </span>
         </TableCell>
-        <TableCell className='py-6 text-lg'>
-          <div className='flex items-center space-x-2'>
-            <span className='font-mono text-sm'>
+        <TableCell>
+          <div className='flex items-center gap-1.5'>
+            <span className='mono-addr !text-ink-2 text-[12px]'>
               {formatTransactionHash(event.transactionHash)}
             </span>
             <Button
               variant='ghost'
               size='sm'
               onClick={(e) => handleCopy(event.transactionHash, 'tx', e)}
-              className='p-1 h-auto hover:bg-gray-800'
+              className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
             >
               {copySuccess.tx ? (
-                <span className='text-green-400 text-xs'>✓</span>
+                <span className='text-ok-text text-xs'>✓</span>
               ) : (
                 <Copy className='w-3 h-3' />
               )}
             </Button>
           </div>
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {formatBlockNumber(event.blockNumber)}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell>
           <div className='flex flex-col'>
-            <span className='text-sm'>
+            <span className='text-[13px] num'>
               {formatEventTimestamp(event.blockTimestamp)}
             </span>
-            <span className='text-xs text-gray-400'>
+            <span className='text-[11px] text-ink-3'>
               {formatRelativeTime(event.blockTimestamp)}
             </span>
           </div>
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {bidAmount ? (
-            <span className='font-mono text-sm'>{bidAmount}</span>
+            <span>{bidAmount}</span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {size ? (
             <span>{formatSize(size)}</span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
       </TableRow>
@@ -278,10 +271,10 @@ const EventTypeFilter = React.memo(
             )
           }
         >
-          <SelectTrigger className='flex-1 sm:flex-none sm:w-[180px] bg-black text-white border-gray-500 focus:border-white'>
+          <SelectTrigger className='flex-1 sm:flex-none sm:w-[170px] h-8 bg-surface-1 text-ink-1 border-hairline focus:border-accent-blue text-[12.5px]'>
             <SelectValue placeholder='All Events' />
           </SelectTrigger>
-          <SelectContent className='bg-black text-white border-gray-500'>
+          <SelectContent className='bg-surface-2 text-ink-1 border-hairline-strong'>
             <SelectItem value='all'>All Events</SelectItem>
             <SelectItem value={BlockchainEventType.INSERT}>
               Insert Events
@@ -314,7 +307,7 @@ const Pagination = React.memo(
         <div className='flex items-center gap-2'>
           <span>Show</span>
           <select
-            className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
+            className='bg-surface-2 text-ink-1 border border-hairline rounded-md px-2 py-1 focus:outline-none focus:border-accent-blue'
             value={pagination.limit}
             onChange={handleItemsPerPageChange}
           >
@@ -334,16 +327,20 @@ const Pagination = React.memo(
             <Button
               onClick={() => handlePageChange(1)}
               disabled={!pagination.hasPreviousPage}
-              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              variant='ghost'
+              size='sm'
+              className='hidden sm:inline-flex h-7 px-2 text-ink-2 disabled:opacity-40'
             >
               First
             </Button>
             <Button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              variant='ghost'
+              size='sm'
+              className='h-7 px-2 text-ink-2 disabled:opacity-40'
             >
-              ◀
+              ‹
             </Button>
             {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
               .filter(
@@ -359,10 +356,12 @@ const Pagination = React.memo(
                   )}
                   <Button
                     onClick={() => handlePageChange(page)}
-                    className={`px-2 py-1 rounded-md ${
+                    variant='ghost'
+                    size='sm'
+                    className={`h-7 min-w-7 px-2 num ${
                       pagination.page === page
                         ? 'bg-white text-black'
-                        : 'bg-black text-white'
+                        : 'text-ink-2'
                     }`}
                   >
                     {page}
@@ -372,14 +371,18 @@ const Pagination = React.memo(
             <Button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              variant='ghost'
+              size='sm'
+              className='h-7 px-2 text-ink-2 disabled:opacity-40'
             >
-              ▶
+              ›
             </Button>
             <Button
               onClick={() => handlePageChange(pagination.totalPages)}
               disabled={!pagination.hasNextPage}
-              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
+              variant='ghost'
+              size='sm'
+              className='hidden sm:inline-flex h-7 px-2 text-ink-2 disabled:opacity-40'
             >
               Last
             </Button>
@@ -472,7 +475,7 @@ function BlockchainEventsTable({
             <input
               type='text'
               placeholder='Search by contract address...'
-              className='p-2 pl-10 bg-black rounded-md w-full sm:w-80 border border-gray-500 focus:outline-none focus:border-white'
+              className='h-8 ps-8 pe-3 text-[12.5px] bg-surface-1 text-ink-1 placeholder:text-ink-3 rounded-lg w-full sm:w-72 border border-hairline focus:outline-none focus:border-accent-blue'
               value={searchInput}
               onChange={handleSearchInputChange}
               onKeyDown={handleKeyDown}
@@ -489,7 +492,7 @@ function BlockchainEventsTable({
 
       {isLoading && (
         <div className='flex justify-center items-center py-20'>
-          <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white'></div>
+          <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-ink-2'></div>
         </div>
       )}
 
@@ -527,17 +530,17 @@ function BlockchainEventsTable({
           {/* Desktop table */}
           <ScrollArea
             orientation='both'
-            className='hidden md:block h-[calc(100vh-350px)] min-h-[400px]'
+            className='hidden md:block h-[calc(100vh-320px)] min-h-[400px] app-card'
           >
             <div className='min-w-full'>
               <TooltipProvider>
                 <Table className='w-full'>
-                  <TableHeader className='bg-black text-white sticky top-0 z-10'>
-                    <TableRow className='h-20 hover:bg-transparent'>
-                      <TableHead className='font-medium text-base py-6'>
+                  <TableHeader className='bg-surface-1 sticky top-0 z-10'>
+                    <TableRow className='hover:bg-transparent'>
+                      <TableHead >
                         Event Type
                       </TableHead>
-                      <TableHead className='font-medium text-base py-6'>
+                      <TableHead >
                         Transaction Hash
                       </TableHead>
                       <SortableTableHead
@@ -556,7 +559,7 @@ function BlockchainEventsTable({
                       >
                         Timestamp
                       </SortableTableHead>
-                      <TableHead className='font-medium text-base py-6'>
+                      <TableHead >
                         <div className='flex items-center gap-2'>
                           Bid Amount
                           <Tooltip>
@@ -584,7 +587,7 @@ function BlockchainEventsTable({
                           </Tooltip>
                         </div>
                       </TableHead>
-                      <TableHead className='font-medium text-base py-6'>
+                      <TableHead >
                         Size
                       </TableHead>
                     </TableRow>
@@ -602,7 +605,7 @@ function BlockchainEventsTable({
                       <TableRow>
                         <TableCell
                           colSpan={6}
-                          className='text-center py-12 bg-black'
+                          className='text-center py-12'
                         >
                           <NoticeBanner
                             image={noContractsFoundImage}

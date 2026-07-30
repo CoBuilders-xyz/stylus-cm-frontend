@@ -39,7 +39,7 @@ export default function Header() {
 
   return (
     <>
-      <div className='w-full h-14 bg-page/90 backdrop-blur-md border-b border-hairline text-ink-1 z-10 flex items-center justify-between gap-3 px-[14px] sm:px-6 fixed top-0'>
+      <div id='app-header' className='w-full h-14 bg-page/90 backdrop-blur-md border-b border-hairline text-ink-1 z-10 flex items-center justify-between gap-3 px-[14px] sm:px-6 fixed top-0'>
         {/* Left section - Logo and Navigation */}
         <div className='flex items-center min-w-0'>
           <Link

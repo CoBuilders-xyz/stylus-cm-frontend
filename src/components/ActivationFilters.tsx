@@ -11,15 +11,15 @@ interface FilterOption<T extends string> {
 
 const ACTIVATION_OPTIONS: FilterOption<ActivationFilter>[] = [
   { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active', dot: 'bg-green-500' },
-  { value: 'expiring', label: 'Expiring', dot: 'bg-amber-400' },
-  { value: 'inactive', label: 'Inactive', dot: 'bg-red-500' },
+  { value: 'active', label: 'Active', dot: 'bg-ok' },
+  { value: 'expiring', label: 'Expiring', dot: 'bg-warn' },
+  { value: 'inactive', label: 'Inactive', dot: 'bg-crit' },
 ];
 
 const CACHE_OPTIONS: FilterOption<CacheFilter>[] = [
   { value: 'all', label: 'All' },
-  { value: 'cached', label: 'Cached', dot: 'bg-emerald-500' },
-  { value: 'uncached', label: 'Not Cached', dot: 'bg-gray-500' },
+  { value: 'cached', label: 'Cached', dot: 'bg-ok' },
+  { value: 'uncached', label: 'Not Cached', dot: 'bg-ink-3' },
 ];
 
 function PillFilterGroup<T extends string>({
@@ -35,10 +35,10 @@ function PillFilterGroup<T extends string>({
 }) {
   return (
     <div className='flex items-center gap-1.5 flex-wrap'>
-      <span className='text-[11px] uppercase tracking-wider text-gray-500 mr-1'>
+      <span className='text-[11px] uppercase tracking-wider text-ink-3 me-1'>
         {label}
       </span>
-      <div className='inline-flex items-center rounded-full border border-gray-700 bg-black/30 p-0.5 backdrop-blur'>
+      <div className='inline-flex items-center rounded-lg border border-hairline bg-surface-1 p-[3px]'>
         {options.map((opt) => {
           const selected = value === opt.value;
           return (
@@ -46,10 +46,10 @@ function PillFilterGroup<T extends string>({
               key={opt.value}
               type='button'
               onClick={() => onChange(opt.value)}
-              className={`h-7 inline-flex items-center gap-1.5 px-3 text-xs rounded-full transition-colors ${
+              className={`h-6.5 inline-flex items-center gap-1.5 px-2.5 text-xs rounded-md transition-colors ${
                 selected
-                  ? 'bg-white text-black font-medium shadow-sm'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-800/60'
+                  ? 'bg-surface-3 text-ink-1 font-medium'
+                  : 'text-ink-2 hover:text-ink-1'
               }`}
             >
               {opt.dot && (

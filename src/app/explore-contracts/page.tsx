@@ -36,9 +36,7 @@ export default function ExploreContractsPage() {
   // Set CSS variable for header height
   useEffect(() => {
     const setHeaderHeight = () => {
-      const header = document.querySelector(
-        'div[class*="bg-black text-white z-10 flex"]'
-      );
+      const header = document.querySelector('#app-header');
       if (header) {
         document.documentElement.style.setProperty(
           '--header-height',
@@ -104,7 +102,7 @@ export default function ExploreContractsPage() {
           paddingRight: isDesktop && isPanelOpen ? desktopPanelWidth : '0',
         }}
       >
-        <div className='p-4 sm:p-6 md:p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='page-gutter py-5 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='explore-contracts'
@@ -141,7 +139,7 @@ export default function ExploreContractsPage() {
       </SidePanel>
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className='bg-black border-gray-700 max-w-md'>
+        <DialogContent className='bg-surface-1 border-hairline-strong max-w-md'>
           <DialogTitle className='sr-only'>Authentication Required</DialogTitle>
           <div className='p-4'>
             <NoticeBanner
@@ -150,11 +148,7 @@ export default function ExploreContractsPage() {
               description='Please connect to your wallet and sign the transaction to add contracts.'
             />
             <div className='flex justify-center'>
-              <div className='px-4 py-2 bg-black text-white border border-white rounded-md inline-flex items-center gap-2'>
-                <ConnectWallet
-                  customCallback={() => setIsAuthModalOpen(false)}
-                />
-              </div>
+              <ConnectWallet customCallback={() => setIsAuthModalOpen(false)} />
             </div>
           </div>
         </DialogContent>
