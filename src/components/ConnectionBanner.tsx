@@ -48,44 +48,47 @@ export default function ConnectionBanner() {
   }
 
   return (
-    <div
-      className={`w-full mt-2 py-2 px-4 text-center font-medium text-[12.5px] transition-all duration-300 ease-in-out ${
-        !isOnline
-          ? 'bg-warn/10 text-warn'
-          : isConnecting
-          ? 'bg-accent-soft text-accent-blue'
-          : isAuthLoading
-          ? 'bg-accent-soft text-accent-blue'
-          : 'bg-ok-soft text-ok-text'
-      }`}
-    >
-      {!isOnline && (
-        <span className='flex items-center justify-center'>
-          <WifiOff className='w-4 h-4 mr-2' />
-          No internet connection
-        </span>
-      )}
+    <>
+      <div aria-hidden className='h-12 shrink-0' />
+      <div
+        className={`fixed inset-x-0 top-14 z-10 mt-2 h-10 px-4 flex items-center justify-center text-center font-medium text-[12.5px] ${
+          !isOnline
+            ? 'bg-warn/10 text-warn'
+            : isConnecting
+            ? 'bg-accent-soft text-accent-blue'
+            : isAuthLoading
+            ? 'bg-accent-soft text-accent-blue'
+            : 'bg-ok-soft text-ok-text'
+        }`}
+      >
+        {!isOnline && (
+          <span className='flex items-center justify-center'>
+            <WifiOff className='w-4 h-4 mr-2' />
+            No internet connection
+          </span>
+        )}
 
-      {isOnline && isConnecting && (
-        <span className='flex items-center justify-center'>
-          <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
-          Loading
-        </span>
-      )}
+        {isOnline && isConnecting && (
+          <span className='flex items-center justify-center'>
+            <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
+            Loading
+          </span>
+        )}
 
-      {isOnline && isConnected && isAuthLoading && (
-        <span className='flex items-center justify-center'>
-          <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
-          Please sign message to authenticate
-        </span>
-      )}
+        {isOnline && isConnected && isAuthLoading && (
+          <span className='flex items-center justify-center'>
+            <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
+            Please sign message to authenticate
+          </span>
+        )}
 
-      {isOnline && !isConnecting && showConnectedBanner && (
-        <span className='flex items-center justify-center'>
-          <Check className='w-4 h-4 mr-2' />
-          Wallet connected successfully!
-        </span>
-      )}
-    </div>
+        {isOnline && !isConnecting && showConnectedBanner && (
+          <span className='flex items-center justify-center'>
+            <Check className='w-4 h-4 mr-2' />
+            Wallet connected successfully!
+          </span>
+        )}
+      </div>
+    </>
   );
 }
