@@ -141,21 +141,21 @@ export default function BlockchainEventsPage() {
 
             {/* Scrollable Content */}
             <ScrollArea className='flex-1'>
-              <div className='p-6'>
+              <div className='p-4 sm:p-6 min-w-0'>
                 {/* Transaction Information */}
                 <div className='mb-6'>
                   <h3 className='text-[13.5px] font-semibold mb-2 text-ink-1'>
                     Transaction Information
                   </h3>
-                  <Table>
+                  <Table className='table-fixed [&_td]:whitespace-normal'>
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
                         <TableCell className='text-ink-3 w-1/3'>
                           Transaction Hash
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='flex items-center space-x-2'>
-                            <span className='font-mono text-sm'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <span className='font-mono text-sm truncate min-w-0'>
                               {formatTransactionHash(
                                 selectedEvent.transactionHash,
                                 10,
@@ -185,7 +185,7 @@ export default function BlockchainEventsPage() {
                         <TableCell className='text-ink-3 w-1/3'>
                           Block Number
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-mono'>
                             {formatBlockNumber(selectedEvent.blockNumber)}
                           </span>
@@ -195,7 +195,7 @@ export default function BlockchainEventsPage() {
                         <TableCell className='text-ink-3 w-1/3'>
                           Block Timestamp
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <div className='flex flex-col'>
                             <span>
                               {formatEventTimestamp(
@@ -212,7 +212,7 @@ export default function BlockchainEventsPage() {
                         <TableCell className='text-ink-3 w-1/3'>
                           Log Index
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-mono'>
                             {selectedEvent.logIndex}
                           </span>
@@ -227,15 +227,15 @@ export default function BlockchainEventsPage() {
                   <h3 className='text-[13.5px] font-semibold mb-2 text-ink-1'>
                     Contract Information
                   </h3>
-                  <Table>
+                  <Table className='table-fixed [&_td]:whitespace-normal'>
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
                         <TableCell className='text-ink-3 w-1/3'>
                           Cache Manager Address
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='flex items-center space-x-2'>
-                            <span className='font-mono text-sm'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <span className='font-mono text-sm truncate min-w-0'>
                               {formatContractAddress(
                                 selectedEvent.contractAddress,
                                 10,
@@ -269,9 +269,9 @@ export default function BlockchainEventsPage() {
                         <TableCell className='text-ink-3 w-1/3'>
                           Bidder Address
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='flex items-center space-x-2'>
-                            <span className='font-mono text-sm'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <span className='font-mono text-sm truncate min-w-0'>
                               {formatContractAddress(
                                 selectedEvent.originAddress,
                                 10,
@@ -307,13 +307,13 @@ export default function BlockchainEventsPage() {
                 {/* Event Data */}
                 <div className='mb-6'>
                   <h3 className='text-[13.5px] font-semibold mb-2 text-ink-1'>Event Data</h3>
-                  <Table>
+                  <Table className='table-fixed [&_td]:whitespace-normal'>
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
                         <TableCell className='text-ink-3 w-1/3'>
                           Event Name
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-medium'>
                             {selectedEvent.eventName}
                           </span>
@@ -356,7 +356,7 @@ export default function BlockchainEventsPage() {
                               </TooltipProvider>
                             </div>
                           </TableCell>
-                          <TableCell className='text-left w-2/3'>
+                          <TableCell className='text-start w-2/3'>
                             <span className='font-mono text-sm'>
                               {getBidAmountFromEventData(
                                 selectedEvent.eventData,
@@ -374,7 +374,7 @@ export default function BlockchainEventsPage() {
                           <TableCell className='text-ink-3 w-1/3'>
                             Size
                           </TableCell>
-                          <TableCell className='text-left w-2/3'>
+                          <TableCell className='text-start w-2/3'>
                             <span className='font-medium'>
                               {formatSize(
                                 getSizeFromEventData(
@@ -393,9 +393,9 @@ export default function BlockchainEventsPage() {
                           <TableCell className='text-ink-3 w-1/3'>
                             Bytecode Hash
                           </TableCell>
-                          <TableCell className='text-left w-2/3'>
-                            <div className='flex items-center space-x-2'>
-                              <span className='font-mono text-sm'>
+                          <TableCell className='text-start w-2/3 min-w-0'>
+                            <div className='flex items-center gap-2 min-w-0'>
+                              <span className='font-mono text-sm truncate min-w-0'>
                                 {formatContractAddress(
                                   getBytecodeHashFromEventData(
                                     selectedEvent.eventData
@@ -433,7 +433,7 @@ export default function BlockchainEventsPage() {
                         <TableCell className='text-ink-3 w-1/3'>
                           Blockchain
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-medium'>
                             {selectedEvent.blockchainName}
                           </span>
@@ -443,9 +443,9 @@ export default function BlockchainEventsPage() {
                         <TableCell className='text-ink-3 w-1/3'>
                           Raw Event Data
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='bg-surface-2 rounded-lg p-3 border border-hairline'>
-                            <pre className='text-xs text-ink-2 whitespace-pre-wrap overflow-x-auto'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='bg-surface-2 rounded-lg p-3 border border-hairline min-w-0'>
+                            <pre className='text-xs text-ink-2 whitespace-pre-wrap break-all overflow-x-hidden'>
                               {JSON.stringify(selectedEvent.eventData, null, 2)}
                             </pre>
                           </div>
