@@ -44,7 +44,6 @@ import {
 import { formatSize } from '../utils/formatting';
 import NoticeBanner from './NoticeBanner';
 import {
-  Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -55,6 +54,7 @@ import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
 import EventMobileCard from '@/components/EventMobileCard';
 import TablePagination from '@/components/TablePagination';
+import TableSearchInput from '@/components/TableSearchInput';
 
 interface BlockchainEventsTableProps {
   events?: BlockchainEvent[];
@@ -360,27 +360,18 @@ function BlockchainEventsTable({
     <div className='overflow-hidden flex flex-col h-full'>
       <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8 flex-shrink-0'>
         <h1 className='text-xl font-bold text-white'>Cache Events</h1>
-        <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto'>
+        <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto'>
           <EventTypeFilter
             currentFilter={eventTypeFilter}
             onFilterChange={setEventTypeFilter}
           />
-          <div className='relative flex-1 sm:flex-none'>
-            <input
-              type='text'
-              placeholder='Search by contract address...'
-              className='h-8 ps-8 pe-3 text-[12.5px] bg-surface-1 text-ink-1 placeholder:text-ink-3 rounded-lg w-full sm:w-72 border border-hairline focus:outline-none focus:border-accent-blue'
-              value={searchInput}
-              onChange={handleSearchInputChange}
-              onKeyDown={handleKeyDown}
-            />
-            <Button
-              className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
-              onClick={handleSearch}
-            >
-              <Search className='w-3 h-3' />
-            </Button>
-          </div>
+          <TableSearchInput
+            value={searchInput}
+            placeholder='Search by contract address...'
+            onChange={handleSearchInputChange}
+            onKeyDown={handleKeyDown}
+            onSearch={handleSearch}
+          />
         </div>
       </div>
 

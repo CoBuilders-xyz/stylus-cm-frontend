@@ -26,7 +26,7 @@ import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
 import { formatEther } from 'viem';
@@ -41,6 +41,7 @@ import ActivationFilters, {
   ActivationFilter,
 } from '@/components/ActivationFilters';
 import TablePagination from '@/components/TablePagination';
+import TableSearchInput from '@/components/TableSearchInput';
 import {
   backendProgramTimeLeft,
   buildActivationInfo,
@@ -406,22 +407,13 @@ function ContractsTable({
           </Button>
         ) : (
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto'>
-            <div className='relative flex-1 sm:flex-none'>
-              <input
-                type='text'
-                placeholder='Search contracts...'
-                className='h-8 ps-8 pe-3 text-[12.5px] bg-surface-1 text-ink-1 placeholder:text-ink-3 rounded-lg w-full sm:w-64 border border-hairline focus:outline-none focus:border-accent-blue'
-                value={searchInput}
-                onChange={handleSearchInputChange}
-                onKeyDown={handleKeyDown}
-              />
-              <button
-                className='absolute inset-inline-start-0 start-0 top-0 h-8 w-8 flex items-center justify-center text-ink-3 hover:text-ink-1'
-                onClick={handleSearch}
-              >
-                <Search className='w-3.5 h-3.5' />
-              </button>
-            </div>
+            <TableSearchInput
+              value={searchInput}
+              placeholder='Search contracts...'
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
+              onSearch={handleSearch}
+            />
             <Button className='w-full sm:w-auto' onClick={onAddNewContract}>
               <span>+</span>
               <span>Add Contract</span>
