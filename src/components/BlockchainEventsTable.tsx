@@ -30,7 +30,6 @@ import {
   SortOrder,
   BlockchainEventType,
   BlockchainEvent,
-  BlockchainEventsPagination,
 } from '../types/blockchainEvents';
 import {
   formatTransactionHash,
@@ -55,6 +54,7 @@ import {
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
 import EventMobileCard from '@/components/EventMobileCard';
+import TablePagination from '@/components/TablePagination';
 
 interface BlockchainEventsTableProps {
   events?: BlockchainEvent[];
@@ -289,110 +289,6 @@ const EventTypeFilter = React.memo(
 
 EventTypeFilter.displayName = 'EventTypeFilter';
 
-// Pagination component - separate to improve performance
-const Pagination = React.memo(
-  ({
-    pagination,
-    handlePageChange,
-    handleItemsPerPageChange,
-  }: {
-    pagination: BlockchainEventsPagination;
-    handlePageChange: (page: number) => void;
-    handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  }) => {
-    return (
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 text-sm text-white'>
-        <div className='flex items-center gap-2'>
-          <span>Show</span>
-          <select
-            className='bg-surface-2 text-ink-1 border border-hairline rounded-md px-2 py-1 focus:outline-none focus:border-accent-blue'
-            value={pagination.limit}
-            onChange={handleItemsPerPageChange}
-          >
-            <option value='5'>5</option>
-            <option value='10'>10</option>
-          </select>
-          <span>entries</span>
-        </div>
-
-        <div className='flex flex-wrap items-center gap-2'>
-          <span className='whitespace-nowrap'>
-            {pagination.totalItems > 0
-              ? `Page ${pagination.page} of ${pagination.totalPages}`
-              : 'No results'}
-          </span>
-          <div className='flex flex-wrap gap-1'>
-            <Button
-              onClick={() => handlePageChange(1)}
-              disabled={!pagination.hasPreviousPage}
-              variant='ghost'
-              size='sm'
-              className='hidden sm:inline-flex h-7 px-2 text-ink-2 disabled:opacity-40'
-            >
-              First
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={!pagination.hasPreviousPage}
-              variant='ghost'
-              size='sm'
-              className='h-7 px-2 text-ink-2 disabled:opacity-40'
-            >
-              ‹
-            </Button>
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter(
-                (page) =>
-                  Math.abs(page - pagination.page) < 3 ||
-                  page === 1 ||
-                  page === pagination.totalPages
-              )
-              .map((page, idx, arr) => (
-                <React.Fragment key={page}>
-                  {idx > 0 && arr[idx - 1] !== page - 1 && (
-                    <span className='px-2 py-1'>...</span>
-                  )}
-                  <Button
-                    onClick={() => handlePageChange(page)}
-                    variant='ghost'
-                    size='sm'
-                    className={`h-7 min-w-7 px-2 num ${
-                      pagination.page === page
-                        ? 'bg-white text-black'
-                        : 'text-ink-2'
-                    }`}
-                  >
-                    {page}
-                  </Button>
-                </React.Fragment>
-              ))}
-            <Button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={!pagination.hasNextPage}
-              variant='ghost'
-              size='sm'
-              className='h-7 px-2 text-ink-2 disabled:opacity-40'
-            >
-              ›
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.totalPages)}
-              disabled={!pagination.hasNextPage}
-              variant='ghost'
-              size='sm'
-              className='hidden sm:inline-flex h-7 px-2 text-ink-2 disabled:opacity-40'
-            >
-              Last
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-);
-
-Pagination.displayName = 'Pagination';
-
 function BlockchainEventsTable({
   events: initialEvents,
   onEventSelect,
@@ -624,10 +520,10 @@ function BlockchainEventsTable({
       {/* Only show pagination controls if we have pagination data and more than 0 items */}
       {!isLoading && !error && pagination.totalItems > 0 && (
         <div className='flex-shrink-0'>
-          <Pagination
+          <TablePagination
             pagination={pagination}
-            handlePageChange={handlePageChange}
-            handleItemsPerPageChange={handleItemsPerPageChange}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
           />
         </div>
       )}
