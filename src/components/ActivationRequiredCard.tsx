@@ -52,7 +52,7 @@ export default function ActivationRequiredCard({
     !isConnected || isActivating || isChainMismatch || !hasDataFee;
 
   return (
-    <div className='mt-3 rounded-[10px] border border-hairline bg-warn-soft p-4'>
+    <div className='mt-3 mb-4 rounded-[10px] border border-hairline bg-warn-soft p-4'>
       <div className='flex items-start gap-2'>
         <AlertTriangle className='h-4 w-4 text-warn mt-0.5 shrink-0' />
         <div className='flex-1'>
