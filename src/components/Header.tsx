@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -27,6 +28,28 @@ import { FEEDBACK_FORM_URL } from '@/utils/env';
 export default function Header() {
   const { openAlertSettings } = useAlertSettings();
   const pathname = usePathname();
+  const chromeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const chrome = chromeRef.current;
+    if (!chrome) return;
+
+    const syncChromeHeight = () => {
+      document.documentElement.style.setProperty(
+        '--app-chrome-h',
+        `${chrome.offsetHeight}px`
+      );
+    };
+
+    syncChromeHeight();
+    const resizeObserver = new ResizeObserver(syncChromeHeight);
+    resizeObserver.observe(chrome);
+
+    return () => {
+      resizeObserver.disconnect();
+      document.documentElement.style.removeProperty('--app-chrome-h');
+    };
+  }, []);
 
   const navItems = [
     { href: '/cache-status', label: 'Cache Status' },
@@ -38,8 +61,11 @@ export default function Header() {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <>
-      <div id='app-header' className='w-full h-14 bg-page/90 backdrop-blur-md border-b border-hairline text-ink-1 z-10 flex items-center justify-between gap-3 px-[14px] sm:px-6 fixed top-0'>
+    <div ref={chromeRef} className='fixed inset-x-0 top-0 z-10'>
+      <div
+        id='app-header'
+        className='w-full h-14 bg-page/90 backdrop-blur-md border-b border-hairline text-ink-1 flex items-center justify-between gap-3 px-[14px] sm:px-6'
+      >
         {/* Left section - Logo and Navigation */}
         <div className='flex items-center min-w-0'>
           <Link
@@ -181,9 +207,9 @@ export default function Header() {
       </div>
 
       {/* ConnectionBanner - sits directly below the fixed header. */}
-      <div className='w-full fixed top-14 z-10'>
+      <div className='w-full'>
         <ConnectionBanner />
       </div>
-    </>
+    </div>
   );
 }
