@@ -560,7 +560,7 @@ function ContractsTable({
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
             {displayRows.length > 0 ? (
-              <div className='flex flex-col gap-2 pb-4'>
+              <div className='app-card divide-y divide-hairline overflow-hidden mb-4'>
                 {displayRows.map(({ contract, activation }) => (
                   <ContractMobileCard
                     key={contract.address}
