@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import logo from 'public/logo.svg';
 import { Megaphone, Menu, MessageCircle } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import { GasTankModal } from './GasTankModal';
@@ -49,16 +47,9 @@ export default function Header() {
             href='/cache-status'
             className='flex items-center gap-2 shrink-0'
           >
-            {/* Mobile: compact wordmark (logo asset is too wide for 375px) */}
-            <span className='sm:hidden text-[13px] font-bold tracking-tight whitespace-nowrap text-ink-1'>
+            <span className='text-[13px] font-bold tracking-tight whitespace-nowrap text-ink-1'>
               Stylus Manager
             </span>
-            {/* Desktop: full logo */}
-            <Image
-              src={logo}
-              alt='Stylus Manager logo'
-              className='hidden sm:block'
-            />
           </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}
