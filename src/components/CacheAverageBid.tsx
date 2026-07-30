@@ -488,6 +488,11 @@ export default function CacheAverageBid() {
     smallData.isLoading || mediumData.isLoading || largeData.isLoading;
 
   const hasError = smallData.error || mediumData.error || largeData.error;
+  const isEmpty =
+    !isLoading &&
+    Boolean(currentBlockchainId) &&
+    !hasError &&
+    chartData.length === 0;
 
   return (
     <Card
@@ -495,7 +500,11 @@ export default function CacheAverageBid() {
       style={{ ...customStyles.card, borderRadius: '10px' }}
     >
       {/* Header and Summary Cards - flex: 3 (30%) */}
-      <div className='flex flex-col flex-[3] min-h-0'>
+      <div
+        className={`flex flex-col ${
+          isEmpty ? 'flex-none' : 'flex-[3] min-h-0'
+        }`}
+      >
         <CardHeader className='relative pb-1 sm:pb-2 flex-shrink-0'>
           <div className='flex flex-col gap-1 pr-20'>
             <CardTitle
@@ -579,7 +588,11 @@ export default function CacheAverageBid() {
         </CardHeader>
 
         {/* Summary cards */}
-        <div className='px-2 sm:px-6 flex-1 flex items-center min-h-0'>
+        <div
+          className={`px-2 sm:px-6 flex items-center ${
+            isEmpty ? 'pb-3 sm:pb-4' : 'flex-1 min-h-0'
+          }`}
+        >
           <div className='grid grid-cols-3 gap-1 sm:gap-2 w-full min-h-0'>
             {contractSizeOptions.map((option) => {
               const stats =
@@ -600,7 +613,9 @@ export default function CacheAverageBid() {
                     transform: isHovered ? 'scale(1.02)' : 'scale(1)',
                     transition: 'all 0.2s ease-in-out',
                   }}
-                  className='px-1 py-0.5 sm:px-2 sm:py-1 md:py-2 text-center cursor-pointer flex flex-col justify-center h-full min-h-0'
+                  className={`px-1 py-0.5 sm:px-2 sm:py-1 md:py-2 text-center cursor-pointer flex flex-col justify-center min-h-0 ${
+                    isEmpty ? 'min-h-14 sm:min-h-16' : 'h-full'
+                  }`}
                   onMouseEnter={() => setHoveredSize(sizeKey)}
                   onMouseLeave={() => setHoveredSize(null)}
                 >
