@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useCacheMetrics } from '@/hooks/useCacheMetrics';
+import {
+  CacheMetricsService,
+  BidTrendsResponse,
+} from '@/services/cacheMetricsService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useAuthentication } from '@/context/AuthenticationProvider';
@@ -25,6 +29,25 @@ export default function CacheStatus() {
 
   const { isAuthenticated } = useAuthentication();
 
+  // Monthly insert/delete totals for the two activity tiles
+  const metricsService = useMemo(() => new CacheMetricsService(), []);
+  const [bidTrends, setBidTrends] = useState<BidTrendsResponse | null>(null);
+  useEffect(() => {
+    if (!currentBlockchainId) return;
+    let cancelled = false;
+    metricsService
+      .getBidTrends(currentBlockchainId, 'M')
+      .then((res) => {
+        if (!cancelled) setBidTrends(res);
+      })
+      .catch(() => {
+        if (!cancelled) setBidTrends(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBlockchainId, metricsService]);
+
   // State for auth modal and side panel
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -47,111 +70,141 @@ export default function CacheStatus() {
   return (
     <>
       <div className='flex flex-col w-full'>
-        <div className='w-full px-10 py-4'>
-          <div className='flex justify-between items-start'>
+        <div className='w-full page-gutter pt-5'>
+          <div className='flex justify-between items-center gap-4 mb-5'>
             <div className='flex flex-col'>
-              <h1 className='text-2xl font-bold text-white'>Cache Status</h1>
-              <p className='text-gray-300 text-sm opacity-60'>
+              <h1 className='page-title'>Cache Status</h1>
+              <p className='page-desc'>
                 Monitor the status of contract caching across multiple chains
               </p>
             </div>
-            <Button
-              className='px-3 py-2 bg-black text-white border border-white rounded-md flex items-center gap-2 text-sm whitespace-nowrap'
-              onClick={handleAddNewContract}
-            >
+            <Button onClick={handleAddNewContract}>
               <span>+</span>
               <span>Add Contract</span>
             </Button>
           </div>
 
-          <div className='grid grid-cols-1 xl:grid-cols-2 gap-4 mt-3'>
+          <div className='grid grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3 mb-6'>
             {/* Total Contracts Card */}
-            <div className='p-4 rounded-md' style={{ background: '#1A1919' }}>
-              <h2 className='text-gray-300 font-medium text-sm'>
-                Total Contracts
-              </h2>
+            <div className='app-card px-4 py-3.5'>
+              <h2 className='tile-label'>Total Contracts</h2>
               {isLoadingTotalBytecodes || !currentBlockchainId ? (
                 <div className='mt-2 space-y-1'>
-                  <Skeleton className='h-8 w-24 bg-slate-700' />
-                  <Skeleton className='h-3 w-20 bg-slate-700' />
+                  <Skeleton className='h-8 w-24 bg-surface-3' />
+                  <Skeleton className='h-3 w-20 bg-surface-3' />
                 </div>
               ) : errorTotalBytecodes ? (
                 <p className='text-red-500 mt-2 text-sm'>Error loading data</p>
               ) : totalBytecodes ? (
                 <>
-                  <p className='text-2xl font-bold text-white mt-1'>
+                  <p className='stat-value mt-1.5'>
                     {totalBytecodes.bytecodeCount.toLocaleString()}
                   </p>
-                  <p className='text-[#B1B1B1] text-xs mt-1'>
-                    {totalBytecodes.bytecodeCountDiffWithLastMonth > 0
-                      ? '+'
-                      : ''}
-                    {totalBytecodes.bytecodeCountDiffWithLastMonth.toLocaleString()}{' '}
+                  <p className='text-xs mt-0.5 text-ink-3'>
+                    <span
+                      className={
+                        totalBytecodes.bytecodeCountDiffWithLastMonth > 0
+                          ? 'text-ok-text font-medium'
+                          : ''
+                      }
+                    >
+                      {totalBytecodes.bytecodeCountDiffWithLastMonth > 0
+                        ? '+'
+                        : ''}
+                      {totalBytecodes.bytecodeCountDiffWithLastMonth.toLocaleString()}
+                    </span>{' '}
                     from last month
                   </p>
                 </>
               ) : (
-                <p className='text-white mt-2 text-sm'>No data available</p>
+                <p className='text-ink-2 mt-2 text-sm'>No data available</p>
               )}
             </div>
 
             {/* Available Cache Space Card */}
-            <div className='p-4 rounded-md' style={{ background: '#1A1919' }}>
-              <h2 className='text-gray-300 font-medium text-sm'>
-                Available Cache Space
-              </h2>
+            <div className='app-card px-4 py-3.5'>
+              <h2 className='tile-label'>Available Cache Space</h2>
               {isLoadingCacheStats || !currentBlockchainId ? (
                 <div className='mt-2 space-y-2'>
-                  <Skeleton className='h-8 w-24 bg-slate-700' />
+                  <Skeleton className='h-8 w-24 bg-surface-3' />
                   <div className='space-y-1'>
-                    <Skeleton className='h-3 w-full bg-slate-700' />
-                    <Skeleton className='h-3 w-full bg-slate-700' />
+                    <Skeleton className='h-3 w-full bg-surface-3' />
+                    <Skeleton className='h-3 w-full bg-surface-3' />
                   </div>
-                  <Skeleton className='h-2 w-full bg-slate-700 rounded-full' />
+                  <Skeleton className='h-2 w-full bg-surface-3 rounded-full' />
                 </div>
               ) : errorCacheStats ? (
                 <p className='text-red-500 mt-2 text-sm'>Error loading data</p>
               ) : cacheStats ? (
                 <>
-                  <p className='text-2xl font-bold text-white mt-1 mb-2'>
-                    {(100 - cacheStats.cacheFilledPercentage).toFixed(1)}%
+                  <p className='stat-value mt-1.5'>
+                    {(100 - cacheStats.cacheFilledPercentage).toFixed(1)}
+                    <span className='text-[13px] font-medium text-ink-2 ms-0.5'>
+                      %
+                    </span>
                   </p>
 
-                  {/* Used and Available Labels on Separate Lines */}
-                  <div className='space-y-1 text-xs'>
-                    <div className='flex justify-between items-center'>
-                      <span className='text-gray-400'>Used</span>
-                      <span
-                        className='font-medium'
-                        style={{ color: '#10B981' }}
-                      >
-                        {cacheStats.cacheFilledPercentage.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className='flex justify-between items-center'>
-                      <span className='text-gray-400'>Available</span>
-                      <span className='text-white font-medium'>
-                        {(100 - cacheStats.cacheFilledPercentage).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar with Custom Styling */}
-                  <div className='mt-2'>
-                    <div className='relative h-2 w-full overflow-hidden rounded-full bg-gray-700'>
-                      {/* Used portion (filled from left) */}
+                  {/* Progress meter */}
+                  <div className='mt-2.5'>
+                    <div className='relative h-1 w-full overflow-hidden rounded-full bg-surface-3'>
                       <div
-                        className='h-full transition-all duration-300'
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          cacheStats.cacheFilledPercentage > 90
+                            ? 'bg-warn'
+                            : 'bg-accent-blue'
+                        }`}
                         style={{
                           width: `${cacheStats.cacheFilledPercentage}%`,
-                          background: '#10B981',
                         }}
                       />
                     </div>
                   </div>
+                  <p className='text-xs mt-1.5 text-ink-3 num'>
+                    {cacheStats.cacheFilledPercentage.toFixed(1)}% used
+                  </p>
                 </>
               ) : (
-                <p className='text-white mt-2 text-sm'>No data available</p>
+                <p className='text-ink-1 mt-2 text-sm'>No data available</p>
+              )}
+            </div>
+
+            {/* Insertions (last 12 months) */}
+            <div className='app-card px-4 py-3.5'>
+              <h2 className='tile-label'>Insertions &middot; 12mo</h2>
+              {bidTrends ? (
+                <>
+                  <p className='stat-value mt-1.5'>
+                    {bidTrends.global.insertCount.toLocaleString()}
+                  </p>
+                  <p className='text-xs mt-0.5 text-ink-3'>
+                    bids placed across the cache
+                  </p>
+                </>
+              ) : (
+                <div className='mt-2 space-y-1'>
+                  <Skeleton className='h-7 w-16 bg-surface-3' />
+                  <Skeleton className='h-3 w-24 bg-surface-3' />
+                </div>
+              )}
+            </div>
+
+            {/* Deletions (last 12 months) */}
+            <div className='app-card px-4 py-3.5'>
+              <h2 className='tile-label'>Deletions &middot; 12mo</h2>
+              {bidTrends ? (
+                <>
+                  <p className='stat-value mt-1.5'>
+                    {bidTrends.global.deleteCount.toLocaleString()}
+                  </p>
+                  <p className='text-xs mt-0.5 text-ink-3'>
+                    evictions from the cache
+                  </p>
+                </>
+              ) : (
+                <div className='mt-2 space-y-1'>
+                  <Skeleton className='h-7 w-16 bg-surface-3' />
+                  <Skeleton className='h-3 w-24 bg-surface-3' />
+                </div>
               )}
             </div>
           </div>
@@ -176,7 +229,7 @@ export default function CacheStatus() {
 
       {/* Authentication Modal */}
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className='bg-black border-gray-700 max-w-md'>
+        <DialogContent className='bg-surface-1 border-hairline-strong max-w-md'>
           <DialogTitle className='sr-only'>Authentication Required</DialogTitle>
           <div className='p-4'>
             <NoticeBanner
@@ -185,11 +238,7 @@ export default function CacheStatus() {
               description='Please connect to your wallet and sign the transaction to add contracts.'
             />
             <div className='flex justify-center'>
-              <div className='px-4 py-2 bg-black text-white border border-white rounded-md inline-flex items-center gap-2'>
-                <ConnectWallet
-                  customCallback={() => setIsAuthModalOpen(false)}
-                />
-              </div>
+              <ConnectWallet customCallback={() => setIsAuthModalOpen(false)} />
             </div>
           </div>
         </DialogContent>

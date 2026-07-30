@@ -86,8 +86,7 @@ export default function BlockchainSelector() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <div
-          className='border border-white rounded-[10px] p-2 flex items-center justify-center cursor-pointer hover:bg-gray-900 space-x-2'
-          style={{ borderWidth: '1px' }}
+          className='h-8 px-[11px] border border-hairline bg-surface-1 rounded-lg flex items-center justify-center cursor-pointer text-ink-2 hover:text-ink-1 hover:border-hairline-strong gap-1.5'
           title='Select Blockchain'
         >
           <span className='text-xs'>
@@ -97,7 +96,7 @@ export default function BlockchainSelector() {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className='w-48 bg-black border-white text-white'
+        className='w-48 bg-surface-2 border-hairline-strong text-ink-1'
         align='end'
       >
         <DropdownMenuGroup>
@@ -105,8 +104,8 @@ export default function BlockchainSelector() {
             <DropdownMenuItem
               key={blockchain.id}
               onClick={() => handleBlockchainSelect(blockchain)}
-              className={`cursor-pointer hover:bg-gray-800 ${
-                selectedBlockchain?.id === blockchain.id ? 'bg-gray-700' : ''
+              className={`cursor-pointer hover:bg-surface-3 ${
+                selectedBlockchain?.id === blockchain.id ? 'bg-surface-3' : ''
               }`}
             >
               <div className='flex items-center justify-between w-full'>

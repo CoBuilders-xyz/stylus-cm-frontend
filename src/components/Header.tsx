@@ -39,52 +39,44 @@ export default function Header() {
 
   return (
     <>
-      <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed top-0'>
+      <div className='w-full h-14 bg-page/90 backdrop-blur-md border-b border-hairline text-ink-1 z-10 flex items-center justify-between gap-3 px-[14px] sm:px-6 fixed top-0'>
         {/* Left section - Logo and Navigation */}
-        <div className='flex items-center space-x-4 text-xs'>
-          <span className='flex items-center min-w-0'>
-            <Link
-              href='/cache-status'
-              className='flex items-center gap-2 mr-1 sm:mr-2'
-            >
-              {/* Mobile: compact wordmark (logo asset is too wide for 375px) */}
-              <span className='sm:hidden text-sm font-bold tracking-tight whitespace-nowrap text-white'>
-                Stylus Manager
-              </span>
-              {/* Desktop: full logo */}
-              <Image
-                src={logo}
-                alt='Stylus Manager logo'
-                className='hidden sm:block'
-              />
-            </Link>
-          </span>
+        <div className='flex items-center min-w-0'>
+          <Link
+            href='/cache-status'
+            className='flex items-center gap-2 shrink-0'
+          >
+            {/* Mobile: compact wordmark (logo asset is too wide for 375px) */}
+            <span className='sm:hidden text-[13px] font-bold tracking-tight whitespace-nowrap text-ink-1'>
+              Stylus Manager
+            </span>
+            {/* Desktop: full logo */}
+            <Image
+              src={logo}
+              alt='Stylus Manager logo'
+              className='hidden sm:block'
+            />
+          </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}
-          <div className='hidden lg:flex items-center space-x-4'>
+          <div className='hidden lg:flex items-center gap-px ms-3'>
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative pb-1 ${
+                className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors ${
                   isActive(item.href)
-                    ? 'text-white'
-                    : 'text-white hover:text-gray-300'
+                    ? 'bg-surface-3 text-ink-1 font-medium'
+                    : 'text-ink-2 hover:text-ink-1 hover:bg-surface-2'
                 }`}
               >
                 {item.label}
-                {isActive(item.href) && (
-                  <div
-                    className='absolute bottom-0 left-0 w-full h-0.5'
-                    style={{ backgroundColor: '#2D99DD' }}
-                  />
-                )}
               </Link>
             ))}
             <Link
               href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
               target='_blank'
-              className='text-white hover:text-gray-300 pb-1'
+              className='whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:text-ink-1 hover:bg-surface-2 transition-colors'
             >
               Docs
             </Link>
@@ -94,7 +86,7 @@ export default function Header() {
                   <Link
                     href={FEEDBACK_FORM_URL}
                     target='_blank'
-                    className='text-white hover:text-gray-300 pb-1 inline-flex items-center'
+                    className='rounded-md p-1.5 text-ink-2 hover:text-ink-1 hover:bg-surface-2 inline-flex items-center transition-colors'
                   >
                     <MessageCircle className='w-4 h-4' />
                   </Link>
@@ -108,11 +100,10 @@ export default function Header() {
         </div>
 
         {/* Right section - Actions (Always visible) */}
-        <div className='flex space-x-1.5 sm:space-x-4 text-xs items-center min-w-0'>
+        <div className='flex gap-2 items-center min-w-0 shrink-0'>
           {/* Mobile-only alert settings */}
           <button
-            className='lg:hidden border border-white rounded-[10px] p-2 flex items-center justify-center hover:bg-gray-900'
-            style={{ borderWidth: '1px' }}
+            className='lg:hidden size-8 border border-hairline rounded-lg flex items-center justify-center text-ink-2 hover:text-ink-1 hover:border-hairline-strong bg-surface-1'
             onClick={openAlertSettings}
             title='Alert Settings'
           >
@@ -120,16 +111,15 @@ export default function Header() {
           </button>
 
           {/* Desktop actions */}
-          <div className='hidden lg:flex space-x-4 items-center'>
+          <div className='hidden lg:flex gap-2 items-center'>
             <GasTankModal />
-            <div
-              className='border border-white rounded-[10px] p-2 flex items-center justify-center cursor-pointer hover:bg-gray-900'
-              style={{ borderWidth: '1px' }}
+            <button
+              className='size-8 border border-hairline rounded-lg flex items-center justify-center text-ink-2 hover:text-ink-1 hover:border-hairline-strong bg-surface-1'
               onClick={openAlertSettings}
               title='Alert Settings'
             >
               <Megaphone className='w-4 h-4' />
-            </div>
+            </button>
           </div>
 
           {/* BlockchainSelector hidden on the smallest viewports to make room
@@ -142,24 +132,24 @@ export default function Header() {
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button
-                className='lg:hidden min-h-[40px] min-w-[40px] p-2 hover:bg-gray-800 rounded-md flex items-center justify-center'
+                className='lg:hidden min-h-[36px] min-w-[36px] border border-hairline rounded-lg bg-surface-1 text-ink-2 hover:text-ink-1 hover:border-hairline-strong flex items-center justify-center'
                 aria-label='Open navigation menu'
               >
-                <Menu className='w-5 h-5' />
+                <Menu className='w-4 h-4' />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align='end'
-              className='w-64 bg-black border-gray-800 text-white'
+              className='w-64 bg-surface-2 border-hairline-strong text-ink-1'
             >
               {navItems.map((item) => (
                 <DropdownMenuItem key={item.href} className='p-0'>
                   <Link
                     href={item.href}
-                    className={`w-full px-3 py-3 ${
+                    className={`w-full px-3 py-3 rounded-sm text-[13px] ${
                       isActive(item.href)
-                        ? 'text-white font-medium bg-gray-800'
-                        : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                        ? 'text-ink-1 font-medium bg-surface-3'
+                        : 'text-ink-2 hover:text-ink-1 hover:bg-surface-3'
                     }`}
                   >
                     {item.label}
@@ -170,7 +160,7 @@ export default function Header() {
                 <Link
                   href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
                   target='_blank'
-                  className='w-full px-3 py-3 text-gray-300 hover:text-white hover:bg-gray-800'
+                  className='w-full px-3 py-3 rounded-sm text-[13px] text-ink-2 hover:text-ink-1 hover:bg-surface-3'
                 >
                   Docs
                 </Link>
@@ -191,7 +181,7 @@ export default function Header() {
       </div>
 
       {/* ConnectionBanner - sits directly below the fixed header. */}
-      <div className='w-full fixed top-16 z-10'>
+      <div className='w-full fixed top-14 z-10'>
         <ConnectionBanner />
       </div>
     </>

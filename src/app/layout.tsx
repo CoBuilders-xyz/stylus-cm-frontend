@@ -10,7 +10,11 @@ import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvi
 import { Toaster } from '@/components/ui/sonner';
 import Footer from '@/components/Footer';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Arial'],
+});
 
 export const metadata: Metadata = {
   title: 'Stylus Manager',

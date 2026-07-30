@@ -38,11 +38,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 const chartConfig = {
   insertCount: {
     label: 'Insertions Count',
-    color: '#4267B2', // Green for inserts
+    color: '#3987E5', // series-1 insertions
   },
   deleteCount: {
     label: 'Deletions Count',
-    color: '#B24942', // Red for deletes
+    color: '#D95926', // series-2 deletions
   },
 } satisfies ChartConfig;
 
@@ -71,7 +71,7 @@ const CustomCursor = (props: CustomCursorProps) => {
       y={y}
       width={width}
       height={height}
-      fill='#2C2E30'
+      fill='var(--surface-3)'
       fillOpacity={0.3}
       stroke='none'
     />
@@ -166,47 +166,47 @@ export default function CacheManagerActivity() {
   // Custom styles
   const customStyles = {
     card: {
-      backgroundColor: '#1A1919',
-      border: 'none',
+      backgroundColor: 'var(--surface-1)',
+      border: '1px solid var(--border-hairline)',
     },
     title: {
-      color: '#FFFFFF',
+      color: 'var(--ink-1)',
     },
     globalValue: {
-      color: '#FFFFFF',
+      color: 'var(--ink-1)',
     },
     description: {
-      color: '#B1B1B1',
+      color: 'var(--ink-3)',
     },
     toggleButton: {
-      backgroundColor: '#1A1919',
-      color: '#B1B1B1',
-      border: '1px solid #2C2E30',
-      borderRadius: '0',
+      backgroundColor: 'transparent',
+      color: 'var(--ink-3)',
+      border: 'none',
+      borderRadius: '6px',
       margin: '0',
     },
     toggleButtonActive: {
-      backgroundColor: '#2C2E30',
-      color: '#FFFFFF',
-      border: '1px solid #2C2E30',
-      borderRadius: '0',
+      backgroundColor: 'var(--surface-3)',
+      color: 'var(--ink-1)',
+      border: 'none',
+      borderRadius: '6px',
       margin: '0',
     },
     toggleGroup: {
-      backgroundColor: '#1A1919',
-      border: '1px solid #2C2E30',
+      backgroundColor: 'var(--surface-2)',
+      border: '1px solid var(--border-hairline)',
       borderRadius: '8px',
-      padding: '0',
+      padding: '2px',
       overflow: 'hidden',
     },
     yAxis: {
-      color: '#B1B1B1',
+      color: 'var(--ink-3)',
     },
     xAxis: {
-      color: '#B1B1B1',
+      color: 'var(--ink-3)',
     },
     grid: {
-      stroke: '#2C2E30',
+      stroke: 'var(--chart-grid)',
     },
   };
 
@@ -226,21 +226,21 @@ export default function CacheManagerActivity() {
     return (
       <div
         style={{
-          backgroundColor: '#1A1919',
-          border: '1px solid #2C2E30',
+          backgroundColor: 'var(--surface-3)',
+          border: '1px solid var(--border-strong)',
           padding: '10px',
           borderRadius: '4px',
         }}
       >
         <p
-          style={{ color: '#FFFFFF', marginBottom: '8px', fontWeight: 'bold' }}
+          style={{ color: 'var(--ink-1)', marginBottom: '8px', fontWeight: 'bold' }}
         >
           {formattedLabel}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div
             style={{
-              color: '#4267B2',
+              color: 'var(--series-1)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -251,7 +251,7 @@ export default function CacheManagerActivity() {
           </div>
           <div
             style={{
-              color: '#B24942',
+              color: 'var(--series-2)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -275,20 +275,20 @@ export default function CacheManagerActivity() {
   return (
     <Card
       className='@container/card flex flex-col h-full'
-      style={{ ...customStyles.card, borderRadius: '12px' }}
+      style={{ ...customStyles.card, borderRadius: '10px' }}
     >
       {/* Header - flex: 3 (30%) */}
       <div className='flex flex-col flex-[3] min-h-0'>
         <CardHeader className='relative pb-1 sm:pb-2 flex-1'>
           <div className='flex flex-col gap-1 sm:gap-2 pr-20 h-full'>
             <CardTitle
-              className='text-base sm:text-2xl font-bold'
+              className='text-[13.5px] font-semibold'
               style={customStyles.title}
             >
               Bid Placement Activity
             </CardTitle>
             <CardDescription
-              className='text-xs sm:text-base'
+              className='text-xs'
               style={customStyles.description}
             >
               Bid placement and deletion activity for the selected period
@@ -299,14 +299,14 @@ export default function CacheManagerActivity() {
                 style={customStyles.globalValue}
               >
                 {isLoading || !currentBlockchainId ? (
-                  <Skeleton className='h-4 sm:h-8 w-32 bg-slate-700' />
+                  <Skeleton className='h-4 sm:h-8 w-32 bg-surface-3' />
                 ) : (
                   <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs sm:text-sm'>
                     <div className='flex items-center'>
                       <span
                         className='mr-1 pb-1'
                         style={{
-                          color: '#4267B2',
+                          color: 'var(--series-1)',
                           fontSize: '12px sm:24px',
                           lineHeight: '1',
                           display: 'inline-block',
@@ -321,7 +321,7 @@ export default function CacheManagerActivity() {
                       <span
                         className='mr-1 pb-1'
                         style={{
-                          color: '#B24942',
+                          color: 'var(--series-2)',
                           fontSize: '12px sm:24px',
                           lineHeight: '1',
                           display: 'inline-block',
@@ -358,7 +358,7 @@ export default function CacheManagerActivity() {
                     borderRight:
                       index === timespanOptions.length - 1
                         ? 'none'
-                        : '1px solid #2C2E30',
+                        : '1px solid var(--border-hairline)',
                     borderLeft: index === 0 ? 'none' : 'none',
                   }}
                 >
@@ -371,9 +371,9 @@ export default function CacheManagerActivity() {
                 className='xl:hidden flex w-20 h-7 text-xs'
                 aria-label='Select a timespan'
                 style={{
-                  backgroundColor: '#1A1919',
-                  color: '#FFFFFF',
-                  border: '1px solid #2C2E30',
+                  backgroundColor: 'var(--surface-1)',
+                  color: 'var(--ink-1)',
+                  border: '1px solid var(--border-hairline)',
                 }}
               >
                 <SelectValue placeholder='D' />
@@ -381,8 +381,8 @@ export default function CacheManagerActivity() {
               <SelectContent
                 className='rounded-xl'
                 style={{
-                  backgroundColor: '#1A1919',
-                  border: '1px solid #2C2E30',
+                  backgroundColor: 'var(--surface-1)',
+                  border: '1px solid var(--border-hairline)',
                 }}
               >
                 {timespanOptions.map((option) => (
@@ -391,9 +391,9 @@ export default function CacheManagerActivity() {
                     value={option.value}
                     className='rounded-lg text-xs'
                     style={{
-                      color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
+                      color: option.value === timespan ? 'var(--ink-1)' : 'var(--ink-3)',
                       backgroundColor:
-                        option.value === timespan ? '#2C2E30' : '#1A1919',
+                        option.value === timespan ? 'var(--surface-3)' : 'var(--surface-2)',
                     }}
                   >
                     {option.label}
@@ -409,7 +409,7 @@ export default function CacheManagerActivity() {
       <CardContent className='flex-[7] flex flex-col p-1 sm:p-2 min-h-0'>
         {isLoading || !currentBlockchainId ? (
           <div className='flex-1 w-full flex items-center justify-center'>
-            <Skeleton className='h-full w-full bg-slate-700' />
+            <Skeleton className='h-full w-full bg-surface-3' />
           </div>
         ) : error ? (
           <div className='flex-1 w-full flex items-center justify-center text-center text-red-500'>
@@ -456,8 +456,8 @@ export default function CacheManagerActivity() {
                     type='natural'
                     dataKey='insertCount'
                     name='Insert Count'
-                    stroke='#4267B2'
-                    fill='#4267B2'
+                    stroke='var(--series-1)'
+                    fill='var(--series-1)'
                     strokeWidth={2}
                     dot={true}
                   />
@@ -465,8 +465,8 @@ export default function CacheManagerActivity() {
                     type='natural'
                     dataKey='deleteCount'
                     name='Eviction Count'
-                    stroke='#B24942'
-                    fill='#B24942'
+                    stroke='var(--series-2)'
+                    fill='var(--series-2)'
                     strokeWidth={2}
                     dot={true}
                   />
