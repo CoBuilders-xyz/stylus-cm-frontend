@@ -593,7 +593,7 @@ export default function ContractDetails({
       </div>
 
       {/* Scrollable Main Content */}
-      <ScrollArea className='panel-scroll-area flex-1 min-w-0'>
+      <ScrollArea className='panel-scroll-area flex-1 min-w-0 overscroll-contain'>
         <div className='px-5 py-4 min-w-0 overflow-x-hidden'>
           {viewType === 'my-contracts' ? (
             <Tabs defaultValue='cache' className='w-full'>

@@ -134,6 +134,7 @@ export default function MyContractsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        lockBodyScrollOnMobile={activePanelContent === 'details'}
       >
         {isPanelOpen &&
           activePanelContent === 'details' &&
