@@ -140,7 +140,7 @@ export default function ExploreContractsPage() {
       </SidePanel>
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className='bg-surface-1 border-hairline-strong max-w-md'>
+        <DialogContent className='bg-surface-1 border-hairline-strong sm:max-w-md'>
           <DialogTitle className='sr-only'>Authentication Required</DialogTitle>
           <div className='p-4'>
             <NoticeBanner

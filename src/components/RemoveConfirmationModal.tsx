@@ -1,8 +1,15 @@
 import React from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import removeContractImage from 'public/remove-contract.svg';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface RemoveConfirmationModalProps {
   isRemoving: boolean;
@@ -16,45 +23,33 @@ export function RemoveConfirmationModal({
   onConfirm,
 }: RemoveConfirmationModalProps) {
   return (
-    <div className='fixed inset-0 bg-page/70 flex items-center justify-center z-50'>
-      <div className='bg-surface-1 border border-hairline-strong p-6 rounded-xl shadow-lg max-w-md w-full'>
-        {/* Close button */}
-        <div className='flex justify-end mb-2'>
-          <Button
-            onClick={onCancel}
-            variant='outline'
-            size='icon'
-          >
-            <X className='h-4 w-4' />
-          </Button>
-        </div>
-
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className='max-w-[calc(100%-28px)] sm:max-w-md gap-0 p-5 sm:p-6'>
         {/* Icon */}
-        <div className='flex justify-center mb-4'>
+        <div className='flex justify-center mb-3 pt-5 sm:pt-3'>
           <Image
             src={removeContractImage}
-            alt={'remove contract'}
-            width={200}
-            height={200}
+            alt='Remove contract'
+            className='h-auto w-[120px] sm:w-[160px]'
           />
         </div>
 
         {/* Title and description */}
-        <h3 className='text-[15px] font-semibold text-ink-1 text-center mb-2'>
+        <DialogTitle className='text-center leading-snug mb-2'>
           Remove Contract From Your List?
-        </h3>
-        <p className='text-center text-ink-2 text-[12.5px] mb-6'>
+        </DialogTitle>
+        <DialogDescription className='text-center leading-relaxed mb-5'>
           This action will remove the contract from your managed list.
           <br />
           All historical data will remain intact.
-        </p>
+        </DialogDescription>
 
         {/* Action buttons */}
-        <div className='flex justify-center gap-3'>
+        <DialogFooter className='flex flex-col sm:flex-row justify-center gap-2'>
           <Button
             onClick={onCancel}
             variant='outline'
-            className='px-5 h-9 rounded-lg'
+            className='w-full sm:w-auto px-5 h-9 rounded-lg'
             disabled={isRemoving}
           >
             Cancel
@@ -62,7 +57,7 @@ export function RemoveConfirmationModal({
           <Button
             onClick={onConfirm}
             variant='destructive'
-            className='px-5 h-9 rounded-lg'
+            className='w-full sm:w-auto px-5 h-9 rounded-lg'
             disabled={isRemoving}
           >
             {isRemoving ? (
@@ -74,9 +69,9 @@ export function RemoveConfirmationModal({
               'Remove Contract'
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
