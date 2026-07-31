@@ -327,7 +327,7 @@ export default function UserAlertSettings({
       {/* Title header */}
       <div className='bg-surface-1 border-b border-hairline'>
         {/* Header content */}
-        <div className='flex justify-between items-center px-5 py-4'>
+        <div className='flex justify-between items-center px-[14px] sm:px-5 py-4'>
           <div>
             <h2 className='text-[15px] font-semibold text-ink-1'>Alert Settings</h2>
             <div className='text-[12.5px] text-ink-2 mt-0.5'>
@@ -344,7 +344,7 @@ export default function UserAlertSettings({
         </div>
       </div>
 
-      <div className='p-5 flex-1 overflow-auto'>
+      <div className='p-[14px] sm:p-5 flex-1 overflow-auto overscroll-contain'>
         <div className='divide-y divide-hairline'>
         {/* Telegram Alerts */}
         <div className='py-1'>

@@ -31,9 +31,10 @@ const SidePanel: React.FC<SidePanelProps> = ({
         style={{
           width,
           zIndex,
-          // Start below header, which has padding of 4 (p-4)
-          marginTop: 'var(--header-height, 64px)',
-          height: 'calc(100vh - var(--header-height, 64px))',
+          marginTop:
+            'var(--header-height, var(--app-chrome-h, 56px))',
+          height:
+            'calc(100vh - var(--header-height, var(--app-chrome-h, 56px)))',
         }}
       >
         {/* No header with title and close button anymore */}
