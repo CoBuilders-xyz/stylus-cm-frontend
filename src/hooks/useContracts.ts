@@ -37,14 +37,11 @@ interface ContractsResult {
 /**
  * Default empty pagination meta
  */
-const DEFAULT_PAGINATION: PaginationMeta = {
-  page: 1,
-  limit: 5,
-  totalItems: 0,
-  totalPages: 0,
-  hasNextPage: false,
-  hasPreviousPage: false,
-};
+const getDefaultLimit = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(min-width: 768px)').matches
+    ? 10
+    : 5;
 
 /**
  * Hook to fetch contracts data with pagination and sorting
@@ -54,13 +51,19 @@ const DEFAULT_PAGINATION: PaginationMeta = {
 export function useContracts(
   type: 'explore' | 'my-contracts'
 ): ContractsResult {
+  const [limit, setLimit] = useState(getDefaultLimit);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [pagination, setPagination] =
-    useState<PaginationMeta>(DEFAULT_PAGINATION);
+  const [pagination, setPagination] = useState<PaginationMeta>(() => ({
+    page: 1,
+    limit,
+    totalItems: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  }));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(5);
   const [sortBy, setSortBy] = useState<ContractSortField[]>([
     ContractSortField.LAST_BID,
   ]);

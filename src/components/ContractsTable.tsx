@@ -437,7 +437,7 @@ function ContractsTable({
       )}
 
       {!isLoading && !error && (
-        <div className='w-full flex-1 flex flex-col min-h-0'>
+        <div className='w-full flex flex-col'>
           <div className='mb-4 flex-shrink-0'>
             <ActivationFilters
               value={activationFilter}
@@ -472,7 +472,7 @@ function ContractsTable({
           {/* Desktop table */}
           <ScrollArea
             orientation='both'
-            className='hidden md:block h-[calc(100vh-320px)] min-h-[400px] app-card'
+            className='hidden md:block max-h-[calc(100vh-320px)] app-card'
           >
             <Table className='w-full'>
               <TableHeader className='bg-surface-1 sticky top-0 z-10'>
