@@ -150,15 +150,8 @@ export function ContractInfo({
                   return (
                     <span
                       key={alert.id}
-                      className={`pill ${
-                        alert.type === AlertType.REACTIVATION_FAILED
-                          ? 'pill-crit'
-                          : 'pill-muted'
-                      }`}
+                      className='pill pill-muted'
                     >
-                      {alert.type === AlertType.REACTIVATION_FAILED && (
-                        <i className='pill-dot' aria-hidden />
-                      )}
                       {getAlertText(alert)}
                     </span>
                   );
