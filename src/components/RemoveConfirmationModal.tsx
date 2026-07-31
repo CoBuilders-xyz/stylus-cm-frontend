@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
 
@@ -24,7 +23,10 @@ export function RemoveConfirmationModal({
 }: RemoveConfirmationModalProps) {
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className='max-w-[calc(100%-28px)] sm:max-w-md gap-0 p-5 sm:p-6'>
+      <DialogContent
+        className='gap-0 p-5 sm:p-6'
+        style={{ maxWidth: 'min(448px, calc(100% - 28px))' }}
+      >
         {/* Icon */}
         <div className='flex justify-center mb-3 pt-5 sm:pt-3'>
           <Image
@@ -45,7 +47,7 @@ export function RemoveConfirmationModal({
         </DialogDescription>
 
         {/* Action buttons */}
-        <DialogFooter className='flex flex-col sm:flex-row justify-center gap-2'>
+        <div className='grid grid-cols-1 sm:grid-cols-[auto_auto] justify-center gap-2'>
           <Button
             onClick={onCancel}
             variant='outline'
@@ -69,7 +71,7 @@ export function RemoveConfirmationModal({
               'Remove Contract'
             )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
