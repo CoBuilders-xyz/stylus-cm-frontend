@@ -470,7 +470,10 @@ function ContractsTable({
           </div>
 
           {/* Desktop table */}
-          <ScrollArea className='hidden md:block h-[calc(100vh-320px)] min-h-[400px] app-card'>
+          <ScrollArea
+            orientation='both'
+            className='hidden md:block h-[calc(100vh-320px)] min-h-[400px] app-card'
+          >
             <Table className='w-full'>
               <TableHeader className='bg-surface-1 sticky top-0 z-10'>
                 <TableRow className='hover:bg-transparent'>
