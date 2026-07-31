@@ -63,7 +63,7 @@ function TablePagination({
     ));
 
   return (
-    <div className='mt-3 flex w-full flex-col gap-3 text-xs text-ink-3 sm:flex-row sm:items-center sm:justify-between'>
+    <div className='mt-3 flex w-full flex-col gap-3 pb-6 text-xs text-ink-3 sm:flex-row sm:items-center sm:justify-between sm:pb-0'>
       <div className='flex items-center gap-2'>
         <span>Show</span>
         <select
