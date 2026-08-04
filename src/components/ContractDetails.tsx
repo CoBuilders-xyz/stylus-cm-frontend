@@ -775,13 +775,12 @@ export default function ContractDetails({
       </ScrollArea>
 
       {/* Confirmation Dialog */}
-      {removeState.showConfirmation && (
-        <RemoveConfirmationModal
-          isRemoving={removeState.isRemoving}
-          onCancel={cancelRemoveContract}
-          onConfirm={confirmRemoveContract}
-        />
-      )}
+      <RemoveConfirmationModal
+        open={removeState.showConfirmation}
+        isRemoving={removeState.isRemoving}
+        onCancel={cancelRemoveContract}
+        onConfirm={confirmRemoveContract}
+      />
     </div>
   );
 }

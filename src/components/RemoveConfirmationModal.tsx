@@ -11,19 +11,21 @@ import {
 } from '@/components/ui/dialog';
 
 interface RemoveConfirmationModalProps {
+  open: boolean;
   isRemoving: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
 export function RemoveConfirmationModal({
+  open,
   isRemoving,
   onCancel,
   onConfirm,
 }: RemoveConfirmationModalProps) {
   return (
     <Dialog
-      open
+      open={open}
       onOpenChange={(open) => {
         if (!open && !isRemoving) onCancel();
       }}
