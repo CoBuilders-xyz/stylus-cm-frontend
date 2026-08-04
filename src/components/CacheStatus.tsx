@@ -32,8 +32,10 @@ export default function CacheStatus() {
   // Monthly insert/delete totals for the two activity tiles
   const metricsService = useMemo(() => new CacheMetricsService(), []);
   const [bidTrends, setBidTrends] = useState<BidTrendsResponse | null>(null);
+  const [bidTrendsError, setBidTrendsError] = useState(false);
   useEffect(() => {
     setBidTrends(null);
+    setBidTrendsError(false);
     if (!currentBlockchainId) return;
     let cancelled = false;
     metricsService
@@ -42,7 +44,10 @@ export default function CacheStatus() {
         if (!cancelled) setBidTrends(res);
       })
       .catch(() => {
-        if (!cancelled) setBidTrends(null);
+        if (!cancelled) {
+          setBidTrends(null);
+          setBidTrendsError(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -169,9 +174,9 @@ export default function CacheStatus() {
               )}
             </div>
 
-            {/* Insertions (last 12 months) */}
+            {/* Insertions (last 30 days) */}
             <div className='app-card px-4 py-3.5'>
-              <h2 className='tile-label'>Insertions &middot; 12mo</h2>
+              <h2 className='tile-label'>Insertions &middot; 30d</h2>
               {bidTrends ? (
                 <>
                   <p className='stat-value mt-1.5'>
@@ -181,6 +186,8 @@ export default function CacheStatus() {
                     bids placed across the cache
                   </p>
                 </>
+              ) : bidTrendsError ? (
+                <p className='text-sm mt-2 text-ink-3'>Data unavailable</p>
               ) : (
                 <div className='mt-2 space-y-1'>
                   <Skeleton className='h-7 w-16 bg-surface-3' />
@@ -189,9 +196,9 @@ export default function CacheStatus() {
               )}
             </div>
 
-            {/* Deletions (last 12 months) */}
+            {/* Deletions (last 30 days) */}
             <div className='app-card px-4 py-3.5'>
-              <h2 className='tile-label'>Deletions &middot; 12mo</h2>
+              <h2 className='tile-label'>Deletions &middot; 30d</h2>
               {bidTrends ? (
                 <>
                   <p className='stat-value mt-1.5'>
@@ -201,6 +208,8 @@ export default function CacheStatus() {
                     evictions from the cache
                   </p>
                 </>
+              ) : bidTrendsError ? (
+                <p className='text-sm mt-2 text-ink-3'>Data unavailable</p>
               ) : (
                 <div className='mt-2 space-y-1'>
                   <Skeleton className='h-7 w-16 bg-surface-3' />
