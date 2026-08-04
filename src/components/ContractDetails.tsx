@@ -31,10 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import BiddingHistory, { BiddingHistoryItem } from './BiddingHistory';
 import ContractInfo from './ContractInfo';
 import RemoveConfirmationModal from './RemoveConfirmationModal';
-import {
-  ContextualAlertsSummary,
-  ContractAlertsOverview,
-} from './ContractAlertsSummary';
+import { ContractAlertsOverview } from './ContractAlertsSummary';
 import EditableContractName, {
   EditableContractNameRef,
 } from './EditableContractName';
@@ -652,12 +649,6 @@ export default function ContractDetails({
                   viewType='my-contracts'
                 />
 
-                <ContextualAlertsSummary
-                  category='cache'
-                  alerts={contractData.alerts}
-                  onManageAlerts={handleContractAlerts}
-                />
-
                 <div className='mb-3'>
                   <h3 className='text-[15px] font-semibold text-ink-1'>Bidding</h3>
                 </div>
@@ -714,11 +705,6 @@ export default function ContractDetails({
                   onActivated={reloadContractData}
                   onConfigSaved={reloadContractData}
                   isLoading={isActivationTabLoading}
-                />
-                <ContextualAlertsSummary
-                  category='activation'
-                  alerts={contractData.alerts}
-                  onManageAlerts={handleContractAlerts}
                 />
               </TabsContent>
 

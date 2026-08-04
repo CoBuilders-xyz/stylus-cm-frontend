@@ -1,6 +1,6 @@
 'use client';
 
-import { BellRing, Pencil } from 'lucide-react';
+import { BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Alert } from '@/services/contractService';
 import { AlertType } from '@/types/alerts';
@@ -114,36 +114,6 @@ export function ContractAlertsOverview({
         <AlertGroup category='cache' alerts={alerts} boxed />
         <AlertGroup category='activation' alerts={alerts} boxed />
       </div>
-    </section>
-  );
-}
-
-export function ContextualAlertsSummary({
-  category,
-  alerts,
-  onManageAlerts,
-}: {
-  category: AlertCategory;
-  alerts: Alert[] | undefined;
-  onManageAlerts: () => void;
-}) {
-  const title = category === 'cache' ? 'Cache alerts' : 'Activation alerts';
-
-  return (
-    <section className='rounded-[10px] border border-hairline bg-surface-1 p-4 mb-6'>
-      <div className='flex items-center justify-between gap-3 mb-3'>
-        <h3 className='text-[13px] font-medium text-ink-1'>{title}</h3>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={onManageAlerts}
-          className='gap-1.5'
-        >
-          <Pencil className='h-3.5 w-3.5' aria-hidden />
-          Edit alerts
-        </Button>
-      </div>
-      <AlertGroup category={category} alerts={alerts} showHeader={false} />
     </section>
   );
 }
