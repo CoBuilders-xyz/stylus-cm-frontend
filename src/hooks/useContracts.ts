@@ -35,15 +35,6 @@ interface ContractsResult {
 }
 
 /**
- * Default empty pagination meta
- */
-const getDefaultLimit = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(min-width: 768px)').matches
-    ? 10
-    : 5;
-
-/**
  * Hook to fetch contracts data with pagination and sorting
  * @param type The type of contracts to fetch ('explore' or 'my-contracts')
  * @returns Object with contracts data, pagination, loading state, error, and methods to control data fetching
@@ -51,7 +42,8 @@ const getDefaultLimit = () =>
 export function useContracts(
   type: 'explore' | 'my-contracts'
 ): ContractsResult {
-  const [limit, setLimit] = useState(getDefaultLimit);
+  const [limit, setLimit] = useState(5);
+  const [isLimitReady, setIsLimitReady] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>(() => ({
     page: 1,
@@ -70,6 +62,12 @@ export function useContracts(
   const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  useEffect(() => {
+    const desktopDefault = window.matchMedia('(min-width: 768px)').matches;
+    setLimit(desktopDefault ? 10 : 5);
+    setIsLimitReady(true);
+  }, []);
+
   // Store the current type in a ref to avoid unnecessary re-renders
   const typeRef = useRef(type);
   useEffect(() => {
@@ -83,7 +81,7 @@ export function useContracts(
   // Use useCallback to ensure the function reference is stable
   const fetchContracts = useCallback(async () => {
     // Don't fetch if we don't have a blockchain ID yet
-    if (!currentBlockchainId) {
+    if (!currentBlockchainId || !isLimitReady) {
       return;
     }
 
@@ -167,6 +165,7 @@ export function useContracts(
   }, [
     contractService,
     currentBlockchainId,
+    isLimitReady,
     page,
     limit,
     sortBy,
@@ -254,7 +253,7 @@ export function useContracts(
   // Create a stable reference to the result object to avoid unnecessary re-renders
   return {
     contracts,
-    isLoading: isLoading || isBlockchainLoading,
+    isLoading: isLoading || isBlockchainLoading || !isLimitReady,
     error,
     pagination,
     refetch: fetchContracts,

@@ -3,7 +3,6 @@
 import React, {
   createContext,
   useContext,
-  useEffect,
   useState,
   ReactNode,
 } from 'react';
@@ -45,32 +44,6 @@ export const AlertSettingsProvider = ({
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const panelWidth = isDesktop ? '53%' : '100%';
 
-  useEffect(() => {
-    if (!isOpen || isDesktop) return;
-
-    const scrollY = window.scrollY;
-    const body = document.body;
-    const previousStyles = {
-      position: body.style.position,
-      top: body.style.top,
-      width: body.style.width,
-      overflow: body.style.overflow,
-    };
-
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.width = '100%';
-    body.style.overflow = 'hidden';
-
-    return () => {
-      body.style.position = previousStyles.position;
-      body.style.top = previousStyles.top;
-      body.style.width = previousStyles.width;
-      body.style.overflow = previousStyles.overflow;
-      window.scrollTo(0, scrollY);
-    };
-  }, [isOpen, isDesktop]);
-
   const openAlertSettings = () => setIsOpen(true);
   const closeAlertSettings = () => setIsOpen(false);
 
@@ -103,6 +76,7 @@ export const AlertSettingsProvider = ({
         onClose={closeAlertSettings}
         zIndex={50} // Higher z-index to ensure it displays above other content
         width={panelWidth}
+        lockBodyScrollOnMobile
       >
         <UserAlertSettings onSuccess={handleChannelConfigSuccess} />
       </SidePanel>
