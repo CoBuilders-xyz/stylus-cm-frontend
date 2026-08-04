@@ -475,6 +475,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
+                    className='text-end [&>div]:justify-end'
                   >
                     <div className='flex items-center gap-2'>
                       Effective Bid
@@ -503,7 +504,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='justify-end-safe [&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
                     Bid
                   </SortableTableHead>
@@ -511,7 +512,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='[&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
                     Min. Bid
                   </SortableTableHead>
@@ -527,7 +528,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='[&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
                     Size
                   </SortableTableHead>
@@ -536,7 +537,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='[&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
                     Total Spent
                   </SortableTableHead>
