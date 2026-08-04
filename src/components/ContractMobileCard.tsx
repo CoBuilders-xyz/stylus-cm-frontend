@@ -68,6 +68,7 @@ export default function ContractMobileCard({
   const showAdd =
     viewType === 'explore-contracts' &&
     isAuthenticated &&
+    !!onAddContract &&
     !contract.isSavedByUser;
 
   const isSelectable = Boolean(onContractSelect);

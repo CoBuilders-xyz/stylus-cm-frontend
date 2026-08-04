@@ -38,11 +38,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 const chartConfig = {
   insertCount: {
     label: 'Insertions Count',
-    color: '#3987E5', // series-1 insertions
+    color: 'var(--series-1)',
   },
   deleteCount: {
     label: 'Deletions Count',
-    color: '#D95926', // series-2 deletions
+    color: 'var(--series-2)',
   },
 } satisfies ChartConfig;
 

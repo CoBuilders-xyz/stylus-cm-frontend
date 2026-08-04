@@ -20,8 +20,10 @@ export const showSuccessToast = ({
 }: SuccessToastProps = {}) => {
   toast.custom(
     () => (
-      <div className='flex items-center justify-center bg-surface-2 text-ink-1 border border-hairline-strong p-3 rounded-lg shadow-lg min-w-fit'>
-        <div className='text-[13px] text-center whitespace-nowrap'>{message}</div>
+      <div className='flex max-w-[calc(100vw-28px)] items-center justify-center rounded-lg border border-hairline-strong bg-surface-2 p-3 text-ink-1 shadow-lg'>
+        <div className='min-w-0 break-words text-center text-[13px] whitespace-normal'>
+          {message}
+        </div>
       </div>
     ),
     {
@@ -47,8 +49,10 @@ export const showErrorToast = ({
 }: ErrorToastProps = {}) => {
   toast.custom(
     (t) => (
-      <div className='flex items-center justify-between bg-surface-2 text-ink-1 border border-hairline-strong p-3 rounded-lg shadow-lg gap-2 min-w-fit'>
-        <div className='flex-grow text-[13px] whitespace-nowrap'>{message}</div>
+      <div className='flex max-w-[calc(100vw-28px)] items-center justify-between gap-2 rounded-lg border border-hairline-strong bg-surface-2 p-3 text-ink-1 shadow-lg'>
+        <div className='min-w-0 flex-grow break-words text-[13px] whitespace-normal'>
+          {message}
+        </div>
 
         {onRetry && (
           <Button

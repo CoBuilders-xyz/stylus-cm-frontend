@@ -22,7 +22,12 @@ export function RemoveConfirmationModal({
   onConfirm,
 }: RemoveConfirmationModalProps) {
   return (
-    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !isRemoving) onCancel();
+      }}
+    >
       <DialogContent
         className='gap-0 p-5 sm:p-6'
         style={{ maxWidth: 'min(448px, calc(100% - 28px))' }}

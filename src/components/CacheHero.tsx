@@ -35,7 +35,7 @@ export default function CacheHero({
   return (
     <div
       className='relative overflow-hidden rounded-[10px] border border-hairline bg-surface-1 p-4 mb-4'
-      style={{ background: statusWash }}
+      style={{ backgroundImage: statusWash }}
     >
       <div className='grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 @md/panel:gap-6'>
         <div className='flex items-center gap-3 min-w-0'>

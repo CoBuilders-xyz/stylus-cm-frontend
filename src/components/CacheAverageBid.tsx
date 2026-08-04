@@ -36,15 +36,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 const chartConfig = {
   small: {
     label: '<8 KB',
-    color: '#3987E5', // series-1
+    color: 'var(--series-1)',
   },
   medium: {
     label: '8-16 KB',
-    color: '#D95926', // series-2
+    color: 'var(--series-2)',
   },
   large: {
     label: '>16 KB',
-    color: '#199E70', // series-3
+    color: 'var(--series-3)',
   },
 } satisfies ChartConfig;
 

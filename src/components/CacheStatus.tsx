@@ -33,6 +33,7 @@ export default function CacheStatus() {
   const metricsService = useMemo(() => new CacheMetricsService(), []);
   const [bidTrends, setBidTrends] = useState<BidTrendsResponse | null>(null);
   useEffect(() => {
+    setBidTrends(null);
     if (!currentBlockchainId) return;
     let cancelled = false;
     metricsService

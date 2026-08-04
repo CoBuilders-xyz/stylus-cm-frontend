@@ -1016,7 +1016,7 @@ export default function AlertsSettings({
                 checked={evictionAlertEnabled}
                 onCheckedChange={handleEvictionAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1050,7 +1050,7 @@ export default function AlertsSettings({
                 checked={noGasAlertEnabled}
                 onCheckedChange={handleNoGasAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1084,7 +1084,7 @@ export default function AlertsSettings({
                 checked={lowGasAlertEnabled}
                 onCheckedChange={handleLowGasAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1131,7 +1131,7 @@ export default function AlertsSettings({
                 checked={bidSafetyAlertEnabled}
                 onCheckedChange={handleBidSafetyAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1210,7 +1210,7 @@ export default function AlertsSettings({
                 checked={approachingExpirationAlertEnabled}
                 onCheckedChange={handleApproachingExpirationAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1265,7 +1265,7 @@ export default function AlertsSettings({
                 checked={expiredAlertEnabled}
                 onCheckedChange={handleExpiredAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1299,7 +1299,7 @@ export default function AlertsSettings({
                 checked={reactivationSucceededAlertEnabled}
                 onCheckedChange={handleReactivationSucceededAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}
@@ -1333,7 +1333,7 @@ export default function AlertsSettings({
                 checked={reactivationFailedAlertEnabled}
                 onCheckedChange={handleReactivationFailedAlertToggle}
                 className={cn(
-                  'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                  'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                   'data-[state=unchecked]:bg-surface-3',
                   'data-[state=checked]:bg-accent-blue'
                 )}

@@ -354,7 +354,7 @@ export default function UserAlertSettings({
               checked={telegramEnabled}
               onCheckedChange={handleTelegramEnabledChange}
               className={cn(
-                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                 'data-[state=unchecked]:bg-surface-3',
                 'data-[state=checked]:bg-accent-blue'
               )}
@@ -442,7 +442,7 @@ export default function UserAlertSettings({
               checked={slackEnabled}
               onCheckedChange={handleSlackEnabledChange}
               className={cn(
-                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                 'data-[state=unchecked]:bg-surface-3',
                 'data-[state=checked]:bg-accent-blue'
               )}
@@ -515,7 +515,7 @@ export default function UserAlertSettings({
               checked={webhookEnabled}
               onCheckedChange={handleWebhookEnabledChange}
               className={cn(
-                'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
+                'alert-switch inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-all',
                 'data-[state=unchecked]:bg-surface-3',
                 'data-[state=checked]:bg-accent-blue'
               )}
