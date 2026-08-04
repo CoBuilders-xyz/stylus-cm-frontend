@@ -19,32 +19,30 @@ export default function ContractStateIndicator({
 }: ContractStateIndicatorProps) {
   return (
     <div
-      className={`flex items-start gap-2 whitespace-nowrap ${
-        align === 'end' ? 'justify-end' : ''
+      className={`flex min-w-0 flex-col whitespace-nowrap ${
+        align === 'end' ? 'items-end text-end' : 'items-start text-start'
       }`}
     >
-      <span
-        aria-hidden
-        className={`mt-[0.45em] inline-block shrink-0 rounded-full ${
-          compact ? 'size-1.5' : 'size-2'
-        } ${dotClassName}`}
-      />
-      <div
-        className={`flex min-w-0 flex-col leading-tight ${
-          align === 'end' ? 'items-end text-end' : ''
-        }`}
-      >
+      <div className='flex items-center gap-2 leading-tight'>
+        <span
+          aria-hidden
+          className={`inline-block shrink-0 rounded-full ${
+            compact ? 'size-1.5' : 'size-2'
+          } ${dotClassName}`}
+        />
         <span
           className={`${compact ? 'text-xs' : 'text-sm'} font-medium ${labelClassName}`}
         >
           {label}
         </span>
-        {description ? (
-          <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-ink-3`}>
-            {description}
-          </span>
-        ) : null}
       </div>
+      {description ? (
+        <span
+          className={`${compact ? 'text-[10px]' : 'text-xs'} text-ink-3 leading-tight`}
+        >
+          {description}
+        </span>
+      ) : null}
     </div>
   );
 }
