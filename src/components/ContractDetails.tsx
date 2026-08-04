@@ -185,6 +185,16 @@ export default function ContractDetails({
     isRemoving: false,
     showConfirmation: false,
   });
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const removeDialogFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (removeDialogFrameRef.current !== null) {
+        window.cancelAnimationFrame(removeDialogFrameRef.current);
+      }
+    };
+  }, []);
 
   // Initialize contract data from initialContractData whenever it changes
   useEffect(() => {
@@ -435,8 +445,11 @@ export default function ContractDetails({
   };
 
   const handleRemoveContract = () => {
-    // Show confirmation dialog
-    setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+    setIsActionsMenuOpen(false);
+    removeDialogFrameRef.current = window.requestAnimationFrame(() => {
+      removeDialogFrameRef.current = null;
+      setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+    });
   };
 
   const cancelRemoveContract = () => {
@@ -532,7 +545,11 @@ export default function ContractDetails({
           </div>
           <div className='flex gap-2 shrink-0'>
             {/* Dropdown Menu */}
-            <DropdownMenu>
+            <DropdownMenu
+              modal={false}
+              open={isActionsMenuOpen}
+              onOpenChange={setIsActionsMenuOpen}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant='outline' size='icon'>
                   <MoreHorizontal className='h-4 w-4' />
@@ -558,7 +575,7 @@ export default function ContractDetails({
                     <DropdownMenuSeparator className='bg-hairline' />
                     <DropdownMenuItem
                       className='hover:bg-surface-3 cursor-pointer text-crit-text'
-                      onClick={handleRemoveContract}
+                      onSelect={handleRemoveContract}
                     >
                       <Trash2 className='h-4 w-4 me-2' />
                       Remove Contract
