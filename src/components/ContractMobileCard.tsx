@@ -74,6 +74,11 @@ export default function ContractMobileCard({
 
   const isSelectable = Boolean(onContractSelect);
   const handleSelect = () => onContractSelect?.(contract.id, contract);
+  const activationDescription = activation
+    ? activation.status === 'inactive' && activation.detail === 'needs_upgrade'
+      ? 'Needs upgrade'
+      : activationSubLabel(activation)
+    : '';
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
@@ -172,7 +177,7 @@ export default function ContractMobileCard({
       </div>
 
       {/* Trailing column: state, one shared edge */}
-      <div className='flex max-w-[48%] shrink-0 flex-col items-end gap-1.5'>
+      <div className='flex shrink-0 flex-col items-end gap-1.5'>
         <ContractStateIndicator
           label={contract.bytecode.isCached ? 'Cached' : 'Not cached'}
           dotClassName={contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'}
@@ -185,12 +190,11 @@ export default function ContractMobileCard({
         {activation && (
           <ContractStateIndicator
             label={activationStatusLabel(activation)}
-            description={activationSubLabel(activation)}
+            description={activationDescription}
             dotClassName={activationDotClass(activation.status)}
             labelClassName={activationTextClass(activation.status)}
             compact
             align='end'
-            descriptionClassName='whitespace-normal break-words'
           />
         )}
         {viewType === 'explore-contracts' && contract.isSavedByUser && (

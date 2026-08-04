@@ -7,7 +7,6 @@ interface ContractStateIndicatorProps {
   labelClassName?: string;
   compact?: boolean;
   align?: 'start' | 'end';
-  descriptionClassName?: string;
 }
 
 export default function ContractStateIndicator({
@@ -17,7 +16,6 @@ export default function ContractStateIndicator({
   labelClassName = 'text-ink-2',
   compact = false,
   align = 'start',
-  descriptionClassName = '',
 }: ContractStateIndicatorProps) {
   return (
     <div
@@ -42,9 +40,7 @@ export default function ContractStateIndicator({
           {label}
         </span>
         {description ? (
-          <span
-            className={`${compact ? 'text-[10px]' : 'text-xs'} text-ink-3 ${descriptionClassName}`}
-          >
+          <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-ink-3`}>
             {description}
           </span>
         ) : null}
