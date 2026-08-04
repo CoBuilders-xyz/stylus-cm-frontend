@@ -172,7 +172,7 @@ export default function ContractMobileCard({
       </div>
 
       {/* Trailing column: state, one shared edge */}
-      <div className='flex flex-col items-end gap-1.5 shrink-0'>
+      <div className='flex max-w-[48%] shrink-0 flex-col items-end gap-1.5'>
         <ContractStateIndicator
           label={contract.bytecode.isCached ? 'Cached' : 'Not cached'}
           dotClassName={contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'}
@@ -190,6 +190,7 @@ export default function ContractMobileCard({
             labelClassName={activationTextClass(activation.status)}
             compact
             align='end'
+            descriptionClassName='whitespace-normal break-words'
           />
         )}
         {viewType === 'explore-contracts' && contract.isSavedByUser && (
