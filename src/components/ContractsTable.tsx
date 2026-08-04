@@ -78,9 +78,25 @@ const SortableTableHead = React.memo(
       }
     }, [sortField, onSort]);
 
+    const handleKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLTableCellElement>) => {
+        if (sortField && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          handleSort();
+        }
+      },
+      [handleSort, sortField]
+    );
+
     // Determine if this column is currently sorted
     const isSorted =
       sortField && currentSortBy.length > 0 && currentSortBy[0] === sortField;
+    const ariaSort =
+      !isSorted || !currentSortOrder
+        ? 'none'
+        : currentSortOrder === 'ASC'
+          ? 'ascending'
+          : 'descending';
 
     // Function to render the appropriate sort icon
     const renderSortIcon = () => {
@@ -116,8 +132,13 @@ const SortableTableHead = React.memo(
     return (
       <TableHead
         onClick={sortField ? handleSort : undefined}
+        onKeyDown={sortField ? handleKeyDown : undefined}
+        tabIndex={sortField ? 0 : undefined}
+        aria-sort={sortField ? ariaSort : undefined}
         className={`${
-          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
+          sortField
+            ? 'cursor-pointer hover:text-ink-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent-blue'
+            : ''
         } ${props.className || ''}`}
       >
         <div className='flex items-center'>
