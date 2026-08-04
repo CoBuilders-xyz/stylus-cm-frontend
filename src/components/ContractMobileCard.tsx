@@ -13,6 +13,7 @@ import {
   activationTextClass,
 } from '@/lib/activation';
 import { Contract } from '@/services/contractService';
+import ContractStateIndicator from '@/components/ContractStateIndicator';
 
 interface Props {
   contract: Contract;
@@ -172,35 +173,25 @@ export default function ContractMobileCard({
 
       {/* Trailing column: state, one shared edge */}
       <div className='flex flex-col items-end gap-1.5 shrink-0'>
+        <ContractStateIndicator
+          label={contract.bytecode.isCached ? 'Cached' : 'Not cached'}
+          dotClassName={contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'}
+          labelClassName={
+            contract.bytecode.isCached ? 'text-ok-text' : 'text-ink-2'
+          }
+          compact
+          align='end'
+        />
         {activation && (
-          <span className='inline-flex items-center gap-1.5'>
-            <span
-              className={`inline-block h-1.5 w-1.5 rounded-full ${activationDotClass(
-                activation.status
-              )}`}
-            />
-            <span
-              className={`text-[11.5px] font-medium ${activationTextClass(
-                activation.status
-              )}`}
-            >
-              {activationStatusLabel(activation)}
-            </span>
-          </span>
-        )}
-        {activation && activationSubLabel(activation) ? (
-          <span className='text-[10.5px] text-ink-3 num text-end'>
-            {activationSubLabel(activation)}
-          </span>
-        ) : null}
-        <span className='inline-flex items-center gap-1.5 text-[10.5px] text-ink-3'>
-          <span
-            className={`inline-block h-[5px] w-[5px] rounded-full ${
-              contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'
-            }`}
+          <ContractStateIndicator
+            label={activationStatusLabel(activation)}
+            description={activationSubLabel(activation)}
+            dotClassName={activationDotClass(activation.status)}
+            labelClassName={activationTextClass(activation.status)}
+            compact
+            align='end'
           />
-          {contract.bytecode.isCached ? 'Cached' : 'Not cached'}
-        </span>
+        )}
         {viewType === 'explore-contracts' && contract.isSavedByUser && (
           <span className='text-[10.5px] text-ink-3'>Added</span>
         )}

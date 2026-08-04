@@ -34,7 +34,7 @@ function PillFilterGroup<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className='flex items-center gap-1.5 flex-wrap'>
+    <div className='flex items-center gap-1.5 flex-wrap' role='group' aria-label={`${label} status`}>
       <span className='text-[11px] uppercase tracking-wider text-ink-3 me-1'>
         {label}
       </span>
@@ -45,6 +45,7 @@ function PillFilterGroup<T extends string>({
             <button
               key={opt.value}
               type='button'
+              aria-pressed={selected}
               onClick={() => onChange(opt.value)}
               className={`h-6.5 inline-flex items-center gap-1.5 px-2.5 text-xs rounded-md transition-colors ${
                 selected
