@@ -1,14 +1,14 @@
-import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import removeContractImage from 'public/remove-contract.svg';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RemoveConfirmationModalProps {
   open: boolean;
@@ -24,13 +24,13 @@ export function RemoveConfirmationModal({
   onConfirm,
 }: RemoveConfirmationModalProps) {
   return (
-    <Dialog
+    <AlertDialog
       open={open}
-      onOpenChange={(open) => {
-        if (!open && !isRemoving) onCancel();
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isRemoving) onCancel();
       }}
     >
-      <DialogContent
+      <AlertDialogContent
         className='gap-0 p-5 sm:p-6'
         style={{ maxWidth: 'min(448px, calc(100% - 28px))' }}
       >
@@ -44,25 +44,26 @@ export function RemoveConfirmationModal({
         </div>
 
         {/* Title and description */}
-        <DialogTitle className='text-center leading-snug mb-2'>
+        <AlertDialogTitle className='text-center leading-snug mb-2'>
           Remove Contract From Your List?
-        </DialogTitle>
-        <DialogDescription className='text-center leading-relaxed mb-5'>
+        </AlertDialogTitle>
+        <AlertDialogDescription className='text-center leading-relaxed mb-5'>
           This action will remove the contract from your managed list.
           <br />
           All historical data will remain intact.
-        </DialogDescription>
+        </AlertDialogDescription>
 
         {/* Action buttons */}
         <div className='grid grid-cols-1 sm:grid-cols-[auto_auto] justify-center gap-2'>
-          <Button
-            onClick={onCancel}
-            variant='outline'
-            className='w-full sm:w-auto px-5 h-9 rounded-lg'
-            disabled={isRemoving}
-          >
-            Cancel
-          </Button>
+          <AlertDialogCancel asChild>
+            <Button
+              variant='outline'
+              className='w-full sm:w-auto px-5 h-9 rounded-lg'
+              disabled={isRemoving}
+            >
+              Cancel
+            </Button>
+          </AlertDialogCancel>
           <Button
             onClick={onConfirm}
             variant='destructive'
@@ -79,8 +80,8 @@ export function RemoveConfirmationModal({
             )}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
