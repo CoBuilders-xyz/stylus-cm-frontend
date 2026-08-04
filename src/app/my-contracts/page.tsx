@@ -119,7 +119,7 @@ export default function MyContractsPage() {
           paddingRight: isDesktop && isPanelOpen ? desktopPanelWidth : '0',
         }}
       >
-        <div className='p-4 sm:p-6 md:p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='page-gutter py-5 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='my-contracts'
@@ -134,6 +134,7 @@ export default function MyContractsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        lockBodyScrollOnMobile={activePanelContent === 'details'}
       >
         {isPanelOpen &&
           activePanelContent === 'details' &&

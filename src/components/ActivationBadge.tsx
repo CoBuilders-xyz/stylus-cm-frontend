@@ -40,14 +40,14 @@ export default function ActivationBadge({
         <span
           className={`${activationTextClass(info.status)} ${
             compact ? 'text-xs' : 'text-sm'
-          } font-semibold tracking-tight`}
+          } font-medium tracking-tight`}
         >
           {statusText}
         </span>
         <span
           className={`${
             compact ? 'text-[10px]' : 'text-xs'
-          } text-gray-400 font-normal`}
+          } text-ink-3 font-normal`}
         >
           {subText}
         </span>

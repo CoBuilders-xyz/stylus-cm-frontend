@@ -1,25 +1,74 @@
 'use client';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ConnectWalletProps {
   customCallback?: () => void;
 }
 
 export default function ConnectWallet({ customCallback }: ConnectWalletProps) {
+  const runAction = (action: () => void) => {
+    customCallback?.();
+    action();
+  };
+
   return (
-    <div
-      // RainbowKit's button stretches its label over two lines on narrow
-      // containers; force single-line + smaller text below sm so the mobile
-      // header stays compact.
-      className='[&_button]:whitespace-nowrap [&_button]:!text-xs sm:[&_button]:!text-sm [&_button]:!py-1.5 sm:[&_button]:!py-2 [&_button]:!min-h-[36px]'
-      onClick={() => customCallback?.()}
-    >
-      <ConnectButton
-        label='Connect'
-        accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }}
-        chainStatus={'none'}
-      />
-    </div>
+    <ConnectButton.Custom>
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openChainModal,
+        openConnectModal,
+        authenticationStatus,
+        mounted,
+      }) => {
+        const ready = mounted && authenticationStatus !== 'loading';
+        const connected =
+          ready &&
+          account &&
+          chain &&
+          (!authenticationStatus ||
+            authenticationStatus === 'authenticated');
+
+        return (
+          <div
+            {...(!ready && {
+              'aria-hidden': true,
+              className: 'pointer-events-none select-none opacity-0',
+            })}
+          >
+            {!connected ? (
+              <Button
+                type='button'
+                onClick={() => runAction(openConnectModal)}
+              >
+                Connect
+              </Button>
+            ) : chain.unsupported ? (
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => runAction(openChainModal)}
+              >
+                Wrong network
+              </Button>
+            ) : (
+              <Button
+                type='button'
+                variant='outline'
+                className='max-w-[112px] gap-1.5 px-2.5'
+                onClick={() => runAction(openAccountModal)}
+              >
+                <span className='truncate'>{account.displayName}</span>
+                <ChevronDown className='size-3.5 shrink-0' />
+              </Button>
+            )}
+          </div>
+        );
+      }}
+    </ConnectButton.Custom>
   );
 }

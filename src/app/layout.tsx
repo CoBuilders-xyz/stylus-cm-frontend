@@ -10,7 +10,11 @@ import { BlockchainSelectionProvider } from '../context/BlockchainSelectionProvi
 import { Toaster } from '@/components/ui/sonner';
 import Footer from '@/components/Footer';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Arial'],
+});
 
 export const metadata: Metadata = {
   title: 'Stylus Manager',
@@ -33,14 +37,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body className={`${inter.className} min-h-dvh flex flex-col`}>
+      <body className={inter.className}>
         <RainbowKitProvider>
           <BlockchainSelectionProvider>
             <AuthenticationProvider>
               <AlertSettingsProvider>
-                <Header />
-                <main className='flex-1 flex flex-col min-h-0'>{children}</main>
-                <Footer />
+                <div className='min-h-dvh flex flex-col'>
+                  <Header />
+                  <main className='flex-1 flex flex-col min-h-0'>
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
               </AlertSettingsProvider>
             </AuthenticationProvider>
           </BlockchainSelectionProvider>

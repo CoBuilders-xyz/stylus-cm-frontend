@@ -52,18 +52,18 @@ export default function ActivationRequiredCard({
     !isConnected || isActivating || isChainMismatch || !hasDataFee;
 
   return (
-    <div className='mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 p-4'>
+    <div className='mt-3 mb-4 rounded-[10px] border border-hairline bg-warn-soft p-4'>
       <div className='flex items-start gap-2'>
-        <AlertTriangle className='h-4 w-4 text-amber-300 mt-0.5 shrink-0' />
+        <AlertTriangle className='h-4 w-4 text-warn mt-0.5 shrink-0' />
         <div className='flex-1'>
-          <p className='text-sm font-medium text-amber-200'>{message}</p>
+          <p className='text-[12.5px] font-medium text-warn'>{message}</p>
           {!isConnected && (
-            <p className='text-xs text-amber-100/80 mt-1'>
+            <p className='text-[11.5px] text-ink-2 mt-1'>
               Connect your wallet to send the activation transaction.
             </p>
           )}
           {isConnected && isChainMismatch && (
-            <p className='text-xs text-amber-100/80 mt-1'>
+            <p className='text-[11.5px] text-ink-2 mt-1'>
               Your wallet is on a different network. Switch to{' '}
               {targetChainLabel} to activate this contract.
             </p>
@@ -73,7 +73,7 @@ export default function ActivationRequiredCard({
             feeLabel &&
             !isActivating &&
             !txHash && (
-              <p className='text-xs text-amber-100/80 mt-1'>
+              <p className='text-[11.5px] text-ink-2 mt-1'>
                 Estimated activation fee: {feeLabel}. Excess value is refunded
                 by the ArbWasm precompile.
               </p>
@@ -82,13 +82,13 @@ export default function ActivationRequiredCard({
             !isChainMismatch &&
             simulationError &&
             !hasDataFee && (
-              <p className='text-xs text-red-300 mt-1'>
+              <p className='text-[11.5px] text-crit-text mt-1'>
                 Could not estimate the activation fee. Make sure your wallet
                 has enough ETH on the correct chain and try again.
               </p>
             )}
           {txHash && (
-            <p className='text-xs text-amber-100/80 mt-2'>
+            <p className='text-[11.5px] text-ink-2 mt-2'>
               {isActivating
                 ? 'Waiting for the activation transaction to be confirmed…'
                 : 'Activation transaction submitted.'}{' '}
@@ -97,7 +97,7 @@ export default function ActivationRequiredCard({
                   href={txUrl}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5]'
+                  className='inline-flex items-center gap-1 text-accent-blue hover:text-accent-blue-hover'
                 >
                   View on Arbiscan
                   <ExternalLink className='h-3 w-3' />
@@ -108,9 +108,10 @@ export default function ActivationRequiredCard({
           {isConnected && isChainMismatch ? (
             <Button
               type='button'
+              variant='outline'
               onClick={onSwitchChain}
               disabled={isSwitchingChain}
-              className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+              className='mt-3 disabled:opacity-60 disabled:cursor-not-allowed'
             >
               {isSwitchingChain && (
                 <Loader2 className='h-4 w-4 animate-spin' />
@@ -122,9 +123,10 @@ export default function ActivationRequiredCard({
           ) : (
             <Button
               type='button'
+              variant='outline'
               onClick={onActivate}
               disabled={cannotActivate}
-              className='mt-3 bg-transparent border border-amber-300 text-amber-200 hover:bg-amber-500/10 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+              className='mt-3 disabled:opacity-60 disabled:cursor-not-allowed'
             >
               {isActivating ? (
                 <Loader2 className='h-4 w-4 animate-spin' />

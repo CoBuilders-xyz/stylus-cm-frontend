@@ -3,13 +3,53 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   Refined Dark Pro — design tokens
+   Single source of truth for the whole app. Do not hardcode hex
+   values in components; use these tokens (or the mapped Tailwind
+   classes below) instead.
+   ============================================================ */
 :root {
-  --background: #000000;
-  --foreground: #171717;
+  /* Surfaces */
+  --page: #0e0f11; /* page background — replaces the blue gradients */
+  --surface-1: #16181b; /* cards, tables, panels */
+  --surface-2: #1c1f23; /* inputs, hover rows, popovers */
+  --surface-3: #24282d; /* selected states, pills, pressed */
+  --border-hairline: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Ink */
+  --ink-1: #f2f3f5;
+  --ink-2: #9ba1a8;
+  --ink-3: #7b8188;
+
+  /* Accent — exactly one accent */
+  --accent-blue: #3987e5;
+  --accent-blue-hover: #4d95ec;
+  --accent-soft: rgba(57, 135, 229, 0.13);
+
+  /* Status (reserved for state) */
+  --ok: #0ca30c;
+  --ok-soft: rgba(12, 163, 12, 0.12);
+  --ok-text: #4fca5c;
+  --warn: #fab219;
+  --warn-soft: rgba(250, 178, 25, 0.12);
+  --crit: #d03b3b;
+  --crit-soft: rgba(208, 59, 59, 0.13);
+  --crit-text: #e4696b;
+
+  /* Chart series (CVD-validated on these surfaces) */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --chart-grid: #24262a;
+
+  --background: var(--page);
+  --foreground: var(--ink-1);
+
   /* Height of the fixed top chrome (header only). Used by page-level layouts
-     so they don't render under the header. Header is p-4 + min-h-[40px]
-     hamburger ≈ 72px total. */
-  --app-chrome-h: 72px;
+     so they don't render under the header. */
+  --app-chrome-h: 56px;
 }
 
 @theme inline {
@@ -50,75 +90,70 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Token-mapped utility colors: bg-surface-1, text-ink-2, border-hairline… */
+  --color-page: var(--page);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-hairline: var(--border-hairline);
+  --color-hairline-strong: var(--border-strong);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-hover: var(--accent-blue-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-text: var(--ok-text);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-crit: var(--crit);
+  --color-crit-soft: var(--crit-soft);
+  --color-crit-text: var(--crit-text);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
 }
 
+/* shadcn semantic mapping — dark-only app */
 :root {
   --radius: 0.625rem;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
-  --background: oklch(0 0 0);
-  --foreground: oklch(0.985 0 0);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-1);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--ink-1);
+  --primary: var(--accent-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--ink-1);
+  --muted: var(--surface-3);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--ink-1);
+  --destructive: var(--crit);
+  --border: var(--border-hairline);
+  --input: var(--border-hairline);
+  --ring: var(--accent-blue);
+  --chart-1: var(--series-1);
+  --chart-2: var(--series-2);
+  --chart-3: var(--series-3);
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --sidebar: var(--surface-1);
+  --sidebar-foreground: var(--ink-1);
+  --sidebar-primary: var(--accent-blue);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--ink-1);
+  --sidebar-border: var(--border-hairline);
+  --sidebar-ring: var(--accent-blue);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --background: var(--page);
+  --foreground: var(--ink-1);
 }
 
 @layer base {
@@ -132,37 +167,131 @@
   }
   body {
     @apply bg-background text-foreground;
+
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Add spacing between table rows */
-  tbody tr {
-    margin-bottom: 0.75rem !important;
-  }
-
-  /* Increase table row height */
-  tr {
-    height: 4.5rem !important;
-  }
-
-  /* Disable hover on table header rows */
+  /* Dense data rows: height comes from cell padding, not forced heights. */
   thead tr:hover {
     background-color: transparent !important;
   }
+}
 
-  /* Custom row hover gradient */
-  /* tbody tr:hover {
-    background: linear-gradient(
-      7.59deg,
-      #0b436e -19.45%,
-      #1581d4 127.17%
-    ) !important;
-    transition: background 0.3s ease;
+@layer components {
+  /* Page scaffolding */
+  .page-shell {
+    background: var(--page);
+    min-height: 100vh;
+    padding-top: var(--app-chrome-h, 56px);
   }
-   */
+  .page-gutter {
+    padding-inline: 24px;
+  }
+  @media (max-width: 640px) {
+    .page-gutter {
+      padding-inline: 14px;
+    }
+  }
 
-  tbody tr:hover {
-    background: transparent;
-    transition: background 0.3s ease;
+  /* Typography roles */
+  .page-title {
+    font-size: 18px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--ink-1);
+  }
+  .page-desc {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  .card-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-1);
+  }
+  .card-sub {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .tile-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--ink-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .mono-addr {
+    font-family: var(--font-geist-mono, ui-monospace), monospace;
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+
+  /* Card */
+  .app-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-hairline);
+    border-radius: 10px;
+  }
+
+  /* Status pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 22px;
+    padding-inline: 9px;
+    border-radius: 11px;
+    font-size: 11.5px;
+    font-weight: 550;
+    white-space: nowrap;
+  }
+  .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .alert-switch:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+  }
+  .pill-ok {
+    background: var(--ok-soft);
+    color: var(--ok-text);
+  }
+  .pill-ok .pill-dot {
+    background: var(--ok);
+  }
+  .pill-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  .pill-warn .pill-dot {
+    background: var(--warn);
+  }
+  .pill-crit {
+    background: var(--crit-soft);
+    color: var(--crit-text);
+  }
+  .pill-crit .pill-dot {
+    background: var(--crit);
+  }
+  .pill-muted {
+    background: var(--surface-3);
+    color: var(--ink-2);
   }
 }
 

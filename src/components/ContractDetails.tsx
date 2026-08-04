@@ -103,9 +103,9 @@ const ExplorerLinkButton: React.FC<ExplorerLinkButtonProps> = ({
 
   return (
     <button
-      className={`${
+      className={`text-ink-3 ${
         isEnabled
-          ? 'hover:text-white cursor-pointer'
+          ? 'hover:text-ink-1 cursor-pointer'
           : 'opacity-50 cursor-not-allowed'
       }`}
       onClick={() => {
@@ -185,6 +185,16 @@ export default function ContractDetails({
     isRemoving: false,
     showConfirmation: false,
   });
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const removeDialogFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (removeDialogFrameRef.current !== null) {
+        window.cancelAnimationFrame(removeDialogFrameRef.current);
+      }
+    };
+  }, []);
 
   // Initialize contract data from initialContractData whenever it changes
   useEffect(() => {
@@ -323,9 +333,9 @@ export default function ContractDetails({
   // If we're still loading and don't have contract data, show a loading state
   if (isLoadingContract && !contractData) {
     return (
-      <div className='text-white flex flex-col h-full bg-[#1A1919] items-center justify-center'>
-        <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white'></div>
-        <p className='mt-4'>Loading contract details...</p>
+      <div className='text-ink-1 flex flex-col h-full bg-surface-1 items-center justify-center'>
+        <div className='animate-spin rounded-full h-10 w-10 border-2 border-hairline-strong border-t-accent-blue'></div>
+        <p className='mt-4 text-[12.5px] text-ink-2'>Loading contract details...</p>
       </div>
     );
   }
@@ -333,17 +343,14 @@ export default function ContractDetails({
   // If we failed to load contract data, show an error
   if (!contractData) {
     return (
-      <div className='text-white flex flex-col h-full bg-[#1A1919] items-center justify-center p-6'>
-        <div className='text-red-500 text-6xl mb-4'>!</div>
-        <h3 className='text-xl font-bold mb-2'>Contract Not Found</h3>
-        <p className='text-gray-400 text-center mb-6'>
+      <div className='text-ink-1 flex flex-col h-full bg-surface-1 items-center justify-center p-6'>
+        <div className='text-crit-text text-5xl mb-4'>!</div>
+        <h3 className='text-[15px] font-semibold mb-2'>Contract Not Found</h3>
+        <p className='text-ink-3 text-[12.5px] text-center mb-6'>
           We couldn&apos;t find details for this contract. It may have been
           removed or there was an error.
         </p>
-        <Button
-          onClick={onClose}
-          className='px-4 py-2 bg-black text-white border border-white rounded-md'
-        >
+        <Button variant='outline' onClick={onClose}>
           Close
         </Button>
       </div>
@@ -438,8 +445,11 @@ export default function ContractDetails({
   };
 
   const handleRemoveContract = () => {
-    // Show confirmation dialog
-    setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+    setIsActionsMenuOpen(false);
+    removeDialogFrameRef.current = window.requestAnimationFrame(() => {
+      removeDialogFrameRef.current = null;
+      setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+    });
   };
 
   const cancelRemoveContract = () => {
@@ -497,14 +507,14 @@ export default function ContractDetails({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919]'>
+    <div className='text-ink-1 flex flex-col h-full bg-surface-1'>
       {/* Sticky Header */}
-      <div className='flex-shrink-0  bg-[#1A1919] p-6'>
+      <div className='flex-shrink-0 bg-surface-1 border-b border-hairline px-5 py-4'>
         <div className='flex justify-between items-center gap-3'>
           <div className='min-w-0 flex-1'>
             {viewType === 'my-contracts' ? (
               <>
-                <div className='text-sm font-mono text-gray-300 flex items-center gap-2 min-w-0'>
+                <div className='mono-addr flex items-center gap-2 min-w-0'>
                   <span className='truncate'>{contractData.address}</span>
                   <ExplorerLinkButton
                     chainId={currentBlockchain?.chainId.toString() || null}
@@ -520,50 +530,54 @@ export default function ContractDetails({
               </>
             ) : contractData.isSavedByUser ? (
               <>
-                <div className='text-sm font-mono text-gray-300 truncate'>
+                <div className='mono-addr truncate'>
                   {contractData.address}
                 </div>
-                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full truncate'>
+                <div className='text-[15px] font-semibold text-ink-1 bg-transparent outline-none border-0 w-full truncate'>
                   {contractData.savedContractName}
                 </div>
               </>
             ) : (
-              <div className='text-lg sm:text-2xl font-mono mb-1 truncate'>
+              <div className='font-mono text-sm text-ink-1 mb-1 truncate'>
                 {contractData.address}
               </div>
             )}
           </div>
           <div className='flex gap-2 shrink-0'>
             {/* Dropdown Menu */}
-            <DropdownMenu>
+            <DropdownMenu
+              modal={false}
+              open={isActionsMenuOpen}
+              onOpenChange={setIsActionsMenuOpen}
+            >
               <DropdownMenuTrigger asChild>
-                <Button className='p-2 rounded-md border border-white hover:bg-gray-900'>
-                  <MoreHorizontal className='h-5 w-5' />
+                <Button variant='outline' size='icon'>
+                  <MoreHorizontal className='h-4 w-4' />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className='bg-[#1E1E1E] border border-[#2C2E30] text-white'>
+              <DropdownMenuContent className='bg-surface-2 border border-hairline text-ink-1'>
                 {viewType === 'my-contracts' ? (
                   <>
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer'
+                      className='hover:bg-surface-3 cursor-pointer'
                       onClick={handleContractAlerts}
                     >
-                      <BellRing className='h-4 w-4 mr-2' />
+                      <BellRing className='h-4 w-4 me-2' />
                       Contract Alerts
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer'
+                      className='hover:bg-surface-3 cursor-pointer'
                       onClick={handleRenameContract}
                     >
-                      <Edit2 className='h-4 w-4 mr-2' />
+                      <Edit2 className='h-4 w-4 me-2' />
                       Rename Contract
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className='bg-[#2C2E30]' />
+                    <DropdownMenuSeparator className='bg-hairline' />
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer text-red-500'
-                      onClick={handleRemoveContract}
+                      className='hover:bg-surface-3 cursor-pointer text-crit-text'
+                      onSelect={handleRemoveContract}
                     >
-                      <Trash2 className='h-4 w-4 mr-2' />
+                      <Trash2 className='h-4 w-4 me-2' />
                       Remove Contract
                     </DropdownMenuItem>
                   </>
@@ -571,7 +585,7 @@ export default function ContractDetails({
                   <DropdownMenuItem
                     className={`${
                       !contractData.isSavedByUser
-                        ? 'hover:bg-gray-800 cursor-pointer'
+                        ? 'hover:bg-surface-3 cursor-pointer'
                         : 'cursor-not-allowed opacity-50'
                     }`}
                     onClick={
@@ -580,7 +594,7 @@ export default function ContractDetails({
                         : undefined
                     }
                   >
-                    <PlusCircle className='h-4 w-4 mr-2' />
+                    <PlusCircle className='h-4 w-4 me-2' />
                     {contractData.isSavedByUser
                       ? 'Contract Already Added'
                       : 'Manage This Contract'}
@@ -588,31 +602,28 @@ export default function ContractDetails({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              className='rounded-md border border-white hover:bg-gray-900'
-              onClick={onClose}
-            >
-              <ChevronLast className='h-5 w-5' />
+            <Button variant='outline' size='icon' onClick={onClose}>
+              <ChevronLast className='h-4 w-4' />
             </Button>
           </div>
         </div>
       </div>
 
       {/* Scrollable Main Content */}
-      <ScrollArea className='panel-scroll-area flex-1 min-w-0'>
-        <div className='p-4 sm:p-6 min-w-0 overflow-x-hidden'>
+      <ScrollArea className='panel-scroll-area flex-1 min-w-0 overscroll-contain'>
+        <div className='px-5 py-4 min-w-0 overflow-x-hidden'>
           {viewType === 'my-contracts' ? (
             <Tabs defaultValue='cache' className='w-full'>
-              <TabsList className='bg-[#0f0f0f] border border-[#2C2E30] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+              <TabsList className='bg-surface-2 border border-hairline rounded-lg p-[2px] mb-4 overflow-x-auto max-w-full flex-nowrap'>
                 <TabsTrigger
                   value='cache'
-                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
                 >
                   Cache
                 </TabsTrigger>
                 <TabsTrigger
                   value='activation'
-                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
                 >
                   Activation
                 </TabsTrigger>
@@ -634,7 +645,7 @@ export default function ContractDetails({
                 />
 
                 <div className='mb-3'>
-                  <h3 className='text-lg'>Bidding</h3>
+                  <h3 className='text-[15px] font-semibold text-ink-1'>Bidding</h3>
                 </div>
 
                 <div className='space-y-4 mb-8'>
@@ -697,16 +708,16 @@ export default function ContractDetails({
             /* Explore Contracts View */
             <>
             <Tabs defaultValue='cache' className='w-full'>
-              <TabsList className='bg-[#0f0f0f] border border-[#2C2E30] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+              <TabsList className='bg-surface-2 border border-hairline rounded-lg p-[2px] mb-4 overflow-x-auto max-w-full flex-nowrap'>
                 <TabsTrigger
                   value='cache'
-                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
                 >
                   Cache
                 </TabsTrigger>
                 <TabsTrigger
                   value='activation'
-                  className='data-[state=active]:bg-[#2C2E30] data-[state=active]:text-white text-gray-300'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
                 >
                   Activation
                 </TabsTrigger>
@@ -740,7 +751,7 @@ export default function ContractDetails({
             </Tabs>
 
             {/* Add to My Contracts Section */}
-              <div className='px-6 text-center'>
+              <div className='px-4 text-center'>
                 {!contractData.isSavedByUser ? (
                   <>
                     <div className='flex justify-center'>
@@ -751,17 +762,14 @@ export default function ContractDetails({
                         height={200}
                       />
                     </div>
-                    <h3 className='text-xl font-bold mb-2'>
+                    <h3 className='text-[15px] font-semibold text-ink-1 mb-2'>
                       Add this contract to place bids
                     </h3>
-                    <p className='text-gray-400 text-sm mb-4'>
+                    <p className='text-ink-3 text-[12.5px] mb-4'>
                       Add this contract to your managed list to place bids, set
                       automations and more.
                     </p>
-                    <Button
-                      className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                      onClick={handleManageContract}
-                    >
+                    <Button onClick={handleManageContract}>
                       Add to My Contracts
                     </Button>
                   </>
@@ -770,7 +778,7 @@ export default function ContractDetails({
                     <div className='flex justify-center'>
                       <Badge
                         variant='secondary'
-                        className='px-4 py-2 text-base font-semibold'
+                        className='px-3 py-1.5 text-[12.5px] font-medium'
                       >
                         Contract already added to your list
                       </Badge>
@@ -784,13 +792,12 @@ export default function ContractDetails({
       </ScrollArea>
 
       {/* Confirmation Dialog */}
-      {removeState.showConfirmation && (
-        <RemoveConfirmationModal
-          isRemoving={removeState.isRemoving}
-          onCancel={cancelRemoveContract}
-          onConfirm={confirmRemoveContract}
-        />
-      )}
+      <RemoveConfirmationModal
+        open={removeState.showConfirmation}
+        isRemoving={removeState.isRemoving}
+        onCancel={cancelRemoveContract}
+        onConfirm={confirmRemoveContract}
+      />
     </div>
   );
 }

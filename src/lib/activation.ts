@@ -334,31 +334,31 @@ export function activationSubLabel(info: ActivationInfo): string {
 export function activationDotClass(status: ActivationStatus): string {
   switch (status) {
     case 'active':
-      return 'bg-green-500';
+      return 'bg-ok';
     case 'expiring':
-      return 'bg-amber-400';
+      return 'bg-warn';
     case 'inactive':
-      return 'bg-red-500';
+      return 'bg-crit';
     case 'error':
-      return 'bg-red-600';
+      return 'bg-crit';
     case 'unknown':
     default:
-      return 'bg-gray-500';
+      return 'bg-ink-3';
   }
 }
 
 export function activationTextClass(status: ActivationStatus): string {
   switch (status) {
     case 'active':
-      return 'text-green-400';
+      return 'text-ok-text';
     case 'expiring':
-      return 'text-amber-300';
+      return 'text-warn';
     case 'inactive':
-      return 'text-red-400';
+      return 'text-crit-text';
     case 'error':
-      return 'text-red-500';
+      return 'text-crit-text';
     case 'unknown':
     default:
-      return 'text-gray-400';
+      return 'text-ink-3';
   }
 }

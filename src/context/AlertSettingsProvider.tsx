@@ -1,8 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+} from 'react';
 import SidePanel from '@/components/SidePanel';
 import UserAlertSettings from '@/components/UserAlertSettings';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 interface AlertSettingsContextProps {
   isOpen: boolean;
@@ -35,6 +41,8 @@ export const AlertSettingsProvider = ({
   const [isOpen, setIsOpen] = useState(false);
   const [notificationChannelsUpdatedAt, setNotificationChannelsUpdatedAt] =
     useState(0);
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const panelWidth = isDesktop ? '53%' : '100%';
 
   const openAlertSettings = () => setIsOpen(true);
   const closeAlertSettings = () => setIsOpen(false);
@@ -67,7 +75,8 @@ export const AlertSettingsProvider = ({
         isOpen={isOpen}
         onClose={closeAlertSettings}
         zIndex={50} // Higher z-index to ensure it displays above other content
-        width='53%' // Set width to 53% of the screen
+        width={panelWidth}
+        lockBodyScrollOnMobile
       >
         <UserAlertSettings onSuccess={handleChannelConfigSuccess} />
       </SidePanel>

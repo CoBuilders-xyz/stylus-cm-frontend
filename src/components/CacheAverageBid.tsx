@@ -36,15 +36,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 const chartConfig = {
   small: {
     label: '<8 KB',
-    color: '#3B82F6', // Blue
+    color: 'var(--series-1)',
   },
   medium: {
     label: '8-16 KB',
-    color: '#10B981', // Green
+    color: 'var(--series-2)',
   },
   large: {
     label: '>16 KB',
-    color: '#F59E0B', // Orange
+    color: 'var(--series-3)',
   },
 } satisfies ChartConfig;
 
@@ -70,9 +70,9 @@ export default function CacheAverageBid() {
   const [hoveredSize, setHoveredSize] = useState<ContractSize | null>(null);
 
   // Get data for all contract sizes
-  const smallData = useBidAverage('D', 'small');
-  const mediumData = useBidAverage('D', 'medium');
-  const largeData = useBidAverage('D', 'large');
+  const smallData = useBidAverage('M', 'small');
+  const mediumData = useBidAverage('M', 'medium');
+  const largeData = useBidAverage('M', 'large');
 
   // Use the first hook for timespan control
   const { timespan, currentBlockchainId } = smallData;
@@ -375,63 +375,64 @@ export default function CacheAverageBid() {
   // Custom styles
   const customStyles = {
     card: {
-      backgroundColor: '#1A1919',
-      border: 'none',
+      backgroundColor: 'var(--surface-1)',
+      border: '1px solid var(--border-hairline)',
     },
     title: {
-      color: '#FFFFFF',
+      color: 'var(--ink-1)',
     },
     description: {
-      color: '#B1B1B1',
+      color: 'var(--ink-3)',
     },
     sizeCard: {
-      backgroundColor: '#252525',
-      border: '1px solid #2C2E30',
+      backgroundColor: 'var(--surface-2)',
+      border: '1px solid var(--border-hairline)',
       borderRadius: '8px',
     },
     sizeLabel: {
-      color: '#B1B1B1',
-      fontSize: '14px',
+      color: 'var(--ink-3)',
+      fontSize: '12px',
     },
     bidValue: {
-      color: '#FFFFFF',
-      fontSize: '20px',
-      fontWeight: 'bold',
+      color: 'var(--ink-1)',
+      fontSize: '16px',
+      fontWeight: '650',
+      fontVariantNumeric: 'tabular-nums',
     },
     percentageChange: {
-      color: '#10B981',
-      fontSize: '12px',
+      color: 'var(--ok-text)',
+      fontSize: '11px',
       fontWeight: '500',
     },
     toggleButton: {
-      backgroundColor: '#1A1919',
-      color: '#B1B1B1',
-      border: '1px solid #2C2E30',
-      borderRadius: '0',
+      backgroundColor: 'transparent',
+      color: 'var(--ink-3)',
+      border: 'none',
+      borderRadius: '6px',
       margin: '0',
     },
     toggleButtonActive: {
-      backgroundColor: '#2C2E30',
-      color: '#FFFFFF',
-      border: '1px solid #2C2E30',
-      borderRadius: '0',
+      backgroundColor: 'var(--surface-3)',
+      color: 'var(--ink-1)',
+      border: 'none',
+      borderRadius: '6px',
       margin: '0',
     },
     toggleGroup: {
-      backgroundColor: '#1A1919',
-      border: '1px solid #2C2E30',
+      backgroundColor: 'var(--surface-2)',
+      border: '1px solid var(--border-hairline)',
       borderRadius: '8px',
-      padding: '0',
+      padding: '2px',
       overflow: 'hidden',
     },
     yAxis: {
-      color: '#B1B1B1',
+      color: 'var(--ink-3)',
     },
     xAxis: {
-      color: '#B1B1B1',
+      color: 'var(--ink-3)',
     },
     grid: {
-      stroke: '#2C2E30',
+      stroke: 'var(--chart-grid)',
     },
   };
 
@@ -450,14 +451,14 @@ export default function CacheAverageBid() {
     return (
       <div
         style={{
-          backgroundColor: '#1A1919',
-          border: '1px solid #2C2E30',
+          backgroundColor: 'var(--surface-3)',
+          border: '1px solid var(--border-strong)',
           padding: '10px',
           borderRadius: '4px',
         }}
       >
         <p
-          style={{ color: '#FFFFFF', marginBottom: '4px', fontWeight: 'bold' }}
+          style={{ color: 'var(--ink-1)', marginBottom: '4px', fontWeight: 'bold' }}
         >
           {formattedLabel}
         </p>
@@ -487,24 +488,35 @@ export default function CacheAverageBid() {
     smallData.isLoading || mediumData.isLoading || largeData.isLoading;
 
   const hasError = smallData.error || mediumData.error || largeData.error;
+  const isEmpty =
+    !isLoading &&
+    Boolean(currentBlockchainId) &&
+    !hasError &&
+    chartData.length === 0;
+  const usesStaticChartState =
+    isLoading || !currentBlockchainId || Boolean(hasError) || isEmpty;
 
   return (
     <Card
       className='@container/card flex flex-col h-full'
-      style={{ ...customStyles.card, borderRadius: '12px' }}
+      style={{ ...customStyles.card, borderRadius: '10px' }}
     >
       {/* Header and Summary Cards - flex: 3 (30%) */}
-      <div className='flex flex-col flex-[3] min-h-0'>
+      <div
+        className={`flex flex-col ${
+          usesStaticChartState ? 'flex-none' : 'flex-[3] min-h-0'
+        }`}
+      >
         <CardHeader className='relative pb-1 sm:pb-2 flex-shrink-0'>
           <div className='flex flex-col gap-1 pr-20'>
             <CardTitle
-              className='text-base sm:text-2xl font-bold'
+              className='text-[13.5px] font-semibold'
               style={customStyles.title}
             >
               Average Bid (ETH)
             </CardTitle>
             <CardDescription
-              className='text-xs sm:text-base'
+              className='text-xs'
               style={customStyles.description}
             >
               Average bid in ETH recorded during the period by contract size
@@ -531,7 +543,7 @@ export default function CacheAverageBid() {
                     borderRight:
                       index === timespanOptions.length - 1
                         ? 'none'
-                        : '1px solid #2C2E30',
+                        : '1px solid var(--border-hairline)',
                     borderLeft: index === 0 ? 'none' : 'none',
                   }}
                 >
@@ -544,9 +556,9 @@ export default function CacheAverageBid() {
                 className='xl:hidden flex w-20 h-7 text-xs'
                 aria-label='Select a timespan'
                 style={{
-                  backgroundColor: '#1A1919',
-                  color: '#FFFFFF',
-                  border: '1px solid #2C2E30',
+                  backgroundColor: 'var(--surface-1)',
+                  color: 'var(--ink-1)',
+                  border: '1px solid var(--border-hairline)',
                 }}
               >
                 <SelectValue placeholder='D' />
@@ -554,8 +566,8 @@ export default function CacheAverageBid() {
               <SelectContent
                 className='rounded-xl'
                 style={{
-                  backgroundColor: '#1A1919',
-                  border: '1px solid #2C2E30',
+                  backgroundColor: 'var(--surface-1)',
+                  border: '1px solid var(--border-hairline)',
                 }}
               >
                 {timespanOptions.map((option) => (
@@ -564,9 +576,9 @@ export default function CacheAverageBid() {
                     value={option.value}
                     className='rounded-lg text-xs'
                     style={{
-                      color: option.value === timespan ? '#FFFFFF' : '#B1B1B1',
+                      color: option.value === timespan ? 'var(--ink-1)' : 'var(--ink-3)',
                       backgroundColor:
-                        option.value === timespan ? '#2C2E30' : '#1A1919',
+                        option.value === timespan ? 'var(--surface-3)' : 'var(--surface-2)',
                     }}
                   >
                     {option.label}
@@ -578,7 +590,11 @@ export default function CacheAverageBid() {
         </CardHeader>
 
         {/* Summary cards */}
-        <div className='px-2 sm:px-6 flex-1 flex items-center min-h-0'>
+        <div
+          className={`px-2 sm:px-6 flex items-center ${
+            usesStaticChartState ? 'pb-3 sm:pb-4' : 'flex-1 min-h-0'
+          }`}
+        >
           <div className='grid grid-cols-3 gap-1 sm:gap-2 w-full min-h-0'>
             {contractSizeOptions.map((option) => {
               const stats =
@@ -599,7 +615,11 @@ export default function CacheAverageBid() {
                     transform: isHovered ? 'scale(1.02)' : 'scale(1)',
                     transition: 'all 0.2s ease-in-out',
                   }}
-                  className='px-1 py-0.5 sm:px-2 sm:py-1 md:py-2 text-center cursor-pointer flex flex-col justify-center h-full min-h-0'
+                  className={`px-1 py-0.5 sm:px-2 sm:py-1 md:py-2 text-center cursor-pointer flex flex-col justify-center min-h-0 ${
+                    usesStaticChartState
+                      ? 'min-h-14 sm:min-h-16'
+                      : 'h-full'
+                  }`}
                   onMouseEnter={() => setHoveredSize(sizeKey)}
                   onMouseLeave={() => setHoveredSize(null)}
                 >
@@ -618,7 +638,7 @@ export default function CacheAverageBid() {
                     style={customStyles.bidValue}
                   >
                     {isLoading || !currentBlockchainId ? (
-                      <Skeleton className='h-2 sm:h-3 md:h-4 w-8 sm:w-12 md:w-16 bg-slate-700 mx-auto' />
+                      <Skeleton className='h-2 sm:h-3 md:h-4 w-8 sm:w-12 md:w-16 bg-surface-3 mx-auto' />
                     ) : (
                       <span className='block'>
                         <span>
@@ -638,14 +658,14 @@ export default function CacheAverageBid() {
       <CardContent className='flex-[7] flex flex-col p-1 sm:p-2 min-h-0'>
         {isLoading || !currentBlockchainId ? (
           <div className='flex-1 w-full flex items-center justify-center'>
-            <Skeleton className='h-full w-full bg-slate-700' />
+            <Skeleton className='h-full w-full bg-surface-3' />
           </div>
         ) : hasError ? (
           <div className='flex-1 w-full flex items-center justify-center text-center text-red-500'>
             Error loading chart data. Please try again.
           </div>
         ) : chartData.length === 0 ? (
-          <div className='flex-1 w-full flex items-center justify-center text-center text-gray-400'>
+          <div className='flex-1 w-full flex items-center justify-center text-center text-ink-3'>
             No data available for the selected filters.
           </div>
         ) : (
@@ -658,33 +678,33 @@ export default function CacheAverageBid() {
                 >
                   <defs>
                     <linearGradient id='fillSmall' x1='0' y1='0' x2='0' y2='1'>
-                      <stop offset='5%' stopColor='#3B82F6' stopOpacity={0.3} />
+                      <stop offset='5%' stopColor='var(--series-1)' stopOpacity={0.12} />
                       <stop
                         offset='95%'
-                        stopColor='#3B82F6'
-                        stopOpacity={0.1}
+                        stopColor='var(--series-1)'
+                        stopOpacity={0.02}
                       />
                     </linearGradient>
                     <linearGradient id='fillMedium' x1='0' y1='0' x2='0' y2='1'>
-                      <stop offset='5%' stopColor='#10B981' stopOpacity={0.3} />
+                      <stop offset='5%' stopColor='var(--series-2)' stopOpacity={0.12} />
                       <stop
                         offset='95%'
-                        stopColor='#10B981'
-                        stopOpacity={0.1}
+                        stopColor='var(--series-2)'
+                        stopOpacity={0.02}
                       />
                     </linearGradient>
                     <linearGradient id='fillLarge' x1='0' y1='0' x2='0' y2='1'>
-                      <stop offset='5%' stopColor='#F59E0B' stopOpacity={0.3} />
+                      <stop offset='5%' stopColor='var(--series-3)' stopOpacity={0.12} />
                       <stop
                         offset='95%'
-                        stopColor='#F59E0B'
-                        stopOpacity={0.1}
+                        stopColor='var(--series-3)'
+                        stopOpacity={0.02}
                       />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
                     vertical={false}
-                    strokeDasharray='3 3'
+                    strokeDasharray='0'
                     stroke={customStyles.grid.stroke}
                   />
                   <XAxis
@@ -710,7 +730,7 @@ export default function CacheAverageBid() {
                       dataKey='small'
                       type='monotone'
                       fill='url(#fillSmall)'
-                      stroke='#3B82F6'
+                      stroke='var(--series-1)'
                       strokeWidth={hoveredSize === 'small' ? 3 : 2}
                     />
                   )}
@@ -719,7 +739,7 @@ export default function CacheAverageBid() {
                       dataKey='medium'
                       type='monotone'
                       fill='url(#fillMedium)'
-                      stroke='#10B981'
+                      stroke='var(--series-2)'
                       strokeWidth={hoveredSize === 'medium' ? 3 : 2}
                     />
                   )}
@@ -728,7 +748,7 @@ export default function CacheAverageBid() {
                       dataKey='large'
                       type='monotone'
                       fill='url(#fillLarge)'
-                      stroke='#F59E0B'
+                      stroke='var(--series-3)'
                       strokeWidth={hoveredSize === 'large' ? 3 : 2}
                     />
                   )}

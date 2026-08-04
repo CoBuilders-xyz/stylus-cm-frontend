@@ -75,47 +75,39 @@ interface AutoActivationReadonlyProps {
 
 /**
  * Read-only summary card used on the explore-contracts view where the user
- * cannot edit the CMA config. Kept dark-bordered rather than gradient — the
- * gradient action-card styling is reserved for interactive controls, matching
- * the Cache tab's split between the (interactive) Bidding cards and the
- * (informational) contract-info rows.
+ * cannot edit the CMA config. Kept as a quiet bordered card — the action-card
+ * styling is reserved for interactive controls, matching the Cache tab's
+ * split between the (interactive) Bidding cards and the (informational)
+ * contract-info rows.
  */
 function AutoActivationReadonly({
   autoActivate,
   maxActivationCost,
 }: AutoActivationReadonlyProps) {
   return (
-    <div className='rounded-lg border border-[#2C2E30] bg-black p-6'>
+    <div className='rounded-[10px] border border-hairline bg-surface-2 p-4'>
       <div className='flex items-start justify-between gap-4 flex-wrap'>
         <div>
-          <h3 className='text-lg font-medium'>Auto-activation</h3>
-          <p className='text-gray-400 text-sm'>
+          <h3 className='text-[13px] font-semibold text-ink-1'>
+            Auto-activation
+          </h3>
+          <p className='text-ink-3 text-[11.5px]'>
             Automatically re-activate this contract before it expires.
           </p>
         </div>
-        <span
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
-            autoActivate
-              ? 'border-green-500/40 bg-green-500/10 text-green-300'
-              : 'border-gray-600/60 bg-gray-500/10 text-gray-300'
-          }`}
-        >
+        <span className={`pill ${autoActivate ? 'pill-ok' : 'pill-muted'}`}>
           <span
             aria-hidden
-            className={`inline-block h-1.5 w-1.5 rounded-full ${
-              autoActivate ? 'bg-green-400' : 'bg-gray-400'
-            }`}
+            className={`pill-dot ${autoActivate ? '' : 'bg-ink-3'}`}
           />
           {autoActivate ? 'Enabled' : 'Disabled'}
         </span>
       </div>
 
-      <dl className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
+      <dl className='mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4'>
         <div>
-          <dt className='text-[11px] uppercase tracking-wider text-gray-500'>
-            Max activation cost
-          </dt>
-          <dd className='mt-0.5 text-gray-100 tabular-nums'>
+          <dt className='tile-label'>Max activation cost</dt>
+          <dd className='mt-0.5 text-[13px] font-medium text-ink-1 num'>
             {formatMaxActivationCost(maxActivationCost)}
           </dd>
         </div>
@@ -169,12 +161,14 @@ export default function ActivationTab({
       />
 
       {/* Auto-activation section — mirrors the "Bidding" section on the
-          Cache tab (h3 heading + gradient action card underneath) so both
+          Cache tab (h3 heading + quiet action card underneath) so both
           tabs share the same visual rhythm. */}
       {canConfigure || (!readOnly && autoActivate !== undefined) ? (
         <>
           <div className='mb-3'>
-            <h3 className='text-lg'>Auto-activation</h3>
+            <h3 className='text-[15px] font-semibold text-ink-1'>
+              Auto-activation
+            </h3>
           </div>
 
           <div className='space-y-4 mb-8'>
@@ -289,10 +283,7 @@ function ActivateNowControl({
       <Tooltip>
         <TooltipTrigger asChild>
           <span>
-            <Button
-              disabled
-              className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
-            >
+            <Button disabled className='cursor-not-allowed'>
               <Zap className='h-4 w-4' />
               Activate now
             </Button>
@@ -306,10 +297,7 @@ function ActivateNowControl({
       <Tooltip>
         <TooltipTrigger asChild>
           <span>
-            <Button
-              disabled
-              className='bg-gray-800 text-gray-400 opacity-70 cursor-not-allowed flex items-center gap-2'
-            >
+            <Button disabled className='cursor-not-allowed'>
               <Zap className='h-4 w-4' />
               Activate now
             </Button>
@@ -323,7 +311,7 @@ function ActivateNowControl({
       <Button
         onClick={switchToTarget}
         disabled={isSwitchingChain}
-        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed'
+        className='disabled:opacity-60 disabled:cursor-not-allowed'
       >
         {isSwitchingChain ? (
           <Loader2 className='h-4 w-4 animate-spin' />
@@ -340,7 +328,7 @@ function ActivateNowControl({
       <Button
         onClick={activate}
         disabled={cannotActivate}
-        className='bg-[#335CD7] hover:bg-[#2a4cb8] text-white flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed'
+        className='disabled:opacity-60 disabled:cursor-not-allowed'
       >
         {isActivating ? (
           <Loader2 className='h-4 w-4 animate-spin' />
@@ -359,16 +347,16 @@ function ActivateNowControl({
     <div className='flex flex-col items-end gap-1 max-w-xs'>
       {button}
       {showSimulationFailure && (
-        <div className='flex items-start gap-2 text-[11px] text-red-300/90 mt-1'>
+        <div className='flex items-start gap-2 text-[11px] text-crit-text mt-1'>
           <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
-          <span className='flex-1 text-right'>
+          <span className='flex-1 text-end'>
             Could not estimate the activation fee. Check your wallet has ETH
             on the correct network and retry.
           </span>
           <button
             type='button'
             onClick={() => refetchSimulation()}
-            className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0'
+            className='inline-flex items-center gap-1 text-accent-blue hover:text-accent-blue-hover shrink-0'
           >
             <RefreshCw className='h-3 w-3' />
             Retry
@@ -380,7 +368,7 @@ function ActivateNowControl({
           href={txUrl}
           target='_blank'
           rel='noopener noreferrer'
-          className='text-[11px] text-[#2D99DD] hover:text-[#5ab2e5] inline-flex items-center gap-1'
+          className='text-[11px] text-accent-blue hover:text-accent-blue-hover inline-flex items-center gap-1'
         >
           View on Arbiscan
           <ExternalLink className='h-3 w-3' />
@@ -642,8 +630,7 @@ function AutoActivationConfigForm({
     setCostError(null);
   };
 
-  const saveButtonBaseClass =
-    'bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed';
+  const saveButtonBaseClass = 'disabled:opacity-60 disabled:cursor-not-allowed';
 
   let saveButton: ReactNode;
   if (!isConnected) {
@@ -694,28 +681,13 @@ function AutoActivationConfigForm({
   }
 
   return (
-    <div
-      className='relative rounded-md p-4 overflow-hidden'
-      style={{
-        background:
-          'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 103.8%)',
-      }}
-    >
-      {/* Noise texture overlay — mirrors AutomatedBiddingSection so both
+    <div className='relative rounded-[10px] p-4 overflow-hidden bg-surface-2 border border-hairline'>
+      {/* Quiet card surface — mirrors AutomatedBiddingSection so both
           "configure an automated behavior" cards share the same surface. */}
-      <div
-        className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-          backgroundSize: '100px 100px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
-
       <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
         <div className='min-w-0 flex-1'>
-          <p className='font-bold'>Auto-activation</p>
-          <p className='text-sm text-blue-200'>
+          <p className='text-[13px] font-semibold text-ink-1'>Auto-activation</p>
+          <p className='text-[11.5px] text-ink-3'>
             Automatically re-activate this contract before it expires. Uses
             your Gas Tank balance to pay for the activation fee.
           </p>
@@ -727,11 +699,11 @@ function AutoActivationConfigForm({
             onCheckedChange={setEnabled}
             disabled={isSaving}
             aria-label='Toggle auto-activation'
-            className='data-[state=checked]:bg-white/90 data-[state=unchecked]:bg-white/25'
+            className='data-[state=checked]:bg-accent-blue data-[state=unchecked]:bg-surface-3'
           />
           <Label
             htmlFor='auto-activate-switch'
-            className='text-sm text-white cursor-pointer'
+            className='text-[12.5px] text-ink-2 cursor-pointer'
           >
             {enabled ? 'Enabled' : 'Disabled'}
           </Label>
@@ -746,7 +718,7 @@ function AutoActivationConfigForm({
       <div className='mt-4 flex flex-col @md/panel:flex-row @md/panel:items-center @md/panel:justify-between gap-2 @md/panel:gap-4 relative z-10'>
         <Label
           htmlFor='auto-activate-cost'
-          className='font-bold text-white'
+          className='text-[13px] font-medium text-ink-2'
         >
           Max activation cost
         </Label>
@@ -769,30 +741,29 @@ function AutoActivationConfigForm({
               }
               // `cn` (twMerge) resolves Tailwind conflicts by rightmost-wins
               // rather than stylesheet order — critical here because the
-              // base `bg-white border-none` would otherwise silently override
-              // the `border-red-500` invalid state and the `bg-gray-700`
+              // base border/background classes would otherwise silently
+              // override the `border-crit` invalid state and the disabled
               // saving state.
               className={cn(
-                'pr-12 border-none bg-white text-gray-500',
+                'pe-12 h-9 bg-surface-1 border-hairline rounded-lg text-[13px] text-ink-1 placeholder:text-ink-3 focus:border-accent-blue',
                 (costError ||
                   hasCostParseError ||
                   (enabled && parsedCost === ZERO_WEI)) &&
-                  'border border-red-500',
-                isSaving &&
-                  'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                  'border-crit',
+                isSaving && 'cursor-not-allowed opacity-60'
               )}
             />
-            <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+            <div className='absolute end-3 top-0 bottom-0 flex items-center pointer-events-none text-ink-3'>
               ETH
             </div>
           </div>
           {costError && (
-            <div className='text-white text-xs italic text-left mt-1'>
+            <div className='text-crit-text text-[11px] text-start mt-1'>
               {costError}
             </div>
           )}
           {!costError && hasCostParseError && (
-            <div className='text-white text-xs italic text-left mt-1'>
+            <div className='text-crit-text text-[11px] text-start mt-1'>
               Enter a valid ETH amount (max 18 decimal places).
             </div>
           )}
@@ -800,7 +771,7 @@ function AutoActivationConfigForm({
             !hasCostParseError &&
             enabled &&
             parsedCost === ZERO_WEI && (
-              <div className='text-white text-xs italic text-left mt-1'>
+              <div className='text-crit-text text-[11px] text-start mt-1'>
                 Max activation cost must be greater than 0 when
                 auto-activation is enabled.
               </div>
@@ -814,7 +785,7 @@ function AutoActivationConfigForm({
             href={txUrl}
             target='_blank'
             rel='noopener noreferrer'
-            className='text-[11px] text-white/90 hover:text-white inline-flex items-center gap-1 underline underline-offset-2'
+            className='text-[11px] text-accent-blue hover:text-accent-blue-hover inline-flex items-center gap-1'
           >
             View on Arbiscan
             <ExternalLink className='h-3 w-3' />
@@ -824,7 +795,7 @@ function AutoActivationConfigForm({
       </div>
 
       {showSimulationFailure && (
-        <div className='mt-3 flex items-start gap-2 text-[11px] text-white/90 relative z-10'>
+        <div className='mt-3 flex items-start gap-2 text-[11px] text-crit-text relative z-10'>
           <AlertTriangle className='h-3 w-3 shrink-0 mt-0.5' />
           <span className='flex-1'>
             Could not simulate the save transaction. Check your wallet is on
@@ -833,7 +804,7 @@ function AutoActivationConfigForm({
           <button
             type='button'
             onClick={() => refetchSimulation()}
-            className='inline-flex items-center gap-1 text-white hover:text-white/80 shrink-0 underline underline-offset-2'
+            className='inline-flex items-center gap-1 text-accent-blue hover:text-accent-blue-hover shrink-0'
           >
             <RefreshCw className='h-3 w-3' />
             Retry
@@ -847,20 +818,20 @@ function AutoActivationConfigForm({
 function AutoActivationConfigSkeleton() {
   return (
     <div
-      className='rounded-md p-4 space-y-4 animate-pulse bg-[#3E71C6]/40'
+      className='rounded-[10px] border border-hairline bg-surface-2 p-4 space-y-4 animate-pulse'
       aria-busy='true'
       aria-live='polite'
     >
       <div className='flex items-start justify-between gap-4 flex-wrap'>
         <div className='space-y-2 flex-1'>
-          <div className='h-4 w-40 rounded bg-white/30' />
-          <div className='h-3 w-56 rounded bg-white/20' />
+          <div className='h-4 w-40 rounded bg-surface-3' />
+          <div className='h-3 w-56 rounded bg-surface-3' />
         </div>
-        <div className='h-6 w-20 rounded-full bg-white/30' />
+        <div className='h-6 w-20 rounded-full bg-surface-3' />
       </div>
-      <div className='h-10 w-full rounded bg-white/70' />
+      <div className='h-9 w-full rounded bg-surface-3' />
       <div className='flex justify-end'>
-        <div className='h-8 w-20 rounded bg-white/30' />
+        <div className='h-8 w-20 rounded bg-surface-3' />
       </div>
     </div>
   );
@@ -874,12 +845,12 @@ function AutoActivationConfigError({
   onRetry: () => void;
 }) {
   return (
-    <div className='rounded-lg border border-red-500/40 bg-red-500/10 p-6'>
-      <div className='flex items-start gap-2 text-sm text-red-200'>
+    <div className='rounded-[10px] border border-hairline bg-crit-soft p-4'>
+      <div className='flex items-start gap-2 text-[12.5px] text-crit-text'>
         <AlertTriangle className='h-4 w-4 shrink-0 mt-0.5' />
         <div className='flex-1'>
           <p className='font-medium'>{message}</p>
-          <p className='text-xs text-red-100/80 mt-1'>
+          <p className='text-[11.5px] text-ink-2 mt-1'>
             The auto-activation editor needs to read the current config
             directly from the CacheManagerAutomation contract before it can
             let you save.
@@ -888,7 +859,7 @@ function AutoActivationConfigError({
         <button
           type='button'
           onClick={onRetry}
-          className='inline-flex items-center gap-1 text-[#2D99DD] hover:text-[#5ab2e5] shrink-0 text-xs'
+          className='inline-flex items-center gap-1 text-accent-blue hover:text-accent-blue-hover shrink-0 text-xs'
         >
           <RefreshCw className='h-3 w-3' />
           Retry
@@ -906,45 +877,45 @@ function AutoActivationConfigError({
 function ActivationTabSkeleton({ readOnly }: { readOnly: boolean }) {
   return (
     <div className='animate-pulse' aria-busy='true' aria-live='polite'>
-      <div className='rounded-lg border border-[#2C2E30] bg-black p-6 mb-6'>
+      <div className='rounded-[10px] border border-hairline bg-surface-1 p-4 mb-4'>
         <div className='flex flex-col @md/panel:flex-row @md/panel:items-start @md/panel:justify-between gap-4 @md/panel:gap-6'>
-          <div className='flex items-center gap-4'>
-            <div className='h-3.5 w-3.5 rounded-full bg-gray-700' />
+          <div className='flex items-center gap-3'>
+            <div className='h-2.5 w-2.5 rounded-full bg-surface-3' />
             <div className='space-y-2'>
-              <div className='h-3 w-24 rounded bg-gray-800' />
-              <div className='h-7 w-32 rounded bg-gray-700' />
-              <div className='h-3 w-40 rounded bg-gray-800' />
+              <div className='h-3 w-24 rounded bg-surface-3' />
+              <div className='h-6 w-32 rounded bg-surface-3' />
+              <div className='h-3 w-40 rounded bg-surface-3' />
             </div>
           </div>
-          {!readOnly && <div className='h-9 w-32 rounded bg-gray-700' />}
+          {!readOnly && <div className='h-8 w-32 rounded bg-surface-3' />}
         </div>
       </div>
 
       {!readOnly && (
         <>
           <div className='mb-3'>
-            <div className='h-5 w-32 rounded bg-gray-700' />
+            <div className='h-5 w-32 rounded bg-surface-3' />
           </div>
-          <div className='rounded-md p-4 mb-8 bg-[#3E71C6]/40 space-y-4'>
+          <div className='rounded-[10px] border border-hairline bg-surface-2 p-4 mb-8 space-y-4'>
             <div className='flex items-start justify-between gap-4 flex-wrap'>
               <div className='space-y-2 flex-1'>
-                <div className='h-4 w-40 rounded bg-white/30' />
-                <div className='h-3 w-56 rounded bg-white/20' />
+                <div className='h-4 w-40 rounded bg-surface-3' />
+                <div className='h-3 w-56 rounded bg-surface-3' />
               </div>
-              <div className='h-6 w-20 rounded-full bg-white/30' />
+              <div className='h-6 w-20 rounded-full bg-surface-3' />
             </div>
-            <div className='h-10 w-full rounded bg-white/70' />
+            <div className='h-9 w-full rounded bg-surface-3' />
           </div>
         </>
       )}
 
       <div className='mb-4'>
-        <div className='h-5 w-40 rounded bg-gray-700' />
+        <div className='h-5 w-40 rounded bg-surface-3' />
       </div>
       <div className='space-y-2'>
-        <div className='h-10 w-full rounded bg-[#121212]' />
-        <div className='h-10 w-full rounded bg-[#121212]' />
-        <div className='h-10 w-full rounded bg-[#121212]' />
+        <div className='h-10 w-full rounded bg-surface-2' />
+        <div className='h-10 w-full rounded bg-surface-2' />
+        <div className='h-10 w-full rounded bg-surface-2' />
       </div>
     </div>
   );

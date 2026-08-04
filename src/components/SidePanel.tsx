@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
+import { useMobileBodyScrollLock } from '@/hooks/useMobileBodyScrollLock';
 
 // Create a context to pass the onClose function to children
 export const SidePanelContext = createContext<{ onClose: () => void }>({
@@ -13,6 +14,7 @@ interface SidePanelProps {
   children?: React.ReactNode;
   width?: string; // Allow customizable width
   zIndex?: number; // Allow customizable z-index for stacking panels
+  lockBodyScrollOnMobile?: boolean;
 }
 
 const SidePanel: React.FC<SidePanelProps> = ({
@@ -21,25 +23,29 @@ const SidePanel: React.FC<SidePanelProps> = ({
   children,
   width = '400px', // Default width of 400px
   zIndex = 40, // Default z-index
+  lockBodyScrollOnMobile = false,
 }) => {
+  useMobileBodyScrollLock(isOpen && lockBodyScrollOnMobile);
+
   return (
     <SidePanelContext.Provider value={{ onClose }}>
       <div
-        className={`@container/panel fixed right-0 top-0 h-full bg-[#1A1919] shadow-xl transition-all duration-300 ease-in-out overflow-x-hidden overflow-y-auto ${
+        className={`@container/panel fixed right-0 top-0 h-full bg-surface-1 border-s border-hairline-strong shadow-xl transition-all duration-300 ease-in-out overflow-x-hidden overflow-y-auto overscroll-contain ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
           width,
           zIndex,
-          // Start below header, which has padding of 4 (p-4)
-          marginTop: 'var(--header-height, 64px)',
-          height: 'calc(100vh - var(--header-height, 64px))',
+          marginTop:
+            'var(--header-height, var(--app-chrome-h, 56px))',
+          height:
+            'calc(100vh - var(--header-height, var(--app-chrome-h, 56px)))',
         }}
       >
         {/* No header with title and close button anymore */}
         <div className='overflow-y-auto h-full'>
           {children || (
-            <div className='flex flex-col items-center justify-center h-80 text-gray-400 p-6'>
+            <div className='flex flex-col items-center justify-center h-80 text-ink-3 p-6'>
               <p>Select a contract to view details</p>
             </div>
           )}

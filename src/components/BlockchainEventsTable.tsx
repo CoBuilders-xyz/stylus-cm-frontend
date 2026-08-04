@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
@@ -31,13 +30,11 @@ import {
   SortOrder,
   BlockchainEventType,
   BlockchainEvent,
-  BlockchainEventsPagination,
 } from '../types/blockchainEvents';
 import {
   formatTransactionHash,
   formatEventTimestamp,
   formatRelativeTime,
-  getEventTypeBadgeVariant,
   formatEventType,
   formatBlockNumber,
   getBidAmountFromEventData,
@@ -47,7 +44,6 @@ import {
 import { formatSize } from '../utils/formatting';
 import NoticeBanner from './NoticeBanner';
 import {
-  Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -57,6 +53,8 @@ import {
 import noContractsFoundImage from '../../public/no-contracts-found.svg';
 import sthWentWrongImage from '../../public/sth-went-wrong.svg';
 import EventMobileCard from '@/components/EventMobileCard';
+import TablePagination from '@/components/TablePagination';
+import TableSearchInput from '@/components/TableSearchInput';
 
 interface BlockchainEventsTableProps {
   events?: BlockchainEvent[];
@@ -96,36 +94,36 @@ const SortableTableHead = React.memo(
 
       if (!isSorted) {
         return (
-          <span className='ml-1 text-gray-500'>
-            <ArrowUpDown className='w-4 h-4' />
+          <span className='ms-1 text-ink-3 opacity-60'>
+            <ArrowUpDown className='w-3.5 h-3.5' />
           </span>
         );
       }
 
       if (currentSortOrder === SortOrder.ASC) {
         return (
-          <span className='ml-1 text-green-400'>
-            <ArrowUp className='w-4 h-4' />
+          <span className='ms-1 text-accent-blue'>
+            <ArrowUp className='w-3.5 h-3.5' />
           </span>
         );
       }
 
       if (currentSortOrder === SortOrder.DESC) {
         return (
-          <span className='ml-1 text-red-400'>
-            <ArrowDown className='w-4 h-4' />
+          <span className='ms-1 text-accent-blue'>
+            <ArrowDown className='w-3.5 h-3.5' />
           </span>
         );
       }
 
-      return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
+      return <span className='ms-1 text-ink-3 opacity-50'>↕</span>;
     };
 
     return (
       <TableHead
         onClick={sortField ? handleSort : undefined}
-        className={`font-medium text-base py-6 ${
-          sortField ? 'cursor-pointer hover:bg-gray-900' : ''
+        className={`${
+          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
         } ${props.className || ''}`}
       >
         <div className='flex items-center'>
@@ -183,72 +181,65 @@ const EventRow = React.memo(
     const size = getSizeFromEventData(event.eventData, event.eventName);
 
     return (
-      <TableRow
-        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors hover:bg-gradient-to-r hover:from-[#0B436E] hover:to-[#1581D4] transition-colors duration-300'
-        onClick={handleRowClick}
-      >
-        <TableCell className='py-6 text-lg'>
-          <Badge
-            variant={getEventTypeBadgeVariant(event.eventName)}
-            className='px-3 py-1 text-sm font-semibold w-fit'
+      <TableRow className='cursor-pointer' onClick={handleRowClick}>
+        <TableCell>
+          <span
+            className={`pill ${
+              event.eventName === 'DeleteBid' ? 'pill-crit' : 'pill-muted'
+            }`}
           >
+            <span
+              className={`pill-dot ${
+                event.eventName === 'DeleteBid' ? 'bg-crit' : 'bg-ok'
+              }`}
+            />
             {formatEventType(event.eventName)}
-          </Badge>
+          </span>
         </TableCell>
-        <TableCell className='py-6 text-lg'>
-          <div className='flex items-center space-x-2'>
-            <span className='font-mono text-sm'>
+        <TableCell>
+          <div className='flex items-center gap-1.5'>
+            <span className='mono-addr !text-ink-2 text-[12px]'>
               {formatTransactionHash(event.transactionHash)}
             </span>
             <Button
               variant='ghost'
               size='sm'
               onClick={(e) => handleCopy(event.transactionHash, 'tx', e)}
-              className='p-1 h-auto hover:bg-gray-800'
+              className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
             >
               {copySuccess.tx ? (
-                <span className='text-green-400 text-xs'>✓</span>
+                <span className='text-ok-text text-xs'>✓</span>
               ) : (
                 <Copy className='w-3 h-3' />
               )}
             </Button>
           </div>
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {formatBlockNumber(event.blockNumber)}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell>
           <div className='flex flex-col'>
-            <span className='text-sm'>
+            <span className='text-[13px] num'>
               {formatEventTimestamp(event.blockTimestamp)}
             </span>
-            <span className='text-xs text-gray-400'>
+            <span className='text-[11px] text-ink-3'>
               {formatRelativeTime(event.blockTimestamp)}
             </span>
           </div>
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {bidAmount ? (
-            <span className='font-mono text-sm'>{bidAmount}</span>
+            <span>{bidAmount}</span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {size ? (
             <span>{formatSize(size)}</span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
       </TableRow>
@@ -269,7 +260,7 @@ const EventTypeFilter = React.memo(
   }) => {
     return (
       <div className='flex items-center gap-2 w-full sm:w-auto'>
-        <span className='text-sm text-gray-300 shrink-0'>Filter:</span>
+        <span className='text-[12.5px] text-ink-2 shrink-0'>Filter:</span>
         <Select
           value={currentFilter || 'all'}
           onValueChange={(value) =>
@@ -278,10 +269,10 @@ const EventTypeFilter = React.memo(
             )
           }
         >
-          <SelectTrigger className='flex-1 sm:flex-none sm:w-[180px] bg-black text-white border-gray-500 focus:border-white'>
+          <SelectTrigger className='flex-1 sm:flex-none sm:w-[170px] h-8 bg-surface-1 text-ink-1 border-hairline focus:border-accent-blue text-[12.5px]'>
             <SelectValue placeholder='All Events' />
           </SelectTrigger>
-          <SelectContent className='bg-black text-white border-gray-500'>
+          <SelectContent className='bg-surface-2 text-ink-1 border-hairline-strong'>
             <SelectItem value='all'>All Events</SelectItem>
             <SelectItem value={BlockchainEventType.INSERT}>
               Insert Events
@@ -297,100 +288,6 @@ const EventTypeFilter = React.memo(
 );
 
 EventTypeFilter.displayName = 'EventTypeFilter';
-
-// Pagination component - separate to improve performance
-const Pagination = React.memo(
-  ({
-    pagination,
-    handlePageChange,
-    handleItemsPerPageChange,
-  }: {
-    pagination: BlockchainEventsPagination;
-    handlePageChange: (page: number) => void;
-    handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  }) => {
-    return (
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 text-sm text-white'>
-        <div className='flex items-center gap-2'>
-          <span>Show</span>
-          <select
-            className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
-            value={pagination.limit}
-            onChange={handleItemsPerPageChange}
-          >
-            <option value='5'>5</option>
-            <option value='10'>10</option>
-          </select>
-          <span>entries</span>
-        </div>
-
-        <div className='flex flex-wrap items-center gap-2'>
-          <span className='whitespace-nowrap'>
-            {pagination.totalItems > 0
-              ? `Page ${pagination.page} of ${pagination.totalPages}`
-              : 'No results'}
-          </span>
-          <div className='flex flex-wrap gap-1'>
-            <Button
-              onClick={() => handlePageChange(1)}
-              disabled={!pagination.hasPreviousPage}
-              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              First
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              ◀
-            </Button>
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter(
-                (page) =>
-                  Math.abs(page - pagination.page) < 3 ||
-                  page === 1 ||
-                  page === pagination.totalPages
-              )
-              .map((page, idx, arr) => (
-                <React.Fragment key={page}>
-                  {idx > 0 && arr[idx - 1] !== page - 1 && (
-                    <span className='px-2 py-1'>...</span>
-                  )}
-                  <Button
-                    onClick={() => handlePageChange(page)}
-                    className={`px-2 py-1 rounded-md ${
-                      pagination.page === page
-                        ? 'bg-white text-black'
-                        : 'bg-black text-white'
-                    }`}
-                  >
-                    {page}
-                  </Button>
-                </React.Fragment>
-              ))}
-            <Button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              ▶
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.totalPages)}
-              disabled={!pagination.hasNextPage}
-              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              Last
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-);
-
-Pagination.displayName = 'Pagination';
 
 function BlockchainEventsTable({
   events: initialEvents,
@@ -462,34 +359,25 @@ function BlockchainEventsTable({
   return (
     <div className='overflow-hidden flex flex-col h-full'>
       <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8 flex-shrink-0'>
-        <h1 className='text-xl font-bold text-white'>Cache Events</h1>
-        <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto'>
+        <h1 className='page-title'>Cache Events</h1>
+        <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto'>
           <EventTypeFilter
             currentFilter={eventTypeFilter}
             onFilterChange={setEventTypeFilter}
           />
-          <div className='relative flex-1 sm:flex-none'>
-            <input
-              type='text'
-              placeholder='Search by contract address...'
-              className='p-2 pl-10 bg-black rounded-md w-full sm:w-80 border border-gray-500 focus:outline-none focus:border-white'
-              value={searchInput}
-              onChange={handleSearchInputChange}
-              onKeyDown={handleKeyDown}
-            />
-            <Button
-              className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
-              onClick={handleSearch}
-            >
-              <Search className='w-3 h-3' />
-            </Button>
-          </div>
+          <TableSearchInput
+            value={searchInput}
+            placeholder='Search by contract address...'
+            onChange={handleSearchInputChange}
+            onKeyDown={handleKeyDown}
+            onSearch={handleSearch}
+          />
         </div>
       </div>
 
       {isLoading && (
         <div className='flex justify-center items-center py-20'>
-          <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white'></div>
+          <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-ink-2'></div>
         </div>
       )}
 
@@ -506,7 +394,7 @@ function BlockchainEventsTable({
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
             {displayEvents.length > 0 ? (
-              <div className='flex flex-col gap-2 pb-4'>
+              <div className='app-card divide-y divide-hairline overflow-hidden mb-4'>
                 {displayEvents.map((event) => (
                   <EventMobileCard
                     key={`${event.transactionHash}-${event.logIndex}`}
@@ -527,17 +415,17 @@ function BlockchainEventsTable({
           {/* Desktop table */}
           <ScrollArea
             orientation='both'
-            className='hidden md:block h-[calc(100vh-350px)] min-h-[400px]'
+            className='hidden md:block h-[calc(100vh-320px)] min-h-[400px] app-card'
           >
             <div className='min-w-full'>
               <TooltipProvider>
                 <Table className='w-full'>
-                  <TableHeader className='bg-black text-white sticky top-0 z-10'>
-                    <TableRow className='h-20 hover:bg-transparent'>
-                      <TableHead className='font-medium text-base py-6'>
+                  <TableHeader className='bg-surface-1 sticky top-0 z-10'>
+                    <TableRow className='hover:bg-transparent'>
+                      <TableHead >
                         Event Type
                       </TableHead>
-                      <TableHead className='font-medium text-base py-6'>
+                      <TableHead >
                         Transaction Hash
                       </TableHead>
                       <SortableTableHead
@@ -556,7 +444,7 @@ function BlockchainEventsTable({
                       >
                         Timestamp
                       </SortableTableHead>
-                      <TableHead className='font-medium text-base py-6'>
+                      <TableHead >
                         <div className='flex items-center gap-2'>
                           Bid Amount
                           <Tooltip>
@@ -584,7 +472,7 @@ function BlockchainEventsTable({
                           </Tooltip>
                         </div>
                       </TableHead>
-                      <TableHead className='font-medium text-base py-6'>
+                      <TableHead >
                         Size
                       </TableHead>
                     </TableRow>
@@ -602,7 +490,7 @@ function BlockchainEventsTable({
                       <TableRow>
                         <TableCell
                           colSpan={6}
-                          className='text-center py-12 bg-black'
+                          className='text-center py-12'
                         >
                           <NoticeBanner
                             image={noContractsFoundImage}
@@ -623,10 +511,10 @@ function BlockchainEventsTable({
       {/* Only show pagination controls if we have pagination data and more than 0 items */}
       {!isLoading && !error && pagination.totalItems > 0 && (
         <div className='flex-shrink-0'>
-          <Pagination
+          <TablePagination
             pagination={pagination}
-            handlePageChange={handlePageChange}
-            handleItemsPerPageChange={handleItemsPerPageChange}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
           />
         </div>
       )}

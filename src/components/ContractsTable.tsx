@@ -9,26 +9,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import {
   useContracts,
   ContractSortField,
   SortOrder,
 } from '@/hooks/useContracts';
 import { useAuthentication } from '@/context/AuthenticationProvider';
-import { Contract, PaginationMeta } from '@/services/contractService';
+import { Contract } from '@/services/contractService';
 import {
   formatSize,
   formatDate,
   formatRiskLevel,
-  getRiskBadgeVariant,
   formatRoundedEth,
 } from '@/utils/formatting';
 import authRequiredImage from 'public/auth-required.svg';
 import noContractsFoundImage from 'public/no-contracts-found.svg';
 import sthWentWrongImage from 'public/sth-went-wrong.svg';
 import NoticeBanner from '@/components/NoticeBanner';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from './ui/button';
 import { formatEther } from 'viem';
@@ -42,6 +40,8 @@ import ActivationBadge from '@/components/ActivationBadge';
 import ActivationFilters, {
   ActivationFilter,
 } from '@/components/ActivationFilters';
+import TablePagination from '@/components/TablePagination';
+import TableSearchInput from '@/components/TableSearchInput';
 import {
   backendProgramTimeLeft,
   buildActivationInfo,
@@ -90,36 +90,36 @@ const SortableTableHead = React.memo(
 
       if (!isSorted) {
         return (
-          <span className='ml-1 text-gray-500'>
-            <ArrowUpDown className='w-4 h-4' />
+          <span className='ms-1 text-ink-3 opacity-60'>
+            <ArrowUpDown className='w-3.5 h-3.5' />
           </span>
         );
       }
 
       if (currentSortOrder === 'ASC') {
         return (
-          <span className='ml-1 text-green-400'>
-            <ArrowUp className='w-4 h-4' />
+          <span className='ms-1 text-accent-blue'>
+            <ArrowUp className='w-3.5 h-3.5' />
           </span>
         );
       }
 
       if (currentSortOrder === 'DESC') {
         return (
-          <span className='ml-1 text-red-400'>
-            <ArrowDown className='w-4 h-4' />
+          <span className='ms-1 text-accent-blue'>
+            <ArrowDown className='w-3.5 h-3.5' />
           </span>
         );
       }
 
-      return <span className='ml-1 text-gray-500 opacity-50'>↕</span>;
+      return <span className='ms-1 text-ink-3 opacity-50'>↕</span>;
     };
 
     return (
       <TableHead
         onClick={sortField ? handleSort : undefined}
-        className={`font-medium text-base py-6 ${
-          sortField ? 'cursor-pointer hover:bg-gray-900' : ''
+        className={`${
+          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
         } ${props.className || ''}`}
       >
         <div className='flex items-center'>
@@ -164,103 +164,88 @@ const ContractRow = React.memo(
     };
 
     return (
-      <TableRow
-        className='h-20 cursor-pointer hover:bg-gray-900 transition-colors hover:bg-gradient-to-r hover:from-[#0B436E] hover:to-[#1581D4] transition-colors duration-300'
-        onClick={handleClick}
-      >
-        <TableCell className='py-6 text-lg w-[250px]'>
-          {viewType === 'my-contracts' && contract.name ? (
-            <div className='flex flex-col'>
-              <span className='text-lg font-medium'>{contract.name}</span>
-              <span className='text-sm text-gray-400'>{contract.address}</span>
-            </div>
-          ) : contract.isSavedByUser ? (
-            <div className='flex flex-col'>
-              <span className='text-lg font-medium'>
-                {contract.savedContractName}
+      <TableRow className='cursor-pointer' onClick={handleClick}>
+        <TableCell className='w-[260px] max-w-[260px]'>
+          {(viewType === 'my-contracts' && contract.name) ||
+          contract.isSavedByUser ? (
+            <div className='flex flex-col min-w-0'>
+              <span className='text-[13px] font-medium text-ink-1 truncate'>
+                {viewType === 'my-contracts' && contract.name
+                  ? contract.name
+                  : contract.savedContractName}
               </span>
-              <span className='text-sm text-gray-400'>{contract.address}</span>
+              <span className='mono-addr truncate'>{contract.address}</span>
             </div>
           ) : (
-            contract.address
+            <span className='mono-addr !text-ink-2 text-[12px] truncate block'>
+              {contract.address}
+            </span>
           )}
         </TableCell>
-        <TableCell className='py-6'>
-          <ActivationBadge info={activation} />
+        <TableCell>
+          <ActivationBadge info={activation} compact />
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {contract.lastBid ? (
             formatRoundedEth(formatEther(BigInt(contract.lastBid))) + ' ETH'
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {contract.effectiveBid ? (
             formatRoundedEth(formatEther(BigInt(contract.effectiveBid))) +
             ' ETH'
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {formatSize(contract.bytecode.size)}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {contract.minBid ? (
             formatRoundedEth(formatEther(BigInt(contract.minBid))) + ' ETH'
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell>
           {contract.evictionRisk ? (
-            <Badge
-              variant={getRiskBadgeVariant(contract.evictionRisk.riskLevel)}
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
+            <span className='inline-flex items-center gap-1.5 text-[12.5px] text-ink-2'>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  contract.evictionRisk.riskLevel === 'high'
+                    ? 'bg-crit'
+                    : contract.evictionRisk.riskLevel === 'medium'
+                    ? 'bg-warn'
+                    : 'bg-ok'
+                }`}
+              />
               {formatRiskLevel(contract.evictionRisk.riskLevel)}
-            </Badge>
+            </span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='text-ink-3'>—</span>
           )}
         </TableCell>
-        <TableCell className='py-6 text-lg'>
+        <TableCell className='text-end num'>
           {contract.totalBidInvestment
             ? formatRoundedEth(
                 formatEther(BigInt(contract.totalBidInvestment))
               ) + ' ETH'
-            : 'N/A'}
+            : '—'}
         </TableCell>
-        <TableCell className='py-6'>
-          <div className='flex flex-col'>
-            <Badge
-              variant={contract.bytecode.isCached ? 'secondary' : 'outline'}
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
+        <TableCell>
+          <div className='flex flex-col gap-0.5'>
+            <span className='pill pill-muted w-fit'>
+              <span
+                className={`pill-dot ${
+                  contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'
+                }`}
+              />
               {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
-            </Badge>
-            <span className='text-sm text-gray-400 mt-1'>
+            </span>
+            <span className='text-[11px] text-ink-3'>
               {formatDate(contract.bidBlockTimestamp)}
             </span>
           </div>
@@ -268,9 +253,11 @@ const ContractRow = React.memo(
         {viewType === 'explore-contracts' &&
           !contract.isSavedByUser &&
           isAuthenticated && (
-            <TableCell className='py-6'>
+            <TableCell>
               <Button
-                className='w-10 h-10 flex items-center justify-center bg-black border border-white text-white rounded-md'
+                variant='outline'
+                size='icon'
+                className='size-7 text-base hover:text-accent-blue hover:border-accent-blue'
                 onClick={handleAddContractClick}
               >
                 +
@@ -278,13 +265,8 @@ const ContractRow = React.memo(
             </TableCell>
           )}
         {viewType === 'explore-contracts' && contract.isSavedByUser && (
-          <TableCell className='py-6'>
-            <Badge
-              variant='secondary'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              Added
-            </Badge>
+          <TableCell>
+            <span className='pill pill-muted'>Added</span>
           </TableCell>
         )}
       </TableRow>
@@ -293,100 +275,6 @@ const ContractRow = React.memo(
 );
 
 ContractRow.displayName = 'ContractRow';
-
-// Pagination component - separate to improve performance
-const Pagination = React.memo(
-  ({
-    pagination,
-    handlePageChange,
-    handleItemsPerPageChange,
-  }: {
-    pagination: PaginationMeta;
-    handlePageChange: (page: number) => void;
-    handleItemsPerPageChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  }) => {
-    return (
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 text-sm text-white'>
-        <div className='flex items-center gap-2'>
-          <span>Show</span>
-          <select
-            className='bg-black text-white rounded-md px-2 py-1 focus:outline-none'
-            value={pagination.limit}
-            onChange={handleItemsPerPageChange}
-          >
-            <option value='5'>5</option>
-            <option value='10'>10</option>
-          </select>
-          <span>entries</span>
-        </div>
-
-        <div className='flex flex-wrap items-center gap-2'>
-          <span className='whitespace-nowrap'>
-            {pagination.totalItems > 0
-              ? `Page ${pagination.page} of ${pagination.totalPages}`
-              : 'No results'}
-          </span>
-          <div className='flex flex-wrap gap-1'>
-            <Button
-              onClick={() => handlePageChange(1)}
-              disabled={!pagination.hasPreviousPage}
-              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              First
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={!pagination.hasPreviousPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              ◀
-            </Button>
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter(
-                (page) =>
-                  Math.abs(page - pagination.page) < 3 ||
-                  page === 1 ||
-                  page === pagination.totalPages
-              )
-              .map((page, idx, arr) => (
-                <React.Fragment key={page}>
-                  {idx > 0 && arr[idx - 1] !== page - 1 && (
-                    <span className='px-2 py-1'>...</span>
-                  )}
-                  <Button
-                    onClick={() => handlePageChange(page)}
-                    className={`px-2 py-1 rounded-md ${
-                      pagination.page === page
-                        ? 'bg-black text-white'
-                        : 'bg-black text-white'
-                    }`}
-                  >
-                    {page}
-                  </Button>
-                </React.Fragment>
-              ))}
-            <Button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={!pagination.hasNextPage}
-              className='px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              ▶
-            </Button>
-            <Button
-              onClick={() => handlePageChange(pagination.totalPages)}
-              disabled={!pagination.hasNextPage}
-              className='hidden sm:inline-flex px-2 py-1 bg-black text-white rounded-md disabled:opacity-50'
-            >
-              Last
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-);
-
-Pagination.displayName = 'Pagination';
 
 function ContractsTable({
   contracts: initialContracts,
@@ -505,13 +393,13 @@ function ContractsTable({
 
   return (
     <div className='overflow-hidden flex flex-col h-full'>
-      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8 flex-shrink-0'>
-        <h1 className='text-xl font-bold text-white'>
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5 flex-shrink-0'>
+        <h1 className='page-title'>
           {viewType === 'my-contracts' ? 'My Contracts' : 'Explore Contracts'}
         </h1>
         {viewType === 'my-contracts' ? (
           <Button
-            className='w-full sm:w-auto px-4 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2'
+            className='w-full sm:w-auto'
             onClick={onAddNewContract}
           >
             <span>+</span>
@@ -519,26 +407,14 @@ function ContractsTable({
           </Button>
         ) : (
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto'>
-            <div className='relative flex-1 sm:flex-none'>
-              <input
-                type='text'
-                placeholder='Search contracts...'
-                className='p-2 pl-10 bg-black rounded-md w-full sm:w-60 border border-gray-500 focus:outline-none focus:border-white'
-                value={searchInput}
-                onChange={handleSearchInputChange}
-                onKeyDown={handleKeyDown}
-              />
-              <Button
-                className='absolute left-1 top-1 p-3 bg-transparent border-none hover:bg-transparent'
-                onClick={handleSearch}
-              >
-                <Search className='w-3 h-3' />
-              </Button>
-            </div>
-            <Button
-              className='w-full sm:w-auto px-4 py-2 bg-black text-white border border-white rounded-md flex items-center justify-center gap-2'
-              onClick={onAddNewContract}
-            >
+            <TableSearchInput
+              value={searchInput}
+              placeholder='Search contracts...'
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
+              onSearch={handleSearch}
+            />
+            <Button className='w-full sm:w-auto' onClick={onAddNewContract}>
               <span>+</span>
               <span>Add Contract</span>
             </Button>
@@ -548,7 +424,7 @@ function ContractsTable({
 
       {isLoading && (
         <div className='flex justify-center items-center py-20'>
-          <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white'></div>
+          <div className='animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-ink-2'></div>
         </div>
       )}
 
@@ -571,7 +447,7 @@ function ContractsTable({
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
             {displayRows.length > 0 ? (
-              <div className='flex flex-col gap-2 pb-4'>
+              <div className='app-card divide-y divide-hairline overflow-hidden mb-4'>
                 {displayRows.map(({ contract, activation }) => (
                   <ContractMobileCard
                     key={contract.address}
@@ -594,12 +470,15 @@ function ContractsTable({
           </div>
 
           {/* Desktop table */}
-          <ScrollArea className='hidden md:block h-[calc(100vh-350px)] min-h-[400px]'>
+          <ScrollArea
+            orientation='both'
+            className='hidden md:block h-[calc(100vh-320px)] min-h-[400px] app-card'
+          >
             <Table className='w-full'>
-              <TableHeader className='bg-black text-white sticky top-0 z-10'>
-                <TableRow className='h-20 hover:bg-transparent'>
+              <TableHeader className='bg-surface-1 sticky top-0 z-10'>
+                <TableRow className='hover:bg-transparent'>
                   <SortableTableHead
-                    className='w-[250px]'
+                    className='w-[260px]'
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
@@ -618,6 +497,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
+                    className='justify-end-safe [&>div]:justify-end'
                   >
                     Bid
                   </SortableTableHead>
@@ -653,6 +533,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
+                    className='[&>div]:justify-end'
                   >
                     Size
                   </SortableTableHead>
@@ -660,6 +541,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
+                    className='[&>div]:justify-end'
                   >
                     Min. Bid
                   </SortableTableHead>
@@ -675,6 +557,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
+                    className='[&>div]:justify-end'
                   >
                     Total Spent
                   </SortableTableHead>
@@ -686,12 +569,10 @@ function ContractsTable({
                   >
                     Cache Status
                   </SortableTableHead>
-                  {viewType === 'explore-contracts' && (
-                    <TableHead className='font-medium text-base py-6'></TableHead>
-                  )}
+                  {viewType === 'explore-contracts' && <TableHead />}
                 </TableRow>
               </TableHeader>
-              <TableBody className='text-white [&>tr]:py-2'>
+              <TableBody className='text-ink-1'>
                 {displayRows.length > 0 ? (
                   displayRows.map(({ contract, activation }) => (
                     <ContractRow
@@ -708,7 +589,7 @@ function ContractsTable({
                   <TableRow>
                     <TableCell
                       colSpan={viewType === 'explore-contracts' ? 10 : 9}
-                      className='text-center py-12 bg-black'
+                      className='text-center py-12'
                     >
                       <NoticeBanner
                         image={noContractsFoundImage}
@@ -727,10 +608,10 @@ function ContractsTable({
       {/* Only show pagination controls if we have pagination data and more than 0 items */}
       {!isLoading && !error && pagination.totalItems > 0 && (
         <div className='flex-shrink-0'>
-          <Pagination
+          <TablePagination
             pagination={pagination}
-            handlePageChange={handlePageChange}
-            handleItemsPerPageChange={handleItemsPerPageChange}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
           />
         </div>
       )}

@@ -557,27 +557,12 @@ export function AutomatedBiddingSection({
   };
 
   return (
-    <div
-      className='relative rounded-md p-4 overflow-hidden'
-      style={{
-        background: 'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 103.8%)',
-      }}
-    >
-      {/* White noise texture overlay */}
-      <div
-        className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-          backgroundSize: '100px 100px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
-
+    <div className='relative rounded-[10px] p-4 overflow-hidden bg-surface-2 border border-hairline'>
       {/* Gas Price Warning */}
       {isGasPriceHigh && (
-        <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center relative z-10'>
-          <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
-          <span className='text-sm'>
+        <div className='bg-crit-soft text-crit-text p-2 rounded-md mb-3 flex items-center relative z-10'>
+          <AlertTriangle className='w-4 h-4 me-2 shrink-0' />
+          <span className='text-[12px]'>
             Warning: Network fees are extremely high{' '}
             {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
             lower gas prices.
@@ -587,31 +572,35 @@ export function AutomatedBiddingSection({
 
       <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
         <div className='min-w-0 flex-1'>
-          <p className='font-bold'>Automated Bidding Configuration</p>
-          <p className='text-sm text-blue-200'>
+          <p className='text-[13px] font-semibold text-ink-1'>
+            Automated Bidding Configuration
+          </p>
+          <p className='text-[11.5px] text-ink-3'>
             Configure automated bidding to maintain your position in the cache
             without manual intervention.
           </p>
         </div>
         <button
           onClick={() => setShowAutomationPanel(!showAutomationPanel)}
-          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
+          className='flex items-center justify-center w-8 h-8 rounded-lg border border-hairline bg-transparent text-ink-2 hover:text-ink-1 hover:border-hairline-strong transition-colors'
           disabled={isTransactionInProgress}
         >
           {showAutomationPanel ? (
-            <ChevronUp className='w-5 h-5 text-white' />
+            <ChevronUp className='w-4 h-4' />
           ) : (
-            <ChevronDown className='w-5 h-5 text-white' />
+            <ChevronDown className='w-4 h-4' />
           )}
         </button>
       </div>
 
       {/* Display user balance */}
-      <div className='mt-2 text-sm text-white relative z-10'>
+      <div className='mt-2 text-[12px] text-ink-2 relative z-10'>
         <div className='flex items-center justify-between'>
           <div>
             <span>Automation balance: </span>
-            <span className='font-semibold'>{formattedUserBalance} ETH</span>
+            <span className='font-medium text-ink-1 num'>
+              {formattedUserBalance} ETH
+            </span>
           </div>
         </div>
 
@@ -620,14 +609,16 @@ export function AutomatedBiddingSection({
           <div className='flex items-center justify-left mt-1'>
             <div>
               <span>Automation is currently: </span>
-              <span className='font-semibold'>
+              <span className='font-medium text-ink-1'>
                 {automatedBidding ? 'Enabled' : 'Disabled'}
               </span>
             </div>
             <div className='flex items-center px-2'>
               <Button
+                variant='outline'
+                size='sm'
                 onClick={handleToggleAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
+                className='mx-2 h-6 px-2'
                 disabled={isTransactionInProgress || isSuccess}
               >
                 {isTransactionInProgress ? (
@@ -675,7 +666,9 @@ export function AutomatedBiddingSection({
               <>
                 <div className='self-center'>
                   <div className='flex items-center space-x-2'>
-                    <p className='font-bold'>Automation Funding</p>
+                    <p className='text-[13px] font-medium text-ink-2'>
+                      Automation Funding
+                    </p>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className='w-4 h-4 cursor-help' />
@@ -702,21 +695,21 @@ export function AutomatedBiddingSection({
                         placeholder='Enter amount'
                         value={fundingValue}
                         onChange={handleFundingChange}
-                        className={`pr-12 bg-white border-none text-gray-500 ${
-                          fundingError ? 'border-red-500' : ''
+                        className={`pe-12 h-9 bg-surface-1 border-hairline rounded-lg text-[13px] text-ink-1 placeholder:text-ink-3 focus:border-accent-blue ${
+                          fundingError ? 'border-crit' : ''
                         } ${
                           isTransactionInProgress
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                            ? 'cursor-not-allowed opacity-60'
                             : ''
                         }`}
                         disabled={isTransactionInProgress}
                       />
-                      <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                      <div className='absolute end-3 top-0 bottom-0 flex items-center pointer-events-none text-ink-3'>
                         ETH
                       </div>
                     </div>
                     {fundingError && (
-                      <div className='text-white text-xs italic text-left mt-1'>
+                      <div className='text-crit-text text-[11px] text-start mt-1'>
                         {fundingError}
                       </div>
                     )}
@@ -729,7 +722,9 @@ export function AutomatedBiddingSection({
             {/* Row 2: Maximum Bid Amount */}
             <div className='self-center'>
               <div className='flex items-center space-x-2'>
-                <p className='font-bold'>Maximum Bid Amount</p>
+                <p className='text-[13px] font-medium text-ink-2'>
+                  Maximum Bid Amount
+                </p>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className='w-4 h-4 cursor-help' />
@@ -759,21 +754,21 @@ export function AutomatedBiddingSection({
                     placeholder='Enter amount'
                     value={inputValue}
                     onChange={handleInputChange}
-                    className={`pr-12 bg-white border-none text-gray-500 ${
-                      inputError ? 'border-red-500' : ''
+                    className={`pe-12 h-9 bg-surface-1 border-hairline rounded-lg text-[13px] text-ink-1 placeholder:text-ink-3 focus:border-accent-blue ${
+                      inputError ? 'border-crit' : ''
                     } ${
                       isTransactionInProgress
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                        ? 'cursor-not-allowed opacity-60'
                         : ''
                     }`}
                     disabled={isTransactionInProgress}
                   />
-                  <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                  <div className='absolute end-3 top-0 bottom-0 flex items-center pointer-events-none text-ink-3'>
                     ETH
                   </div>
                 </div>
                 {inputError && (
-                  <div className='text-white text-xs italic text-left mt-1'>
+                  <div className='text-crit-text text-[11px] text-start mt-1'>
                     {inputError}
                   </div>
                 )}
@@ -792,11 +787,11 @@ export function AutomatedBiddingSection({
                   onCheckedChange={(checked) =>
                     setDisclaimerChecked(checked === true)
                   }
-                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                  className='mt-1 data-[state=checked]:bg-accent-blue data-[state=checked]:text-white border-hairline-strong'
                 />
                 <Label
                   htmlFor='disclaimer'
-                  className='text-sm font-medium leading-tight'
+                  className='text-[11.5px] text-ink-3 leading-tight'
                 >
                   I understand this is an experimental feature pending audit
                   completion, and I accept the associated risks of using
@@ -806,7 +801,7 @@ export function AutomatedBiddingSection({
               </div>
               <Button
                 onClick={handleSetAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                className='shrink-0'
                 disabled={
                   isTransactionInProgress || isSuccess || !disclaimerChecked
                 }
@@ -832,11 +827,11 @@ export function AutomatedBiddingSection({
                   onCheckedChange={(checked) =>
                     setDisclaimerChecked(checked === true)
                   }
-                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                  className='mt-1 data-[state=checked]:bg-accent-blue data-[state=checked]:text-white border-hairline-strong'
                 />
                 <Label
                   htmlFor='disclaimer'
-                  className='text-sm font-medium leading-tight'
+                  className='text-[11.5px] text-ink-3 leading-tight'
                 >
                   I understand this is an experimental feature pending audit
                   completion, and I accept the associated risks of using
@@ -846,7 +841,7 @@ export function AutomatedBiddingSection({
               </div>
               <Button
                 onClick={handleUpdateAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                className='shrink-0'
                 disabled={
                   isTransactionInProgress || isSuccess || !disclaimerChecked
                 }
