@@ -34,24 +34,19 @@ function PillFilterGroup<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div
-      className='flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-1.5'
-      role='group'
-      aria-label={`${label} status`}
-    >
-      <span className='text-[11px] uppercase tracking-wider text-ink-3 sm:me-1'>
+    <div className='flex items-center gap-1.5 flex-wrap'>
+      <span className='text-[11px] uppercase tracking-wider text-ink-3 me-1'>
         {label}
       </span>
-      <div className='flex w-full items-center rounded-lg border border-hairline bg-surface-1 p-[3px] sm:w-auto'>
+      <div className='inline-flex items-center rounded-lg border border-hairline bg-surface-1 p-[3px]'>
         {options.map((opt) => {
           const selected = value === opt.value;
           return (
             <button
               key={opt.value}
               type='button'
-              aria-pressed={selected}
               onClick={() => onChange(opt.value)}
-              className={`inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors sm:h-6.5 sm:flex-none sm:px-2.5 ${
+              className={`h-6.5 inline-flex items-center gap-1.5 px-2.5 text-xs rounded-md transition-colors ${
                 selected
                   ? 'bg-surface-3 text-ink-1 font-medium'
                   : 'text-ink-2 hover:text-ink-1'
@@ -76,10 +71,7 @@ interface ActivationProps {
   onChange: (v: ActivationFilter) => void;
 }
 
-export default function ActivationFilters({
-  value,
-  onChange,
-}: ActivationProps) {
+export default function ActivationFilters({ value, onChange }: ActivationProps) {
   return (
     <PillFilterGroup
       label='Activation'

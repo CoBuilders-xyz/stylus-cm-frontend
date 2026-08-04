@@ -37,11 +37,6 @@ import {
 } from '@/components/ui/tooltip';
 import ContractMobileCard from '@/components/ContractMobileCard';
 import ActivationBadge from '@/components/ActivationBadge';
-import ActivationFilters, {
-  ActivationFilter,
-  CacheFilter,
-  CacheFilters,
-} from '@/components/ActivationFilters';
 import ContractStateIndicator from '@/components/ContractStateIndicator';
 import TablePagination from '@/components/TablePagination';
 import TableSearchInput from '@/components/TableSearchInput';
@@ -298,12 +293,7 @@ function ContractsTable({
 
   const { isAuthenticated } = useAuthentication();
   const [searchInput, setSearchInput] = useState('');
-  const [activationFilter, setActivationFilter] =
-    useState<ActivationFilter>('all');
-  const [cacheFilter, setCacheFilter] = useState<CacheFilter>('all');
 
-  // Source contracts before activation filtering — keep this in a separate
-  // memo so downstream derivations don't re-run when only the filter changes.
   const sourceContracts = useMemo(
     () => (initialContracts?.length ? initialContracts : contracts),
     [initialContracts, contracts]
@@ -326,39 +316,7 @@ function ContractsTable({
     [sourceContracts]
   );
 
-  const displayRows = useMemo(() => {
-    return rowsWithActivation.filter(({ contract, activation }) => {
-      const matchesCache =
-        cacheFilter === 'all' ||
-        (cacheFilter === 'cached' && contract.bytecode.isCached) ||
-        (cacheFilter === 'uncached' && !contract.bytecode.isCached);
-      if (!matchesCache) return false;
-      if (activationFilter === 'all') return true;
-      // `error` rows belong to the same UX bucket as `inactive`: both need
-      // the user to activate. Hiding them under "Inactive" would make
-      // failed activations invisible to anyone scanning by status.
-      if (activationFilter === 'inactive') {
-        return activation.status === 'inactive' || activation.status === 'error';
-      }
-      return activation.status === activationFilter;
-    });
-  }, [rowsWithActivation, activationFilter, cacheFilter]);
-
-  const handleActivationFilterChange = useCallback(
-    (value: ActivationFilter) => {
-      setActivationFilter(value);
-      goToPage(1);
-    },
-    [goToPage]
-  );
-
-  const handleCacheFilterChange = useCallback(
-    (value: CacheFilter) => {
-      setCacheFilter(value);
-      goToPage(1);
-    },
-    [goToPage]
-  );
+  const displayRows = rowsWithActivation;
 
   // Handle page changes through the hook
   const handlePageChange = useCallback(
@@ -457,16 +415,6 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
-          <div className='mb-4 flex flex-wrap items-center gap-x-5 gap-y-3 flex-shrink-0'>
-            <CacheFilters
-              value={cacheFilter}
-              onChange={handleCacheFilterChange}
-            />
-            <ActivationFilters
-              value={activationFilter}
-              onChange={handleActivationFilterChange}
-            />
-          </div>
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
             {displayRows.length > 0 ? (
