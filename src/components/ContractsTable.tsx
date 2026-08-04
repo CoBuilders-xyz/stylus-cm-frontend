@@ -37,9 +37,7 @@ import {
 } from '@/components/ui/tooltip';
 import ContractMobileCard from '@/components/ContractMobileCard';
 import ActivationBadge from '@/components/ActivationBadge';
-import ActivationFilters, {
-  ActivationFilter,
-} from '@/components/ActivationFilters';
+import ContractStateIndicator from '@/components/ContractStateIndicator';
 import TablePagination from '@/components/TablePagination';
 import TableSearchInput from '@/components/TableSearchInput';
 import {
@@ -80,9 +78,25 @@ const SortableTableHead = React.memo(
       }
     }, [sortField, onSort]);
 
+    const handleKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLTableCellElement>) => {
+        if (sortField && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          handleSort();
+        }
+      },
+      [handleSort, sortField]
+    );
+
     // Determine if this column is currently sorted
     const isSorted =
       sortField && currentSortBy.length > 0 && currentSortBy[0] === sortField;
+    const ariaSort =
+      !isSorted || !currentSortOrder
+        ? 'none'
+        : currentSortOrder === 'ASC'
+          ? 'ascending'
+          : 'descending';
 
     // Function to render the appropriate sort icon
     const renderSortIcon = () => {
@@ -118,8 +132,13 @@ const SortableTableHead = React.memo(
     return (
       <TableHead
         onClick={sortField ? handleSort : undefined}
+        onKeyDown={sortField ? handleKeyDown : undefined}
+        tabIndex={sortField ? 0 : undefined}
+        aria-sort={sortField ? ariaSort : undefined}
         className={`${
-          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
+          sortField
+            ? 'cursor-pointer hover:text-ink-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent-blue'
+            : ''
         } ${props.className || ''}`}
       >
         <div className='flex items-center'>
@@ -183,14 +202,16 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell>
-          <ActivationBadge info={activation} compact />
+          <ContractStateIndicator
+            label={contract.bytecode.isCached ? 'Cached' : 'Not cached'}
+            description={formatDate(contract.bidBlockTimestamp)}
+            dotClassName={contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'}
+            labelClassName={contract.bytecode.isCached ? 'text-ok-text' : 'text-ink-2'}
+            compact
+          />
         </TableCell>
-        <TableCell className='text-end num'>
-          {contract.lastBid ? (
-            formatRoundedEth(formatEther(BigInt(contract.lastBid))) + ' ETH'
-          ) : (
-            <span className='text-ink-3'>—</span>
-          )}
+        <TableCell>
+          <ActivationBadge info={activation} compact />
         </TableCell>
         <TableCell className='text-end num'>
           {contract.effectiveBid ? (
@@ -201,7 +222,11 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell className='text-end num'>
-          {formatSize(contract.bytecode.size)}
+          {contract.lastBid ? (
+            formatRoundedEth(formatEther(BigInt(contract.lastBid))) + ' ETH'
+          ) : (
+            <span className='text-ink-3'>—</span>
+          )}
         </TableCell>
         <TableCell className='text-end num'>
           {contract.minBid ? (
@@ -229,26 +254,14 @@ const ContractRow = React.memo(
           )}
         </TableCell>
         <TableCell className='text-end num'>
+          {formatSize(contract.bytecode.size)}
+        </TableCell>
+        <TableCell className='text-end num'>
           {contract.totalBidInvestment
             ? formatRoundedEth(
                 formatEther(BigInt(contract.totalBidInvestment))
               ) + ' ETH'
             : '—'}
-        </TableCell>
-        <TableCell>
-          <div className='flex flex-col gap-0.5'>
-            <span className='pill pill-muted w-fit'>
-              <span
-                className={`pill-dot ${
-                  contract.bytecode.isCached ? 'bg-ok' : 'bg-ink-3'
-                }`}
-              />
-              {contract.bytecode.isCached ? 'Cached' : 'Not Cached'}
-            </span>
-            <span className='text-[11px] text-ink-3'>
-              {formatDate(contract.bidBlockTimestamp)}
-            </span>
-          </div>
         </TableCell>
         {viewType === 'explore-contracts' &&
           !contract.isSavedByUser &&
@@ -301,11 +314,7 @@ function ContractsTable({
 
   const { isAuthenticated } = useAuthentication();
   const [searchInput, setSearchInput] = useState('');
-  const [activationFilter, setActivationFilter] =
-    useState<ActivationFilter>('all');
 
-  // Source contracts before activation filtering — keep this in a separate
-  // memo so downstream derivations don't re-run when only the filter changes.
   const sourceContracts = useMemo(
     () => (initialContracts?.length ? initialContracts : contracts),
     [initialContracts, contracts]
@@ -328,18 +337,7 @@ function ContractsTable({
     [sourceContracts]
   );
 
-  const displayRows = useMemo(() => {
-    if (activationFilter === 'all') return rowsWithActivation;
-    return rowsWithActivation.filter(({ activation }) => {
-      // `error` rows belong to the same UX bucket as `inactive`: both need
-      // the user to activate. Hiding them under "Inactive" would make
-      // failed activations invisible to anyone scanning by status.
-      if (activationFilter === 'inactive') {
-        return activation.status === 'inactive' || activation.status === 'error';
-      }
-      return activation.status === activationFilter;
-    });
-  }, [rowsWithActivation, activationFilter]);
+  const displayRows = rowsWithActivation;
 
   // Handle page changes through the hook
   const handlePageChange = useCallback(
@@ -438,12 +436,6 @@ function ContractsTable({
 
       {!isLoading && !error && (
         <div className='w-full flex-1 flex flex-col min-h-0'>
-          <div className='mb-4 flex-shrink-0'>
-            <ActivationFilters
-              value={activationFilter}
-              onChange={setActivationFilter}
-            />
-          </div>
           {/* Mobile card list */}
           <div className='md:hidden flex-1 min-h-0 overflow-y-auto'>
             {displayRows.length > 0 ? (
@@ -486,6 +478,14 @@ function ContractsTable({
                     Contract
                   </SortableTableHead>
                   <SortableTableHead
+                    sortField={ContractSortField.IS_CACHED}
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSort={setSorting}
+                  >
+                    Cache Status
+                  </SortableTableHead>
+                  <SortableTableHead
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
@@ -493,18 +493,10 @@ function ContractsTable({
                     Activation
                   </SortableTableHead>
                   <SortableTableHead
-                    sortField={ContractSortField.LAST_BID}
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='justify-end-safe [&>div]:justify-end'
-                  >
-                    Bid
-                  </SortableTableHead>
-                  <SortableTableHead
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
+                    className='text-end [&>div]:justify-end'
                   >
                     <div className='flex items-center gap-2'>
                       Effective Bid
@@ -529,19 +521,19 @@ function ContractsTable({
                     </div>
                   </SortableTableHead>
                   <SortableTableHead
-                    sortField={ContractSortField.BYTECODE_SIZE}
+                    sortField={ContractSortField.LAST_BID}
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='[&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
-                    Size
+                    Bid
                   </SortableTableHead>
                   <SortableTableHead
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='[&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
                     Min. Bid
                   </SortableTableHead>
@@ -553,21 +545,22 @@ function ContractsTable({
                     Eviction Risk
                   </SortableTableHead>
                   <SortableTableHead
+                    sortField={ContractSortField.BYTECODE_SIZE}
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSort={setSorting}
+                    className='text-end [&>div]:justify-end'
+                  >
+                    Size
+                  </SortableTableHead>
+                  <SortableTableHead
                     sortField={ContractSortField.TOTAL_BID_INVESTMENT}
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='[&>div]:justify-end'
+                    className='text-end [&>div]:justify-end'
                   >
                     Total Spent
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortField={ContractSortField.IS_CACHED}
-                    currentSortBy={sortBy}
-                    currentSortOrder={sortOrder}
-                    onSort={setSorting}
-                  >
-                    Cache Status
                   </SortableTableHead>
                   {viewType === 'explore-contracts' && <TableHead />}
                 </TableRow>

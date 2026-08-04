@@ -31,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import BiddingHistory, { BiddingHistoryItem } from './BiddingHistory';
 import ContractInfo from './ContractInfo';
 import RemoveConfirmationModal from './RemoveConfirmationModal';
+import { ContractAlertsOverview } from './ContractAlertsSummary';
 import EditableContractName, {
   EditableContractNameRef,
 } from './EditableContractName';
@@ -629,6 +630,11 @@ export default function ContractDetails({
                 </TabsTrigger>
               </TabsList>
 
+              <ContractAlertsOverview
+                alerts={contractData.alerts}
+                onManageAlerts={handleContractAlerts}
+              />
+
               <TabsContent value='cache'>
                 <CacheHero
                   isCached={!!contractData?.bytecode.isCached}
@@ -639,7 +645,6 @@ export default function ContractDetails({
 
                 <ContractInfo
                   contractData={contractData}
-                  onManageAlerts={handleContractAlerts}
                   isLoading={isLoadingContract}
                   viewType='my-contracts'
                 />
@@ -733,7 +738,6 @@ export default function ContractDetails({
 
                 <ContractInfo
                   contractData={contractData}
-                  onManageAlerts={handleContractAlerts}
                   isLoading={isLoadingContract}
                   viewType='explore-contracts'
                 />

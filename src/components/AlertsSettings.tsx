@@ -1003,6 +1003,8 @@ export default function AlertsSettings({
               'opacity-50 pointer-events-none'
           )}
         >
+          <h4 className='tile-label mb-1'>Cache alerts</h4>
+
           {/* Eviction Alerts */}
           <div className='bg-surface-2 border border-hairline rounded-[10px] p-4'>
             <div className='flex items-center justify-between mb-2'>
