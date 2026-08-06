@@ -117,6 +117,11 @@ export default function ExploreContractsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel={
+          activePanelContent === 'details'
+            ? 'Contract details'
+            : 'Add contract'
+        }
         lockBodyScrollOnMobile={activePanelContent === 'details'}
       >
         {isPanelOpen &&

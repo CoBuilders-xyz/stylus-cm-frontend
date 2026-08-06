@@ -175,6 +175,14 @@ const ContractRow = React.memo(
       }
     };
 
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>) => {
+      if (event.target !== event.currentTarget) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleClick();
+      }
+    };
+
     const handleAddContractClick = (e: React.MouseEvent) => {
       e.stopPropagation(); // Prevent row click event
       if (onAddContract) {
@@ -183,7 +191,18 @@ const ContractRow = React.memo(
     };
 
     return (
-      <TableRow className='cursor-pointer' onClick={handleClick}>
+      <TableRow
+        className='cursor-pointer outline-none focus-visible:bg-surface-2 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-blue/60'
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={onContractSelect ? 0 : undefined}
+        data-focus-return-id={`contract-${contract.id}`}
+        aria-label={
+          onContractSelect
+            ? `Open contract ${contract.name || contract.savedContractName || contract.address}`
+            : undefined
+        }
+      >
         <TableCell className='w-[260px] max-w-[260px]'>
           {(viewType === 'my-contracts' && contract.name) ||
           contract.isSavedByUser ? (

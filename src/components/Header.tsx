@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Megaphone, Menu, MessageCircle } from 'lucide-react';
+import { Megaphone, Menu, MessageCircle, Search } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import { GasTankModal } from './GasTankModal';
 import BlockchainSelector from './BlockchainSelector';
@@ -80,6 +80,7 @@ export default function Header() {
                   <Link
                     href={FEEDBACK_FORM_URL}
                     target='_blank'
+                    aria-label='Give us feedback'
                     className='rounded-md p-1.5 text-ink-2 hover:text-ink-1 hover:bg-surface-2 inline-flex items-center transition-colors'
                   >
                     <MessageCircle className='w-4 h-4' />
@@ -97,20 +98,40 @@ export default function Header() {
         <div className='flex gap-2 items-center min-w-0 shrink-0'>
           {/* Mobile-only alert settings */}
           <button
+            type='button'
             className='lg:hidden size-8 border border-hairline rounded-lg flex items-center justify-center text-ink-2 hover:text-ink-1 hover:border-hairline-strong bg-surface-1'
             onClick={openAlertSettings}
             title='Alert Settings'
+            aria-label='Open alert settings'
           >
             <Megaphone className='w-4 h-4' />
           </button>
 
           {/* Desktop actions */}
           <div className='hidden lg:flex gap-2 items-center'>
+            <button
+              type='button'
+              className='h-8 rounded-lg border border-hairline bg-surface-1 px-2.5 text-ink-2 outline-none transition-colors hover:border-hairline-strong hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-accent-blue/50 flex items-center gap-2'
+              onClick={() =>
+                window.dispatchEvent(
+                  new Event('stylus:open-command-palette')
+                )
+              }
+              aria-label='Open command palette'
+            >
+              <Search className='size-3.5' aria-hidden='true' />
+              <span className='text-[11px]'>Commands</span>
+              <kbd className='rounded border border-hairline px-1 py-0.5 text-[9px] text-ink-3'>
+                ⌘K
+              </kbd>
+            </button>
             <GasTankModal />
             <button
+              type='button'
               className='size-8 border border-hairline rounded-lg flex items-center justify-center text-ink-2 hover:text-ink-1 hover:border-hairline-strong bg-surface-1'
               onClick={openAlertSettings}
               title='Alert Settings'
+              aria-label='Open alert settings'
             >
               <Megaphone className='w-4 h-4' />
             </button>
@@ -158,6 +179,18 @@ export default function Header() {
                 >
                   Docs
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className='gap-2 px-3 py-3 text-[13px] text-ink-2'
+                onSelect={() =>
+                  window.dispatchEvent(
+                    new Event('stylus:open-command-palette')
+                  )
+                }
+              >
+                <Search className='size-4' aria-hidden='true' />
+                Command palette
+                <span className='ms-auto text-[10px] text-ink-3'>⌘K</span>
               </DropdownMenuItem>
               {/* BlockchainSelector inside the mobile menu — don't let
                   DropdownMenuItem close the menu when the selector opens. */}

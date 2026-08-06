@@ -76,6 +76,7 @@ export const AlertSettingsProvider = ({
         onClose={closeAlertSettings}
         zIndex={50} // Higher z-index to ensure it displays above other content
         width={panelWidth}
+        ariaLabel='Notification settings'
         lockBodyScrollOnMobile
       >
         <UserAlertSettings onSuccess={handleChannelConfigSuccess} />

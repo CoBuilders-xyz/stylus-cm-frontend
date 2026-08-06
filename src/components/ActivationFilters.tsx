@@ -38,7 +38,11 @@ function PillFilterGroup<T extends string>({
       <span className='text-[11px] uppercase tracking-wider text-ink-3 me-1'>
         {label}
       </span>
-      <div className='inline-flex items-center rounded-lg border border-hairline bg-surface-1 p-[3px]'>
+      <div
+        className='inline-flex items-center rounded-lg border border-hairline bg-surface-1 p-[3px]'
+        role='group'
+        aria-label={`${label} filter`}
+      >
         {options.map((opt) => {
           const selected = value === opt.value;
           return (
@@ -46,7 +50,8 @@ function PillFilterGroup<T extends string>({
               key={opt.value}
               type='button'
               onClick={() => onChange(opt.value)}
-              className={`h-6.5 inline-flex items-center gap-1.5 px-2.5 text-xs rounded-md transition-colors ${
+              aria-pressed={selected}
+              className={`h-6.5 inline-flex items-center gap-1.5 px-2.5 text-xs rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-blue/60 ${
                 selected
                   ? 'bg-surface-3 text-ink-1 font-medium'
                   : 'text-ink-2 hover:text-ink-1'

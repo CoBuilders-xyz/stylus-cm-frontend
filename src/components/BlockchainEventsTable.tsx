@@ -122,8 +122,30 @@ const SortableTableHead = React.memo(
     return (
       <TableHead
         onClick={sortField ? handleSort : undefined}
+        onKeyDown={
+          sortField
+            ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleSort();
+                }
+              }
+            : undefined
+        }
+        tabIndex={sortField ? 0 : undefined}
+        aria-sort={
+          sortField
+            ? !isSorted
+              ? 'none'
+              : currentSortOrder === SortOrder.ASC
+                ? 'ascending'
+                : 'descending'
+            : undefined
+        }
         className={`${
-          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
+          sortField
+            ? 'cursor-pointer hover:text-ink-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent-blue'
+            : ''
         } ${props.className || ''}`}
       >
         <div className='flex items-center'>
@@ -156,6 +178,16 @@ const EventRow = React.memo(
       }
     };
 
+    const handleRowKeyDown = (
+      keyEvent: React.KeyboardEvent<HTMLTableRowElement>
+    ) => {
+      if (keyEvent.target !== keyEvent.currentTarget) return;
+      if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+        keyEvent.preventDefault();
+        handleRowClick();
+      }
+    };
+
     const handleCopy = async (
       text: string,
       field: string,
@@ -181,7 +213,18 @@ const EventRow = React.memo(
     const size = getSizeFromEventData(event.eventData, event.eventName);
 
     return (
-      <TableRow className='cursor-pointer' onClick={handleRowClick}>
+      <TableRow
+        className='cursor-pointer outline-none focus-visible:bg-surface-2 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-blue/60'
+        onClick={handleRowClick}
+        onKeyDown={handleRowKeyDown}
+        tabIndex={onEventSelect ? 0 : undefined}
+        data-focus-return-id={`event-${event.id}`}
+        aria-label={
+          onEventSelect
+            ? `Open ${formatEventType(event.eventName)} event ${formatTransactionHash(event.transactionHash)}`
+            : undefined
+        }
+      >
         <TableCell>
           <span
             className={`pill ${
@@ -205,6 +248,7 @@ const EventRow = React.memo(
               variant='ghost'
               size='sm'
               onClick={(e) => handleCopy(event.transactionHash, 'tx', e)}
+              aria-label='Copy transaction hash'
               className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
             >
               {copySuccess.tx ? (

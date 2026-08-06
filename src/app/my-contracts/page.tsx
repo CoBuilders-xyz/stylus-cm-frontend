@@ -134,6 +134,11 @@ export default function MyContractsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel={
+          activePanelContent === 'details'
+            ? 'Contract details'
+            : 'Add contract'
+        }
         lockBodyScrollOnMobile={activePanelContent === 'details'}
       >
         {isPanelOpen &&
@@ -162,6 +167,7 @@ export default function MyContractsPage() {
         onClose={handleCloseAlertsPanel}
         width={panelWidth}
         zIndex={50}
+        ariaLabel='Contract alert settings'
       >
         {isAlertsPanelOpen && (
           <AlertsSettings
