@@ -122,7 +122,7 @@ export default function Header() {
               <Search className='size-3.5' aria-hidden='true' />
               <span className='text-[11px]'>Commands</span>
               <kbd className='rounded border border-hairline px-1 py-0.5 text-[9px] text-ink-3'>
-                ⌘K
+                Ctrl+K / ⌘K
               </kbd>
             </button>
             <GasTankModal />
@@ -190,7 +190,9 @@ export default function Header() {
               >
                 <Search className='size-4' aria-hidden='true' />
                 Command palette
-                <span className='ms-auto text-[10px] text-ink-3'>⌘K</span>
+                <span className='ms-auto text-[10px] text-ink-3'>
+                  Ctrl+K / ⌘K
+                </span>
               </DropdownMenuItem>
               {/* BlockchainSelector inside the mobile menu — don't let
                   DropdownMenuItem close the menu when the selector opens. */}

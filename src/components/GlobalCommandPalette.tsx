@@ -232,26 +232,28 @@ export default function GlobalCommandPalette() {
               </CommandItem>
               <CommandItem
                 value='open documentation docs'
-                onSelect={() =>
-                  run(() =>
-                    window.open(
-                      'https://cobuilders-xyz.github.io/stylus-cm-deploy/',
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  )
-                }
+                onSelect={() => {
+                  window.open(
+                    'https://cobuilders-xyz.github.io/stylus-cm-deploy/',
+                    '_blank',
+                    'noopener,noreferrer'
+                  );
+                  setOpen(false);
+                }}
               >
                 <BookOpen aria-hidden='true' />
                 <span>Open documentation</span>
               </CommandItem>
               <CommandItem
                 value='send feedback'
-                onSelect={() =>
-                  run(() =>
-                    window.open(FEEDBACK_FORM_URL, '_blank', 'noopener,noreferrer')
-                  )
-                }
+                onSelect={() => {
+                  window.open(
+                    FEEDBACK_FORM_URL,
+                    '_blank',
+                    'noopener,noreferrer'
+                  );
+                  setOpen(false);
+                }}
               >
                 <Keyboard aria-hidden='true' />
                 <span>Send feedback</span>
@@ -260,7 +262,7 @@ export default function GlobalCommandPalette() {
           </CommandList>
           <div className='flex items-center justify-between border-t border-hairline px-4 py-2 text-[10px] text-ink-3'>
             <span>↑↓ Navigate · Enter Select · Esc Close</span>
-            <span className='hidden sm:inline'>⌘K</span>
+            <span className='hidden sm:inline'>Ctrl+K / ⌘K</span>
           </div>
         </Command>
       </DialogContent>
