@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Button } from '@/components/ui/button';
 import {
@@ -62,6 +62,11 @@ export function GasTankModal() {
     isConnected &&
     currentBlockchain != null &&
     walletChainId !== currentBlockchain.chainId;
+  const canReadBalance =
+    !!currentBlockchain?.cacheManagerAutomationAddress &&
+    isConnected &&
+    !!userAddress &&
+    !isChainMismatch;
 
   // Get user balance from cache manager automation contract
   const {
@@ -75,13 +80,15 @@ export function GasTankModal() {
     account: userAddress, // Include the user's address to properly sign the request
     chainId: currentBlockchain?.chainId,
     query: {
-      enabled:
-        !!currentBlockchain?.cacheManagerAutomationAddress &&
-        isConnected &&
-        !!userAddress &&
-        !isChainMismatch,
+      enabled: canReadBalance,
     },
   });
+
+  const refreshBalanceSafely = useCallback(() => {
+    if (canReadBalance) {
+      void refetchBalance();
+    }
+  }, [canReadBalance, refetchBalance]);
 
   // Use the web3 hook with its full state
   const { writeContract, status, reset } = useWeb3({
@@ -111,9 +118,9 @@ export function GasTankModal() {
 
       // Reset transaction state and refresh balance
       reset();
-      refetchBalance();
+      refreshBalanceSafely();
     }
-  }, [isSuccess, reset, refetchBalance]);
+  }, [isSuccess, refreshBalanceSafely, reset]);
 
   function onOpenChange(open: boolean) {
     // Prevent closing if transaction is in progress
@@ -124,7 +131,7 @@ export function GasTankModal() {
       setDepositAmount('');
     } else {
       // Refresh balance when opening the modal
-      refetchBalance();
+      refreshBalanceSafely();
     }
   }
 
@@ -217,7 +224,7 @@ export function GasTankModal() {
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
             isTransactionInProgress={isTransactionInProgress}
-            refreshBalance={refetchBalance}
+            refreshBalance={refreshBalanceSafely}
             isBalanceLoading={isLoading}
             disclaimerChecked={disclaimerChecked}
             setDisclaimerChecked={setDisclaimerChecked}
@@ -255,7 +262,7 @@ export function GasTankModal() {
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
             isTransactionInProgress={isTransactionInProgress}
-            refreshBalance={refetchBalance}
+            refreshBalance={refreshBalanceSafely}
             isBalanceLoading={isLoading}
             disclaimerChecked={disclaimerChecked}
             setDisclaimerChecked={setDisclaimerChecked}

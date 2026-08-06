@@ -20,7 +20,7 @@ export interface WriteTransactionRequest {
   args: readonly unknown[];
   value?: bigint;
   gas?: bigint;
-  chainId?: number;
+  chainId: number;
 }
 
 /**
@@ -93,6 +93,7 @@ export class Web3Service {
         abi,
         functionName,
         args,
+        chainId,
       };
 
       // Add value if provided. Strings are treated as ETH and converted to
@@ -102,12 +103,6 @@ export class Web3Service {
       if (value != null) {
         transactionRequest.value =
           typeof value === 'string' ? parseEther(value) : value;
-      }
-
-      // Forward the target chain id (if any) so wagmi routes the write to
-      // the intended network regardless of the wallet's current chain.
-      if (chainId != null) {
-        transactionRequest.chainId = chainId;
       }
 
       // Add gas limit if provided

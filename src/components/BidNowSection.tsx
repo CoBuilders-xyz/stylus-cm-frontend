@@ -118,6 +118,17 @@ export function BidNowSection({
       return;
     }
 
+    if (
+      !currentBlockchain ||
+      lastBidParams.chainId !== currentBlockchain.chainId
+    ) {
+      showErrorToast({
+        message:
+          'The selected network changed since this bid failed. Submit a new bid on the current network.',
+      });
+      return;
+    }
+
     // Reset any previous error states
     reset();
     setHasReloaded(false);
@@ -127,7 +138,7 @@ export function BidNowSection({
     writeContract(lastBidParams, (hash) => {
       console.log(`Retry transaction submitted with hash: ${hash}`);
     });
-  }, [lastBidParams, writeContract, reset]);
+  }, [currentBlockchain, lastBidParams, writeContract, reset]);
 
   // Function to fetch the latest contract data and check cache status
   const pollContractStatus = useCallback(async () => {

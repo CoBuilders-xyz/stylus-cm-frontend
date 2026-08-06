@@ -194,6 +194,17 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (
+      !currentBlockchain ||
+      lastTxParams.chainId !== currentBlockchain.chainId
+    ) {
+      showErrorToast({
+        message:
+          'The selected network changed since this transaction failed. Submit the configuration again on the current network.',
+      });
+      return;
+    }
+
     // Reset any previous error states
     reset();
 
@@ -201,7 +212,7 @@ export function AutomatedBiddingSection({
     writeContract(lastTxParams, (hash) => {
       console.log(`Retry transaction submitted with hash: ${hash}`);
     });
-  }, [lastTxParams, writeContract, reset]);
+  }, [currentBlockchain, lastTxParams, writeContract, reset]);
 
   // Show error toast if transaction fails
   useEffect(() => {
