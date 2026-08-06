@@ -48,7 +48,7 @@ export interface ContractWriteParams<
   value?: string | bigint;
   /** Target chain id — forwarded to wagmi so the write happens on the
    * intended network even if the wallet is currently switched elsewhere. */
-  chainId?: number;
+  chainId: number;
   /** Gas protection configuration */
   gasProtection?: GasProtectionConfig;
 }

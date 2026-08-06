@@ -12,6 +12,7 @@ import {
 } from '@/config/abis/arbWasm/arbWasm';
 import { showErrorToast, showSuccessToast } from '@/components/Toast';
 import { TransactionStatus, useWeb3 } from '@/hooks/useWeb3';
+import { getNetworkSwitchErrorMessage } from '@/utils/walletErrors';
 
 /**
  * Over-pay used to discover the program's dataFee via `useSimulateContract`.
@@ -78,7 +79,7 @@ export function useActivateProgram({
 }: UseActivateProgramParams): UseActivateProgramResult {
   const { isConnected } = useAccount();
   const walletChainId = useChainId();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const isChainMismatch =
     isConnected && targetChainId != null && walletChainId !== targetChainId;
 
@@ -132,7 +133,7 @@ export function useActivateProgram({
     return result?.[1];
   }, [simulation?.result]);
 
-  const switchToTarget = useCallback(() => {
+  const switchToTarget = useCallback(async () => {
     if (targetChainId == null) {
       // Consumers wire this to a "Switch to X" button that is only shown
       // when `isChainMismatch === true`, which itself implies `targetChainId`
@@ -142,13 +143,23 @@ export function useActivateProgram({
       });
       return;
     }
-    switchChain({ chainId: targetChainId });
-  }, [switchChain, targetChainId]);
+    try {
+      await switchChainAsync({ chainId: targetChainId });
+    } catch (error) {
+      showErrorToast({ message: getNetworkSwitchErrorMessage(error) });
+    }
+  }, [switchChainAsync, targetChainId]);
 
   const activate = useCallback(() => {
     if (!isConnected) {
       showErrorToast({
         message: 'Connect your wallet to activate this contract.',
+      });
+      return;
+    }
+    if (targetChainId == null) {
+      showErrorToast({
+        message: 'Target network is not set yet. Try again in a moment.',
       });
       return;
     }

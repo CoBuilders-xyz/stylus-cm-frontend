@@ -2,7 +2,7 @@
 
 import { useBlockchainSelection } from '@/context/BlockchainSelectionProvider';
 import { useSwitchChain, useAccount } from 'wagmi';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown } from 'lucide-react';
+import { showErrorToast } from '@/components/Toast';
+import { getNetworkSwitchErrorMessage } from '@/utils/walletErrors';
 
 export default function BlockchainSelector() {
   const {
@@ -20,15 +22,12 @@ export default function BlockchainSelector() {
     isLoading,
   } = useBlockchainSelection();
 
-  const { switchChain } = useSwitchChain();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const { isConnected, chain } = useAccount();
-
-  // Track if we initiated the chain switch to prevent loops
-  const isInternalSwitch = useRef(false);
 
   // Sync wallet chain changes to UI selector
   useEffect(() => {
-    if (isInternalSwitch.current || !isConnected || !chain?.id || isLoading) {
+    if (!isConnected || !chain?.id || isLoading) {
       return;
     }
 
@@ -58,27 +57,27 @@ export default function BlockchainSelector() {
     return null;
   }
 
-  const handleBlockchainSelect = (
+  const handleBlockchainSelect = async (
     blockchain: (typeof availableBlockchains)[0]
   ) => {
     // Only switch if user selected a different blockchain
     if (blockchain.id === selectedBlockchain?.id) return;
 
-    setSelectedBlockchain(blockchain);
+    if (!isConnected) {
+      setSelectedBlockchain(blockchain);
+      return;
+    }
 
-    // Switch wallet chain if connected
-    if (isConnected && switchChain) {
-      isInternalSwitch.current = true;
-      try {
-        switchChain({ chainId: blockchain.chainId });
-      } catch (error) {
-        console.warn(`Failed to switch to chain ${blockchain.name}:`, error);
-      } finally {
-        // Reset flag after a short delay to allow chain switch to complete
-        setTimeout(() => {
-          isInternalSwitch.current = false;
-        }, 1000);
-      }
+    try {
+      // Keep the application on its current chain until the wallet confirms
+      // the switch. A rejection must never leave UI state ahead of the wallet.
+      await switchChainAsync({ chainId: blockchain.chainId });
+      setSelectedBlockchain(blockchain);
+    } catch (error) {
+      console.warn(`Failed to switch to chain ${blockchain.name}`);
+      showErrorToast({
+        message: getNetworkSwitchErrorMessage(error, blockchain.name),
+      });
     }
   };
 
@@ -104,6 +103,7 @@ export default function BlockchainSelector() {
             <DropdownMenuItem
               key={blockchain.id}
               onClick={() => handleBlockchainSelect(blockchain)}
+              disabled={isSwitchingChain}
               className={`cursor-pointer hover:bg-surface-3 ${
                 selectedBlockchain?.id === blockchain.id ? 'bg-surface-3' : ''
               }`}
@@ -111,7 +111,7 @@ export default function BlockchainSelector() {
               <div className='flex items-center justify-between w-full'>
                 <span>{blockchain.name}</span>
                 {selectedBlockchain?.id === blockchain.id && (
-                  <div className='w-2 h-2 bg-white rounded-full' />
+                  <div className='w-2 h-2 bg-ink-1 rounded-full' />
                 )}
               </div>
             </DropdownMenuItem>

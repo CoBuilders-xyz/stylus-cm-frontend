@@ -3,6 +3,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   useGasPrice,
+  useChainId,
 } from 'wagmi';
 import { formatGwei } from 'viem';
 import {
@@ -81,6 +82,7 @@ export function useWeb3(options: UseWeb3Options = {}): Web3TransactionResult {
   >(undefined);
   const [isGasPriceHigh, setIsGasPriceHigh] = useState<boolean>(false);
   const [gasPriceGwei, setGasPriceGwei] = useState<string | null>(null);
+  const walletChainId = useChainId();
 
   // Get current gas price
   const { data: gasPrice } = useGasPrice();
@@ -193,6 +195,15 @@ export function useWeb3(options: UseWeb3Options = {}): Web3TransactionResult {
         setStatus(TransactionStatus.PREPARING);
         setError(null);
 
+        if (walletChainId !== params.chainId) {
+          const mismatchError = new Error(
+            'Your wallet is connected to a different network. Switch networks before submitting this transaction.'
+          );
+          setError(mismatchError);
+          setStatus(TransactionStatus.ERROR);
+          return;
+        }
+
         // Check current gas price before proceeding
         if (gasPrice && isGasPriceHigh) {
           const gasPriceFormatted = formatGwei(gasPrice);
@@ -221,7 +232,7 @@ export function useWeb3(options: UseWeb3Options = {}): Web3TransactionResult {
         setStatus(TransactionStatus.ERROR);
       }
     },
-    [gasPrice, isGasPriceHigh, gasProtection, wagmiWriteContract]
+    [gasPrice, isGasPriceHigh, gasProtection, wagmiWriteContract, walletChainId]
   );
 
   /**
