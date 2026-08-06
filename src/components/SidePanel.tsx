@@ -8,6 +8,24 @@ export const SidePanelContext = createContext<{ onClose: () => void }>({
   onClose: () => {},
 });
 
+const openPanelStack: symbol[] = [];
+const panelElements = new Map<symbol, HTMLElement>();
+
+function addPanelToStack(panelId: symbol) {
+  const existingIndex = openPanelStack.indexOf(panelId);
+  if (existingIndex !== -1) openPanelStack.splice(existingIndex, 1);
+  openPanelStack.push(panelId);
+}
+
+function removePanelFromStack(panelId: symbol) {
+  const index = openPanelStack.indexOf(panelId);
+  if (index !== -1) openPanelStack.splice(index, 1);
+}
+
+function isTopmostPanel(panelId: symbol) {
+  return openPanelStack.at(-1) === panelId;
+}
+
 interface SidePanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,6 +47,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
 }) => {
   useMobileBodyScrollLock(isOpen && lockBodyScrollOnMobile);
   const panelRef = useRef<HTMLDivElement>(null);
+  const panelIdRef = useRef(Symbol('side-panel'));
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const previousFocusIdRef = useRef<string | null>(null);
   const onCloseRef = useRef(onClose);
@@ -40,15 +59,29 @@ const SidePanel: React.FC<SidePanelProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    previousFocusRef.current =
+    const panelId = panelIdRef.current;
+    const previousPanelId = openPanelStack.at(-1);
+    const previousPanel = previousPanelId
+      ? panelElements.get(previousPanelId) ?? null
+      : null;
+    addPanelToStack(panelId);
+    if (panelRef.current) panelElements.set(panelId, panelRef.current);
+
+    const activeElement =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
+    previousFocusRef.current =
+      previousPanel && !previousPanel.contains(activeElement)
+        ? previousPanel
+        : activeElement;
     previousFocusIdRef.current =
       previousFocusRef.current?.dataset.focusReturnId ?? null;
 
     const frame = requestAnimationFrame(() => panelRef.current?.focus());
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isTopmostPanel(panelId)) return;
+
       if (event.key === 'Escape') {
         if (!panelRef.current?.contains(document.activeElement)) return;
         event.preventDefault();
@@ -57,7 +90,9 @@ const SidePanel: React.FC<SidePanelProps> = ({
       }
 
       const shouldTrapFocus =
-        lockBodyScrollOnMobile || window.matchMedia('(max-width: 767px)').matches;
+        lockBodyScrollOnMobile ||
+        openPanelStack.length > 1 ||
+        window.matchMedia('(max-width: 767px)').matches;
       if (event.key !== 'Tab' || !shouldTrapFocus || !panelRef.current) {
         return;
       }
@@ -89,6 +124,8 @@ const SidePanel: React.FC<SidePanelProps> = ({
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown);
+      removePanelFromStack(panelId);
+      panelElements.delete(panelId);
       requestAnimationFrame(() => {
         const originalTarget = previousFocusRef.current;
         const fallbackTarget = previousFocusIdRef.current
