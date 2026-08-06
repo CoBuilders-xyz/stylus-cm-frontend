@@ -9,6 +9,7 @@ import {
 import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
 import { showErrorToast, showSuccessToast } from '@/components/Toast';
 import { TransactionStatus, useWeb3 } from '@/hooks/useWeb3';
+import { getNetworkSwitchErrorMessage } from '@/utils/walletErrors';
 
 export interface UseConfigureAutoActivationParams {
   /** WASM contract whose CMA auto-activation config is being edited. */
@@ -96,7 +97,7 @@ export function useConfigureAutoActivation({
 }: UseConfigureAutoActivationParams): UseConfigureAutoActivationResult {
   const { isConnected } = useAccount();
   const walletChainId = useChainId();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const isChainMismatch =
     isConnected && targetChainId != null && walletChainId !== targetChainId;
 
@@ -164,15 +165,19 @@ export function useConfigureAutoActivation({
     },
   });
 
-  const switchToTarget = useCallback(() => {
+  const switchToTarget = useCallback(async () => {
     if (targetChainId == null) {
       showErrorToast({
         message: 'Target network is not set yet. Try again in a moment.',
       });
       return;
     }
-    switchChain({ chainId: targetChainId });
-  }, [switchChain, targetChainId]);
+    try {
+      await switchChainAsync({ chainId: targetChainId });
+    } catch (error) {
+      showErrorToast({ message: getNetworkSwitchErrorMessage(error) });
+    }
+  }, [switchChainAsync, targetChainId]);
 
   const save = useCallback(() => {
     // Defensive gate — the caller sets `enabled` from its own dirtiness
@@ -188,6 +193,12 @@ export function useConfigureAutoActivation({
     if (!isConnected) {
       showErrorToast({
         message: 'Connect your wallet to save this configuration.',
+      });
+      return;
+    }
+    if (targetChainId == null) {
+      showErrorToast({
+        message: 'Target network is not set yet. Try again in a moment.',
       });
       return;
     }

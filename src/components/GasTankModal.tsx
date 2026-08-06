@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +39,7 @@ import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { formatRoundedEth } from '@/utils/formatting';
+import { showErrorToast } from '@/components/Toast';
 
 export function GasTankModal() {
   // Internal state
@@ -52,7 +53,20 @@ export function GasTankModal() {
   const { currentBlockchain } = useBlockchainService();
 
   // Get the connected account
-  const { address: userAddress, isConnected } = useAccount();
+  const {
+    address: userAddress,
+    isConnected,
+    chainId: walletChainId,
+  } = useAccount();
+  const isChainMismatch =
+    isConnected &&
+    currentBlockchain != null &&
+    walletChainId !== currentBlockchain.chainId;
+  const canReadBalance =
+    !!currentBlockchain?.cacheManagerAutomationAddress &&
+    isConnected &&
+    !!userAddress &&
+    !isChainMismatch;
 
   // Get user balance from cache manager automation contract
   const {
@@ -64,13 +78,17 @@ export function GasTankModal() {
     abi: cacheManagerAutomationAbi.abi as Abi,
     functionName: 'getUserBalance',
     account: userAddress, // Include the user's address to properly sign the request
+    chainId: currentBlockchain?.chainId,
     query: {
-      enabled:
-        !!currentBlockchain?.cacheManagerAutomationAddress &&
-        isConnected &&
-        !!userAddress,
+      enabled: canReadBalance,
     },
   });
+
+  const refreshBalanceSafely = useCallback(() => {
+    if (canReadBalance) {
+      void refetchBalance();
+    }
+  }, [canReadBalance, refetchBalance]);
 
   // Use the web3 hook with its full state
   const { writeContract, status, reset } = useWeb3({
@@ -100,9 +118,9 @@ export function GasTankModal() {
 
       // Reset transaction state and refresh balance
       reset();
-      refetchBalance();
+      refreshBalanceSafely();
     }
-  }, [isSuccess, reset, refetchBalance]);
+  }, [isSuccess, refreshBalanceSafely, reset]);
 
   function onOpenChange(open: boolean) {
     // Prevent closing if transaction is in progress
@@ -113,13 +131,19 @@ export function GasTankModal() {
       setDepositAmount('');
     } else {
       // Refresh balance when opening the modal
-      refetchBalance();
+      refreshBalanceSafely();
     }
   }
 
   function handleDeposit() {
     const amount = Number.parseFloat(depositAmount);
     if (!isNaN(amount) && amount > 0 && currentBlockchain) {
+      if (isChainMismatch) {
+        showErrorToast({
+          message: `Switch your wallet to ${currentBlockchain.name} before depositing funds.`,
+        });
+        return;
+      }
       try {
         // Create transaction parameters
         const txParams = {
@@ -129,6 +153,7 @@ export function GasTankModal() {
           functionName: 'fundBalance',
           args: [] as const, // Even though this function doesn't take args, wagmi requires this property
           value: depositAmount, // Amount to add in ETH
+          chainId: currentBlockchain.chainId,
         };
 
         // Send the transaction
@@ -143,6 +168,12 @@ export function GasTankModal() {
 
   function handleWithdraw() {
     if (balanceInEth > 0 && currentBlockchain) {
+      if (isChainMismatch) {
+        showErrorToast({
+          message: `Switch your wallet to ${currentBlockchain.name} before withdrawing funds.`,
+        });
+        return;
+      }
       try {
         // Create transaction parameters
         const txParams = {
@@ -151,6 +182,7 @@ export function GasTankModal() {
           abi: cacheManagerAutomationAbi.abi as Abi,
           functionName: 'withdrawBalance',
           args: [] as const, // Even though this function doesn't take args, wagmi requires this property
+          chainId: currentBlockchain.chainId,
         };
 
         // Send the transaction
@@ -192,10 +224,11 @@ export function GasTankModal() {
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
             isTransactionInProgress={isTransactionInProgress}
-            refreshBalance={refetchBalance}
+            refreshBalance={refreshBalanceSafely}
             isBalanceLoading={isLoading}
             disclaimerChecked={disclaimerChecked}
             setDisclaimerChecked={setDisclaimerChecked}
+            isChainMismatch={isChainMismatch}
           />
         </DialogContent>
       </Dialog>
@@ -229,10 +262,11 @@ export function GasTankModal() {
             handleDeposit={handleDeposit}
             handleWithdraw={handleWithdraw}
             isTransactionInProgress={isTransactionInProgress}
-            refreshBalance={refetchBalance}
+            refreshBalance={refreshBalanceSafely}
             isBalanceLoading={isLoading}
             disclaimerChecked={disclaimerChecked}
             setDisclaimerChecked={setDisclaimerChecked}
+            isChainMismatch={isChainMismatch}
           />
         </div>
         <DrawerFooter className='pt-2'>
@@ -261,6 +295,7 @@ interface GasTankContentProps {
   isBalanceLoading: boolean;
   disclaimerChecked: boolean;
   setDisclaimerChecked: (value: boolean) => void;
+  isChainMismatch: boolean;
 }
 
 function GasTankContent({
@@ -274,6 +309,7 @@ function GasTankContent({
   isBalanceLoading,
   disclaimerChecked,
   setDisclaimerChecked,
+  isChainMismatch,
 }: GasTankContentProps) {
   return (
     <div className='py-4'>
@@ -299,7 +335,9 @@ function GasTankContent({
           size='sm'
           onClick={() => refreshBalance()}
           className='mt-2 text-xs text-ink-3 hover:text-ink-1'
-          disabled={isTransactionInProgress || isBalanceLoading}
+          disabled={
+            isTransactionInProgress || isBalanceLoading || isChainMismatch
+          }
         >
           Refresh
         </Button>
@@ -309,13 +347,13 @@ function GasTankContent({
         <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger
             value='deposit'
-            disabled={isTransactionInProgress}
+            disabled={isTransactionInProgress || isChainMismatch}
           >
             Deposit
           </TabsTrigger>
           <TabsTrigger
             value='withdraw'
-            disabled={isTransactionInProgress}
+            disabled={isTransactionInProgress || isChainMismatch}
           >
             Withdraw
           </TabsTrigger>
@@ -338,7 +376,9 @@ function GasTankContent({
                     ? 'cursor-not-allowed opacity-60'
                     : ''
                 }
-                disabled={isTransactionInProgress || isBalanceLoading}
+                disabled={
+                  isTransactionInProgress || isBalanceLoading || isChainMismatch
+                }
               />
             </div>
           </div>
@@ -369,6 +409,7 @@ function GasTankContent({
               !depositAmount ||
               Number(depositAmount) <= 0 ||
               isBalanceLoading ||
+              isChainMismatch ||
               !disclaimerChecked
             }
           >
@@ -394,7 +435,10 @@ function GasTankContent({
             onClick={handleWithdraw}
             className='w-full h-9 rounded-lg mt-4'
             disabled={
-              isTransactionInProgress || balance <= 0 || isBalanceLoading
+              isTransactionInProgress ||
+              balance <= 0 ||
+              isBalanceLoading ||
+              isChainMismatch
             }
           >
             {isTransactionInProgress ? (

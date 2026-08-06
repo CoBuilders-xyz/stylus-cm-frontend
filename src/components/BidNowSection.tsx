@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@radix-ui/react-tooltip';
+import { useAccount } from 'wagmi';
 
 interface BidNowSectionProps {
   contract: Contract;
@@ -38,6 +39,11 @@ export function BidNowSection({
 }: BidNowSectionProps) {
   // Get the current blockchain
   const { currentBlockchain } = useBlockchainService();
+  const { isConnected, chainId: walletChainId } = useAccount();
+  const isChainMismatch =
+    isConnected &&
+    currentBlockchain != null &&
+    walletChainId !== currentBlockchain.chainId;
 
   // Get the contracts updater
   const { signalContractUpdated } = useContractsUpdater();
@@ -61,6 +67,7 @@ export function BidNowSection({
     functionName: string;
     args: string[];
     value: string;
+    chainId: number;
   } | null>(null);
 
   // State for suggested bids
@@ -98,7 +105,8 @@ export function BidNowSection({
     isPlacingBid ||
     isPolling ||
     (isSuccess && !hasReloaded) ||
-    isContractCached;
+    isContractCached ||
+    isChainMismatch;
 
   // Component ref for click outside detection
   const componentRef = useRef<HTMLDivElement>(null);
@@ -107,6 +115,17 @@ export function BidNowSection({
   const handleRetry = useCallback(() => {
     if (!lastBidParams) {
       console.error('No previous bid parameters found to retry');
+      return;
+    }
+
+    if (
+      !currentBlockchain ||
+      lastBidParams.chainId !== currentBlockchain.chainId
+    ) {
+      showErrorToast({
+        message:
+          'The selected network changed since this bid failed. Submit a new bid on the current network.',
+      });
       return;
     }
 
@@ -119,7 +138,7 @@ export function BidNowSection({
     writeContract(lastBidParams, (hash) => {
       console.log(`Retry transaction submitted with hash: ${hash}`);
     });
-  }, [lastBidParams, writeContract, reset]);
+  }, [currentBlockchain, lastBidParams, writeContract, reset]);
 
   // Function to fetch the latest contract data and check cache status
   const pollContractStatus = useCallback(async () => {
@@ -390,6 +409,13 @@ export function BidNowSection({
       return;
     }
 
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before placing a bid.`,
+      });
+      return;
+    }
+
     if (!bidAmount || parseFloat(bidAmount) < 0 || inputError) {
       console.error('Please enter a valid bid amount');
       setInputError('Enter a valid amount to Bid');
@@ -430,6 +456,7 @@ export function BidNowSection({
         functionName: 'placeBid',
         args: [contract.address],
         value: bidAmount,
+        chainId: currentBlockchain.chainId,
       };
       console.log('Bid params:', bidParams);
       // Store the parameters for retry functionality

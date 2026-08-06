@@ -68,7 +68,15 @@ export function AutomatedBiddingSection({
   const { currentBlockchain } = useBlockchainService();
 
   // Get the connected account
-  const { address: userAddress, isConnected } = useAccount();
+  const {
+    address: userAddress,
+    isConnected,
+    chainId: walletChainId,
+  } = useAccount();
+  const isChainMismatch =
+    isConnected &&
+    currentBlockchain != null &&
+    walletChainId !== currentBlockchain.chainId;
 
   // Chain-authoritative read of this contract's CMA record. Sourcing the
   // activation fields we must preserve (`autoActivate`, `maxActivationCost`)
@@ -92,11 +100,13 @@ export function AutomatedBiddingSection({
     abi: cacheManagerAutomationAbi.abi as Abi,
     functionName: 'getUserBalance',
     account: userAddress, // Include the user's address to properly sign the request
+    chainId: currentBlockchain?.chainId,
     query: {
       enabled:
         !!currentBlockchain?.cacheManagerAutomationAddress &&
         isConnected &&
-        !!userAddress,
+        !!userAddress &&
+        !isChainMismatch,
     },
   });
 
@@ -137,6 +147,7 @@ export function AutomatedBiddingSection({
     functionName: string;
     args: [string, bigint, boolean, boolean, bigint];
     value: string;
+    chainId: number;
   } | null>(null);
 
   // Use the web3 hook
@@ -183,6 +194,17 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (
+      !currentBlockchain ||
+      lastTxParams.chainId !== currentBlockchain.chainId
+    ) {
+      showErrorToast({
+        message:
+          'The selected network changed since this transaction failed. Submit the configuration again on the current network.',
+      });
+      return;
+    }
+
     // Reset any previous error states
     reset();
 
@@ -190,7 +212,7 @@ export function AutomatedBiddingSection({
     writeContract(lastTxParams, (hash) => {
       console.log(`Retry transaction submitted with hash: ${hash}`);
     });
-  }, [lastTxParams, writeContract, reset]);
+  }, [currentBlockchain, lastTxParams, writeContract, reset]);
 
   // Show error toast if transaction fails
   useEffect(() => {
@@ -345,6 +367,13 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before configuring automated bidding.`,
+      });
+      return;
+    }
+
     if (!contract || !contract.address) {
       console.error('No contract address provided');
       showSomethingWentWrongToast();
@@ -397,6 +426,7 @@ export function AutomatedBiddingSection({
           BigInt(0),
         ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
+        chainId: currentBlockchain.chainId,
       };
 
       // Store the parameters for retry functionality
@@ -434,6 +464,13 @@ export function AutomatedBiddingSection({
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
       showSomethingWentWrongToast();
+      return;
+    }
+
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before updating automated bidding.`,
+      });
       return;
     }
 
@@ -475,6 +512,7 @@ export function AutomatedBiddingSection({
           cmaRecord.autoActivate,
           cmaRecord.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
+        chainId: currentBlockchain.chainId,
       };
 
       // Store the parameters for retry functionality
@@ -499,6 +537,13 @@ export function AutomatedBiddingSection({
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
       showSomethingWentWrongToast();
+      return;
+    }
+
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before changing automated bidding.`,
+      });
       return;
     }
 
@@ -538,6 +583,7 @@ export function AutomatedBiddingSection({
           cmaRecord.autoActivate,
           cmaRecord.maxActivationCost,
         ] as [string, bigint, boolean, boolean, bigint],
+        chainId: currentBlockchain.chainId,
       };
 
       // Store the parameters for retry functionality
@@ -619,7 +665,9 @@ export function AutomatedBiddingSection({
                 size='sm'
                 onClick={handleToggleAutomation}
                 className='mx-2 h-6 px-2'
-                disabled={isTransactionInProgress || isSuccess}
+                disabled={
+                  isTransactionInProgress || isSuccess || isChainMismatch
+                }
               >
                 {isTransactionInProgress ? (
                   <div className='flex items-center'>
@@ -803,7 +851,10 @@ export function AutomatedBiddingSection({
                 onClick={handleSetAutomation}
                 className='shrink-0'
                 disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                  isTransactionInProgress ||
+                  isSuccess ||
+                  isChainMismatch ||
+                  !disclaimerChecked
                 }
               >
                 {isTransactionInProgress ? (
@@ -843,7 +894,10 @@ export function AutomatedBiddingSection({
                 onClick={handleUpdateAutomation}
                 className='shrink-0'
                 disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                  isTransactionInProgress ||
+                  isSuccess ||
+                  isChainMismatch ||
+                  !disclaimerChecked
                 }
               >
                 {isTransactionInProgress ? (
