@@ -180,20 +180,6 @@ export default function Header() {
                   Docs
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className='gap-2 px-3 py-3 text-[13px] text-ink-2'
-                onSelect={() =>
-                  window.dispatchEvent(
-                    new Event('stylus:open-command-palette')
-                  )
-                }
-              >
-                <Search className='size-4' aria-hidden='true' />
-                Command palette
-                <span className='ms-auto text-[10px] text-ink-3'>
-                  Ctrl+K / ⌘K
-                </span>
-              </DropdownMenuItem>
               {/* BlockchainSelector inside the mobile menu — don't let
                   DropdownMenuItem close the menu when the selector opens. */}
               <DropdownMenuItem
