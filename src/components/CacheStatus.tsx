@@ -226,6 +226,7 @@ export default function CacheStatus() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel='Add contract'
       >
         {isPanelOpen && (
           <AddContract

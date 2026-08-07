@@ -121,15 +121,29 @@ const SortableTableHead = React.memo(
 
     return (
       <TableHead
-        onClick={sortField ? handleSort : undefined}
-        className={`${
-          sortField ? 'cursor-pointer hover:text-ink-1 transition-colors' : ''
-        } ${props.className || ''}`}
+        aria-sort={
+          sortField
+            ? !isSorted
+              ? 'none'
+              : currentSortOrder === SortOrder.ASC
+                ? 'ascending'
+                : 'descending'
+            : undefined
+        }
+        className={props.className || ''}
       >
-        <div className='flex items-center'>
-          {children}
-          {renderSortIcon()}
-        </div>
+        {sortField ? (
+          <button
+            type='button'
+            onClick={handleSort}
+            className='flex w-full items-center rounded-sm text-start text-inherit outline-none transition-colors hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-accent-blue/60'
+          >
+            {children}
+            {renderSortIcon()}
+          </button>
+        ) : (
+          <div className='flex items-center'>{children}</div>
+        )}
       </TableHead>
     );
   }
@@ -153,6 +167,16 @@ const EventRow = React.memo(
     const handleRowClick = () => {
       if (onEventSelect) {
         onEventSelect(event);
+      }
+    };
+
+    const handleRowKeyDown = (
+      keyEvent: React.KeyboardEvent<HTMLTableRowElement>
+    ) => {
+      if (keyEvent.target !== keyEvent.currentTarget) return;
+      if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+        keyEvent.preventDefault();
+        handleRowClick();
       }
     };
 
@@ -181,7 +205,18 @@ const EventRow = React.memo(
     const size = getSizeFromEventData(event.eventData, event.eventName);
 
     return (
-      <TableRow className='cursor-pointer' onClick={handleRowClick}>
+      <TableRow
+        className='cursor-pointer outline-none focus-visible:bg-surface-2 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-blue/60'
+        onClick={handleRowClick}
+        onKeyDown={handleRowKeyDown}
+        tabIndex={onEventSelect ? 0 : undefined}
+        data-focus-return-id={`event-${event.id}`}
+        aria-label={
+          onEventSelect
+            ? `Open ${formatEventType(event.eventName)} event ${formatTransactionHash(event.transactionHash)}`
+            : undefined
+        }
+      >
         <TableCell>
           <span
             className={`pill ${
@@ -205,6 +240,7 @@ const EventRow = React.memo(
               variant='ghost'
               size='sm'
               onClick={(e) => handleCopy(event.transactionHash, 'tx', e)}
+              aria-label='Copy transaction hash'
               className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
             >
               {copySuccess.tx ? (

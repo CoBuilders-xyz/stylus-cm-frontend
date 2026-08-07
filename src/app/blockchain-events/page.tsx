@@ -104,6 +104,7 @@ export default function BlockchainEventsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel='Event details'
       >
         {isPanelOpen && selectedEvent && (
           <div className='text-ink-1 flex flex-col h-full bg-surface-1'>

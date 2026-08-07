@@ -104,6 +104,12 @@ const ExplorerLinkButton: React.FC<ExplorerLinkButtonProps> = ({
 
   return (
     <button
+      type='button'
+      aria-label={
+        isEnabled
+          ? 'View contract on block explorer'
+          : 'Block explorer unavailable for this network'
+      }
       className={`text-ink-3 ${
         isEnabled
           ? 'hover:text-ink-1 cursor-pointer'
