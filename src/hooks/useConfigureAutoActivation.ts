@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { isAddress, type Abi } from 'viem';
+import { isAddress } from 'viem';
 import {
   useAccount,
   useChainId,
   useSimulateContract,
   useSwitchChain,
 } from 'wagmi';
-import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { CACHE_MANAGER_AUTOMATION_ABI } from '@/config/abis/cacheManagerAutomation/cacheManagerAutomation';
 import { showErrorToast, showSuccessToast } from '@/components/Toast';
 import { TransactionStatus, useWeb3 } from '@/hooks/useWeb3';
 import { getNetworkSwitchErrorMessage } from '@/utils/walletErrors';
@@ -38,9 +38,9 @@ export interface UseConfigureAutoActivationParams {
    * `insertContract` take all five fields atomically; if we don't echo the
    * live values back, we silently overwrite the user's bidding config.
    *
-   * For an unregistered contract the tab passes `maxBid: 0n, enabled: false`
-   * — bidding stays off by default. Once registered, the tab reads the
-   * live values from the backend `Contract` and forwards them here.
+   * For an unregistered contract the tab passes the CMA `minMaxBidAmount`
+   * floor as `maxBid` and `biddingEnabled: false` — bidding stays off by
+   * default. Once registered, the tab echoes the live on-chain values.
    */
   currentMaxBid: bigint;
   currentBiddingEnabled: boolean;
@@ -118,14 +118,17 @@ export function useConfigureAutoActivation({
   const isConfirmed = status === TransactionStatus.SUCCESS;
 
   const functionName = isRegistered ? 'updateContract' : 'insertContract';
+  // CMA v2.0 kept the v1 input order for both writes:
+  // (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost).
+  // Only the ContractConfig *output* tuple was reordered.
   const args = useMemo(() => {
     if (!isValidAddress) return undefined;
     return [
       contractAddress as `0x${string}`,
-      currentMaxBid,
-      currentBiddingEnabled,
-      autoActivate,
-      maxActivationCost,
+      currentMaxBid, // _maxBid
+      currentBiddingEnabled, // _biddingEnabled
+      autoActivate, // _autoActivate
+      maxActivationCost, // _maxActivationCost
     ] as const;
   }, [
     autoActivate,
@@ -142,7 +145,7 @@ export function useConfigureAutoActivation({
     refetch: refetchSimulation,
   } = useSimulateContract({
     address: cmaAddress,
-    abi: cacheManagerAutomationAbi.abi as Abi,
+    abi: CACHE_MANAGER_AUTOMATION_ABI,
     functionName,
     args: args as readonly unknown[] | undefined,
     // `insertContract` is payable; the caller is expected to have funded
@@ -231,7 +234,7 @@ export function useConfigureAutoActivation({
     }
     writeContract({
       address: cmaAddress,
-      abi: cacheManagerAutomationAbi.abi as Abi,
+      abi: CACHE_MANAGER_AUTOMATION_ABI,
       functionName,
       args: args as readonly unknown[],
       value: BigInt(0),

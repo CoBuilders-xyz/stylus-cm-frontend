@@ -1,20 +1,20 @@
 import { useCallback, useMemo } from 'react';
-import { type Abi } from 'viem';
 import { useAccount, useReadContract } from 'wagmi';
-import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { CACHE_MANAGER_AUTOMATION_ABI } from '@/config/abis/cacheManagerAutomation/cacheManagerAutomation';
+import {
+  findCMAContractConfig,
+  type CMAContractConfig,
+} from '@/lib/cma';
 
 /**
- * Shape of a single entry returned by `CacheManagerAutomation.getUserContracts`.
- * Order matches the tuple layout in the ABI:
- * `(address contractAddress, uint256 maxBid, bool enabled, bool autoActivate, uint256 maxActivationCost)`.
+ * Shape of a single entry returned by `CacheManagerAutomation.getUserContracts`
+ * (CMA v2.0). Order matches the `ContractConfig` tuple layout in the ABI:
+ * `(address contractAddress, bool biddingEnabled, bool autoActivate, uint256 maxBid, uint256 maxActivationCost)`.
+ *
+ * `biddingEnabled` replaces the v1 `enabled` field. It gates automated
+ * bidding only; `autoActivate` independently gates activation.
  */
-export interface CMAUserContract {
-  contractAddress: `0x${string}`;
-  maxBid: bigint;
-  enabled: boolean;
-  autoActivate: boolean;
-  maxActivationCost: bigint;
-}
+export type CMAUserContract = CMAContractConfig;
 
 export interface UseUserCMAContractResult {
   /**
@@ -28,30 +28,16 @@ export interface UseUserCMAContractResult {
   /**
    * CMA-enforced floor for the `maxBid` field on every write. `insertContract`
    * / `updateContract` revert with `InvalidBid()` when `maxBid` is below this
-   * value, *even when `enabled === false`* — so Activation-first flows must
-   * seed `maxBid` with this floor (nominal, never executes because bidding
-   * is off) instead of `0n`. `undefined` while the read has not resolved.
+   * value, *even when `biddingEnabled === false`* — so Activation-first flows
+   * must seed `maxBid` with this floor (nominal, never executes because
+   * bidding is off) instead of `0n`. `undefined` while the read has not
+   * resolved.
    */
   minMaxBidAmount: bigint | undefined;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
 }
-
-/**
- * Shape viem returns for each element of the `getUserContracts` array. The
- * ABI defines a struct with **named** fields, so viem decodes the tuples
- * as objects (not positional arrays) — matches how the existing
- * `AutomatedBiddingSection` code already accesses `c.contractAddress`,
- * `c.enabled`, etc.
- */
-type CMAUserContractTuple = {
-  contractAddress: `0x${string}`;
-  maxBid: bigint;
-  enabled: boolean;
-  autoActivate: boolean;
-  maxActivationCost: bigint;
-};
 
 /**
  * Reads the connected user's per-contract config directly from the
@@ -65,6 +51,11 @@ type CMAUserContractTuple = {
  * The chain itself is authoritative and updates immediately on tx
  * confirmation, so consumers should call `refetch()` from their
  * `onConfirmed` callback to keep the local view in lockstep.
+ *
+ * The ABI defines `ContractConfig` with **named** components, so viem
+ * decodes each tuple as an object (`c.contractAddress`, `c.biddingEnabled`,
+ * ...). The name → position mapping lives in the ABI, which is why the ABI
+ * must match the deployed CMA version exactly (see `src/lib/cma.test.ts`).
  */
 export function useUserCMAContract({
   chainId,
@@ -84,7 +75,7 @@ export function useUserCMAContract({
     refetch: refetchContracts,
   } = useReadContract({
     address: cmaAddress,
-    abi: cacheManagerAutomationAbi.abi as Abi,
+    abi: CACHE_MANAGER_AUTOMATION_ABI,
     functionName: 'getUserContracts',
     // `getUserContracts` reads via `msg.sender`, so we must pass the
     // connected wallet as `account` — otherwise the CMA sees the zero
@@ -110,7 +101,7 @@ export function useUserCMAContract({
     refetch: refetchMinMaxBid,
   } = useReadContract({
     address: cmaAddress,
-    abi: cacheManagerAutomationAbi.abi as Abi,
+    abi: CACHE_MANAGER_AUTOMATION_ABI,
     functionName: 'minMaxBidAmount',
     chainId,
     query: {
@@ -120,23 +111,14 @@ export function useUserCMAContract({
   const minMaxBidAmount =
     typeof rawMinMaxBid === 'bigint' ? rawMinMaxBid : undefined;
 
-  const data = useMemo<CMAUserContract | null | undefined>(() => {
-    if (rawContracts == null) return undefined;
-    if (contractAddress == null) return null;
-    const tuples = rawContracts as readonly CMAUserContractTuple[];
-    const target = contractAddress.toLowerCase();
-    const match = tuples.find(
-      (entry) => entry.contractAddress.toLowerCase() === target
-    );
-    if (!match) return null;
-    return {
-      contractAddress: match.contractAddress,
-      maxBid: match.maxBid,
-      enabled: match.enabled,
-      autoActivate: match.autoActivate,
-      maxActivationCost: match.maxActivationCost,
-    };
-  }, [rawContracts, contractAddress]);
+  const data = useMemo<CMAUserContract | null | undefined>(
+    () =>
+      findCMAContractConfig(
+        rawContracts as readonly CMAContractConfig[] | undefined,
+        contractAddress
+      ),
+    [rawContracts, contractAddress]
+  );
 
   const refetchStable = useCallback(() => {
     refetchContracts();
