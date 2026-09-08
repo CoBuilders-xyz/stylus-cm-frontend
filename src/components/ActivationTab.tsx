@@ -447,11 +447,11 @@ function AutoActivationConfig({
       onChainMaxActivationCost={onChainConfig?.maxActivationCost ?? ZERO_WEI}
       // Registered → echo the current `maxBid`. Not registered →
       // fall back to `minMaxBidAmount`, the CMA-enforced floor. `0n`
-      // would revert with `InvalidBid()` even with `enabled = false`,
+      // would revert with `InvalidBid()` even with `biddingEnabled = false`,
       // so this nominal value is the only safe seed for the
       // Activation-first insertContract path.
       onChainMaxBid={onChainConfig?.maxBid ?? minMaxBidAmount}
-      onChainBiddingEnabled={onChainConfig?.enabled ?? false}
+      onChainBiddingEnabled={onChainConfig?.biddingEnabled ?? false}
       refetchCMAConfig={refetchCMAConfig}
       onSaved={onSaved}
     />

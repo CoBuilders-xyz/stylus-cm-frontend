@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
-import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { CACHE_MANAGER_AUTOMATION_ABI } from '@/config/abis/cacheManagerAutomation/cacheManagerAutomation';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   FuelIcon as GasStation,
@@ -33,7 +33,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { type Abi, formatEther } from 'viem';
+import { formatEther } from 'viem';
 import { useReadContract, useAccount } from 'wagmi';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -75,7 +75,7 @@ export function GasTankModal() {
     isLoading,
   } = useReadContract({
     address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-    abi: cacheManagerAutomationAbi.abi as Abi,
+    abi: CACHE_MANAGER_AUTOMATION_ABI,
     functionName: 'getUserBalance',
     account: userAddress, // Include the user's address to properly sign the request
     chainId: currentBlockchain?.chainId,
@@ -149,7 +149,7 @@ export function GasTankModal() {
         const txParams = {
           address:
             currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-          abi: cacheManagerAutomationAbi.abi as Abi,
+          abi: CACHE_MANAGER_AUTOMATION_ABI,
           functionName: 'fundBalance',
           args: [] as const, // Even though this function doesn't take args, wagmi requires this property
           value: depositAmount, // Amount to add in ETH
@@ -179,7 +179,7 @@ export function GasTankModal() {
         const txParams = {
           address:
             currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-          abi: cacheManagerAutomationAbi.abi as Abi,
+          abi: CACHE_MANAGER_AUTOMATION_ABI,
           functionName: 'withdrawBalance',
           args: [] as const, // Even though this function doesn't take args, wagmi requires this property
           chainId: currentBlockchain.chainId,

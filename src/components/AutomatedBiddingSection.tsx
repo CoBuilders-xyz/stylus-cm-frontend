@@ -11,7 +11,7 @@ import {
   ChevronUp,
   Info,
 } from 'lucide-react';
-import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { CACHE_MANAGER_AUTOMATION_ABI } from '@/config/abis/cacheManagerAutomation/cacheManagerAutomation';
 import { formatEther, parseEther } from 'viem';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -97,7 +97,7 @@ export function AutomatedBiddingSection({
   // Get user balance from cache manager automation contract
   const { data: userBalance, refetch: refetchBalance } = useReadContract({
     address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-    abi: cacheManagerAutomationAbi.abi as Abi,
+    abi: CACHE_MANAGER_AUTOMATION_ABI,
     functionName: 'getUserBalance',
     account: userAddress, // Include the user's address to properly sign the request
     chainId: currentBlockchain?.chainId,
@@ -134,7 +134,7 @@ export function AutomatedBiddingSection({
       setOriginalMaxBid('0');
       return;
     }
-    setAutomatedBidding(cmaRecord.enabled);
+    setAutomatedBidding(cmaRecord.biddingEnabled);
     const maxBidEth = formatEther(cmaRecord.maxBid);
     setMaxBidAmount(maxBidEth);
     setOriginalMaxBid(maxBidEth);
@@ -416,14 +416,15 @@ export function AutomatedBiddingSection({
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
+        abi: CACHE_MANAGER_AUTOMATION_ABI,
         functionName: 'insertContract',
+        // CMA input order: (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost)
         args: [
           contract.address,
-          parseEther(inputValue),
-          automatedBidding,
-          false,
-          BigInt(0),
+          parseEther(inputValue), // _maxBid
+          automatedBidding, // _biddingEnabled
+          false, // _autoActivate
+          BigInt(0), // _maxActivationCost
         ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
         chainId: currentBlockchain.chainId,
@@ -503,14 +504,15 @@ export function AutomatedBiddingSection({
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
+        abi: CACHE_MANAGER_AUTOMATION_ABI,
         functionName: 'updateContract',
+        // CMA input order: (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost)
         args: [
           contract.address,
-          parseEther(inputValue),
-          automatedBidding,
-          cmaRecord.autoActivate,
-          cmaRecord.maxActivationCost,
+          parseEther(inputValue), // _maxBid
+          automatedBidding, // _biddingEnabled
+          cmaRecord.autoActivate, // _autoActivate (preserved from chain)
+          cmaRecord.maxActivationCost, // _maxActivationCost (preserved from chain)
         ] as [string, bigint, boolean, boolean, bigint],
         chainId: currentBlockchain.chainId,
       };
@@ -574,14 +576,15 @@ export function AutomatedBiddingSection({
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
+        abi: CACHE_MANAGER_AUTOMATION_ABI,
         functionName: 'updateContract',
+        // CMA input order: (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost)
         args: [
           contract.address,
-          parseEther(originalMaxBid),
-          newAutomatedBidding,
-          cmaRecord.autoActivate,
-          cmaRecord.maxActivationCost,
+          parseEther(originalMaxBid), // _maxBid (unchanged)
+          newAutomatedBidding, // _biddingEnabled
+          cmaRecord.autoActivate, // _autoActivate (preserved from chain)
+          cmaRecord.maxActivationCost, // _maxActivationCost (preserved from chain)
         ] as [string, bigint, boolean, boolean, bigint],
         chainId: currentBlockchain.chainId,
       };
