@@ -52,6 +52,11 @@ interface ContractsTableProps {
   onContractSelect?: (contractId: string, initialData?: Contract) => void;
   onAddContract?: (contract: Contract) => void;
   onAddNewContract?: () => void;
+  /**
+   * Mobile-only "Activate" CTA on inactive / expiring cards. When omitted the
+   * card hides the button instead of rendering a dead one.
+   */
+  onActivate?: (contract: Contract) => void;
 }
 
 // Table header component with sorting functionality
@@ -128,7 +133,7 @@ const SortableTableHead = React.memo(
           <button
             type='button'
             onClick={handleSort}
-            className='flex w-full items-center rounded-sm text-start text-inherit outline-none transition-colors hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-accent-blue/60'
+            className='flex w-full items-center rounded-sm text-inherit outline-none transition-colors hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-accent-blue/60'
           >
             {children}
             {renderSortIcon()}
@@ -305,6 +310,7 @@ function ContractsTable({
   onContractSelect,
   onAddContract,
   onAddNewContract,
+  onActivate,
 }: ContractsTableProps) {
   // Use our custom hook to fetch contracts if not provided explicitly
   const {
@@ -459,6 +465,7 @@ function ContractsTable({
                     isAuthenticated={isAuthenticated}
                     onContractSelect={onContractSelect}
                     onAddContract={onAddContract}
+                    onActivate={onActivate}
                   />
                 ))}
               </div>
@@ -506,7 +513,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='text-end [&>div]:justify-end'
+                    className='text-end [&>div]:justify-end [&>button]:justify-end'
                   >
                     <div className='flex items-center gap-2'>
                       Effective Bid
@@ -535,7 +542,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='text-end [&>div]:justify-end'
+                    className='text-end [&>div]:justify-end [&>button]:justify-end'
                   >
                     Bid
                   </SortableTableHead>
@@ -543,7 +550,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='text-end [&>div]:justify-end'
+                    className='text-end [&>div]:justify-end [&>button]:justify-end'
                   >
                     Min. Bid
                   </SortableTableHead>
@@ -559,7 +566,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='text-end [&>div]:justify-end'
+                    className='text-end [&>div]:justify-end [&>button]:justify-end'
                   >
                     Size
                   </SortableTableHead>
@@ -568,7 +575,7 @@ function ContractsTable({
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={setSorting}
-                    className='text-end [&>div]:justify-end'
+                    className='text-end [&>div]:justify-end [&>button]:justify-end'
                   >
                     Total Spent
                   </SortableTableHead>

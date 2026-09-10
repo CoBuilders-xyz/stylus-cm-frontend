@@ -22,6 +22,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
+import {
+  resolveDisabledApproachingExpirationValue,
+  resolveDisabledLowGasValue,
+} from '@/lib/alertValues';
 
 interface AlertsSettingsProps {
   onSuccess?: () => void;
@@ -539,11 +543,14 @@ export default function AlertsSettings({
         });
       } else {
         const existing = findInitial(AlertType.LOW_GAS);
-        const existingValue = existing ? parseFloat(existing.value) : NaN;
-        if (existing && !isNaN(existingValue) && existingValue > 0) {
+        if (existing) {
+          // The backend requires a valid value even on a disable. If the
+          // stored value is unusable, send a safe fallback rather than
+          // skipping the request — skipping would leave the alert active
+          // while the save reports success. See `@/lib/alertValues`.
           alertSettings.push({
             type: AlertType.LOW_GAS,
-            value: existingValue,
+            value: resolveDisabledLowGasValue(existing.value),
             isActive: false,
             userContractId: contractId,
             slackChannelEnabled: lowGasSlackEnabled,
@@ -579,16 +586,11 @@ export default function AlertsSettings({
         });
       } else {
         const existing = findInitial(AlertType.APPROACHING_EXPIRATION);
-        const existingValue = existing ? parseInt(existing.value, 10) : NaN;
-        if (
-          existing &&
-          !isNaN(existingValue) &&
-          existingValue >= 1 &&
-          existingValue <= 365
-        ) {
+        if (existing) {
+          // Same reasoning as LOW_GAS above: always send the disable.
           alertSettings.push({
             type: AlertType.APPROACHING_EXPIRATION,
-            value: existingValue,
+            value: resolveDisabledApproachingExpirationValue(existing.value),
             isActive: false,
             userContractId: contractId,
             slackChannelEnabled: approachingExpirationSlackEnabled,
@@ -1189,14 +1191,8 @@ export default function AlertsSettings({
           </div>
 
           {/* Divider between cache/bid alerts and activation alerts */}
-          <div
-            className='border-t border-hairline pt-4'
-            role='separator'
-            aria-label='Activation alerts'
-          >
-            <h4 className='tile-label mb-2'>
-              Activation alerts
-            </h4>
+          <div className='border-t border-hairline pt-4'>
+            <h4 className='tile-label mb-2'>Activation alerts</h4>
           </div>
 
           {/* Approaching Expiration Alerts */}

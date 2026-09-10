@@ -3,7 +3,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   useGasPrice,
-  useChainId,
+  useAccount,
 } from 'wagmi';
 import { formatGwei } from 'viem';
 import {
@@ -82,7 +82,11 @@ export function useWeb3(options: UseWeb3Options = {}): Web3TransactionResult {
   >(undefined);
   const [isGasPriceHigh, setIsGasPriceHigh] = useState<boolean>(false);
   const [gasPriceGwei, setGasPriceGwei] = useState<string | null>(null);
-  const walletChainId = useChainId();
+  // `useAccount().chainId` is the chain of the active wallet connection.
+  // `useChainId()` is Wagmi's global config state and can lag or differ
+  // (e.g. wallet on an unconfigured chain, or disconnected), which would
+  // make this gate disagree with the `isChainMismatch` checks in callers.
+  const { chainId: walletChainId } = useAccount();
 
   // Get current gas price
   const { data: gasPrice } = useGasPrice();

@@ -19,6 +19,9 @@ export default function MyContractsPage() {
   const [selectedContractData, setSelectedContractData] =
     useState<Contract | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [detailsInitialTab, setDetailsInitialTab] = useState<
+    'cache' | 'activation'
+  >('cache');
   const [activePanelContent, setActivePanelContent] = useState<
     'details' | 'add'
   >('details');
@@ -42,6 +45,17 @@ export default function MyContractsPage() {
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
     setSelectedContractId(contractId);
     setSelectedContractData(initialData || null);
+    setDetailsInitialTab('cache');
+    setActivePanelContent('details');
+    setIsPanelOpen(true);
+  };
+
+  // Mobile card "Activate" CTA: open the same details panel, but land on
+  // the Activation tab where the real activation controls live.
+  const handleActivateContract = (contract: Contract) => {
+    setSelectedContractId(contract.id);
+    setSelectedContractData(contract);
+    setDetailsInitialTab('activation');
     setActivePanelContent('details');
     setIsPanelOpen(true);
   };
@@ -125,6 +139,7 @@ export default function MyContractsPage() {
             viewType='my-contracts'
             onContractSelect={handleContractSelect}
             onAddNewContract={handleAddNewContract}
+            onActivate={handleActivateContract}
           />
         </div>
       </div>
@@ -148,6 +163,7 @@ export default function MyContractsPage() {
               contractId={selectedContractId}
               initialContractData={selectedContractData || undefined}
               viewType='my-contracts'
+              initialTab={detailsInitialTab}
               onShowAlerts={handleShowAlerts}
             />
           )}

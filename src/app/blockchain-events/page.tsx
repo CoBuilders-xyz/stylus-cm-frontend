@@ -134,6 +134,7 @@ export default function BlockchainEventsPage() {
                   variant='outline'
                   size='icon'
                   onClick={handleClosePanel}
+                  aria-label='Close event details'
                 >
                   <X className='h-4 w-4' />
                 </Button>
