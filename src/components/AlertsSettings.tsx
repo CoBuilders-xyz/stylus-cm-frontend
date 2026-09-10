@@ -552,7 +552,7 @@ export default function AlertsSettings({
           // while the save reports success.
           const existingValue = parseFloat(existing.value);
           const value =
-            !isNaN(existingValue) && existingValue > 0
+            Number.isFinite(existingValue) && existingValue > 0
               ? existingValue
               : DISABLED_LOW_GAS_FALLBACK_VALUE;
           alertSettings.push({
@@ -597,7 +597,9 @@ export default function AlertsSettings({
           // Same reasoning as LOW_GAS above: always send the disable.
           const existingValue = parseInt(existing.value, 10);
           const value =
-            !isNaN(existingValue) && existingValue >= 1 && existingValue <= 365
+            Number.isInteger(existingValue) &&
+            existingValue >= 1 &&
+            existingValue <= 365
               ? existingValue
               : DISABLED_APPROACHING_EXPIRATION_FALLBACK_VALUE;
           alertSettings.push({
