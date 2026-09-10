@@ -22,12 +22,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
-
-// Fallbacks used only when disabling a value-based alert whose stored value
-// no longer passes validation (legacy rows). The alert is inactive, so the
-// value is never acted on; it only has to satisfy the backend schema.
-const DISABLED_LOW_GAS_FALLBACK_VALUE = 0.01;
-const DISABLED_APPROACHING_EXPIRATION_FALLBACK_VALUE = 7;
+import {
+  resolveDisabledApproachingExpirationValue,
+  resolveDisabledLowGasValue,
+} from '@/lib/alertValues';
 
 interface AlertsSettingsProps {
   onSuccess?: () => void;
@@ -549,15 +547,10 @@ export default function AlertsSettings({
           // The backend requires a valid value even on a disable. If the
           // stored value is unusable, send a safe fallback rather than
           // skipping the request — skipping would leave the alert active
-          // while the save reports success.
-          const existingValue = parseFloat(existing.value);
-          const value =
-            Number.isFinite(existingValue) && existingValue > 0
-              ? existingValue
-              : DISABLED_LOW_GAS_FALLBACK_VALUE;
+          // while the save reports success. See `@/lib/alertValues`.
           alertSettings.push({
             type: AlertType.LOW_GAS,
-            value,
+            value: resolveDisabledLowGasValue(existing.value),
             isActive: false,
             userContractId: contractId,
             slackChannelEnabled: lowGasSlackEnabled,
@@ -595,16 +588,9 @@ export default function AlertsSettings({
         const existing = findInitial(AlertType.APPROACHING_EXPIRATION);
         if (existing) {
           // Same reasoning as LOW_GAS above: always send the disable.
-          const existingValue = parseInt(existing.value, 10);
-          const value =
-            Number.isInteger(existingValue) &&
-            existingValue >= 1 &&
-            existingValue <= 365
-              ? existingValue
-              : DISABLED_APPROACHING_EXPIRATION_FALLBACK_VALUE;
           alertSettings.push({
             type: AlertType.APPROACHING_EXPIRATION,
-            value,
+            value: resolveDisabledApproachingExpirationValue(existing.value),
             isActive: false,
             userContractId: contractId,
             slackChannelEnabled: approachingExpirationSlackEnabled,
