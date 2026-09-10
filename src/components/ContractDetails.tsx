@@ -136,6 +136,8 @@ interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
+  /** Tab shown when the panel opens (my-contracts view only). */
+  initialTab?: 'cache' | 'activation';
   onAddContract?: (contract: Contract) => void;
   onShowAlerts?: (
     userContractId: string,
@@ -148,6 +150,7 @@ export default function ContractDetails({
   contractId,
   initialContractData,
   viewType = 'explore-contracts',
+  initialTab = 'cache',
   onAddContract,
   onShowAlerts,
 }: ContractDetailsProps) {
@@ -620,7 +623,7 @@ export default function ContractDetails({
       <ScrollArea className='panel-scroll-area flex-1 min-w-0 overscroll-contain'>
         <div className='px-5 py-4 min-w-0 overflow-x-hidden'>
           {viewType === 'my-contracts' ? (
-            <Tabs defaultValue='cache' className='w-full'>
+            <Tabs defaultValue={initialTab} className='w-full'>
               <TabsList className='bg-surface-2 border border-hairline rounded-lg p-[2px] mb-4 overflow-x-auto max-w-full flex-nowrap'>
                 <TabsTrigger
                   value='cache'

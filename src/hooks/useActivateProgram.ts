@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { isAddress, parseEther } from 'viem';
-import {
-  useAccount,
-  useChainId,
-  useSimulateContract,
-  useSwitchChain,
-} from 'wagmi';
+import { useAccount, useSimulateContract, useSwitchChain } from 'wagmi';
 import {
   ARB_WASM_ABI,
   ARB_WASM_PRECOMPILE,
@@ -21,6 +16,16 @@ import { getNetworkSwitchErrorMessage } from '@/utils/walletErrors';
  * larger than the largest fee we expect to see in practice.
  */
 const ACTIVATION_SIMULATION_VALUE = parseEther('0.01');
+
+/**
+ * Balance granted to the caller for the duration of the `eth_call` only.
+ * `eth_call` rejects the request outright when the sender cannot cover
+ * `value`, so without this a wallet holding less than the probe amount
+ * could never discover the fee (and never see an enabled Activate button),
+ * even though the real activation costs far less. The override never
+ * touches chain state and the real write still uses the wallet's funds.
+ */
+const ACTIVATION_SIMULATION_BALANCE = parseEther('1');
 
 export interface UseActivateProgramParams {
   /** Address of the WASM program to activate. Simulation waits until this is a valid 42-char address. */
@@ -77,8 +82,12 @@ export function useActivateProgram({
   enabled = true,
   onConfirmed,
 }: UseActivateProgramParams): UseActivateProgramResult {
-  const { isConnected } = useAccount();
-  const walletChainId = useChainId();
+  // Read the chain from the active connection (see the note in `useWeb3`).
+  const {
+    address: account,
+    isConnected,
+    chainId: walletChainId,
+  } = useAccount();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const isChainMismatch =
     isConnected && targetChainId != null && walletChainId !== targetChainId;
@@ -110,6 +119,9 @@ export function useActivateProgram({
     args: isValidAddress ? [address as `0x${string}`] : undefined,
     value: ACTIVATION_SIMULATION_VALUE,
     chainId: targetChainId,
+    stateOverride: account
+      ? [{ address: account, balance: ACTIVATION_SIMULATION_BALANCE }]
+      : undefined,
     query: {
       // Also stop simulating once the write is in flight or just confirmed —
       // the precompile would revert with `ProgramUpToDate` and surface as

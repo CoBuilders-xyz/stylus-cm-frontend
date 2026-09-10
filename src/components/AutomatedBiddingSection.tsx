@@ -85,6 +85,7 @@ export function AutomatedBiddingSection({
   // exactly the COB-499 regression class. Refetches on write confirmation.
   const {
     data: cmaRecord,
+    minMaxBidAmount,
     refetch: refetchCMARecord,
   } = useUserCMAContract({
     chainId: currentBlockchain?.chainId,
@@ -238,29 +239,16 @@ export function AutomatedBiddingSection({
         onSuccess();
       }
 
-      // Instead of just refetching, first update our local state with the values we just set
-      // This ensures that the values stay consistent with what the user just set
       if (contract?.address) {
-        // If we just completed a successful transaction, we should keep the user's input value
-        // rather than allowing it to be overwritten by outdated contract data
-
-        // Store current values before reset
-        const currentInputValue = inputValue;
-        const currentAutomatedBidding = automatedBidding;
-
         // Reset transaction state
         reset();
 
         // Immediately refetch the balance and the CMA record so both this
-        // tab and the Activation tab see the just-updated values.
+        // tab and the Activation tab see the just-updated values. The
+        // hydration effect above then echoes the confirmed on-chain values
+        // into the form.
         refetchBalance();
         refetchCMARecord();
-
-        // Log the values we're keeping
-        console.log('Keeping user values after successful transaction:', {
-          maxBidAmount: currentInputValue,
-          automatedBidding: currentAutomatedBidding,
-        });
       }
     }
   }, [
@@ -269,8 +257,6 @@ export function AutomatedBiddingSection({
     reset,
     refetchBalance,
     refetchCMARecord,
-    inputValue,
-    automatedBidding,
     contract?.address,
   ]);
 
@@ -335,6 +321,27 @@ export function AutomatedBiddingSection({
     setAutomationFunding(value);
   };
 
+  // The CMA reverts `insertContract` / `updateContract` with `InvalidBid`
+  // whenever `_maxBid < minMaxBidAmount`, even when bidding is disabled.
+  // Check the floor client-side so the user sees the real reason instead
+  // of a generic wallet error (and does not burn gas on a doomed tx).
+  const validateMaxBidFloor = (value: string): boolean => {
+    if (minMaxBidAmount === undefined) {
+      showErrorToast({
+        message:
+          'Could not read the minimum bid amount. Try again in a moment.',
+      });
+      return false;
+    }
+    if (parseEther(value) < minMaxBidAmount) {
+      setInputError(
+        `Maximum bid must be at least ${formatEther(minMaxBidAmount)} ETH`
+      );
+      return false;
+    }
+    return true;
+  };
+
   // Handle set bid button click
   const handleSetAutomation = () => {
     let hasError = false;
@@ -356,6 +363,10 @@ export function AutomatedBiddingSection({
     const isFundingValid = validateNumericInput(fundingValue, setFundingError);
 
     if (!isMaxBidValid || !isFundingValid) {
+      return;
+    }
+
+    if (!validateMaxBidFloor(inputValue)) {
       return;
     }
 
@@ -457,6 +468,10 @@ export function AutomatedBiddingSection({
     const isMaxBidValid = validateNumericInput(inputValue, setInputError);
 
     if (!isMaxBidValid) {
+      return;
+    }
+
+    if (!validateMaxBidFloor(inputValue)) {
       return;
     }
 

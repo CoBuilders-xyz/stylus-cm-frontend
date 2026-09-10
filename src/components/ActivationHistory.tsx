@@ -118,7 +118,7 @@ export default function ActivationHistory({
                   </TableCell>
 
                   {/* Spent / reason */}
-                  <TableCell className='p-2 w-1/4 text-center'>
+                  <TableCell className='p-2 w-1/4 text-center whitespace-normal break-words'>
                     <span
                       className={`font-medium num ${
                         isSuccess
