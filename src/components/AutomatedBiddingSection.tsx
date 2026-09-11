@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
@@ -122,6 +122,18 @@ export function AutomatedBiddingSection({
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
+  // True once the user has typed in the max-bid input since the last
+  // hydration / submit. While set, hydration leaves `maxBidAmount` alone so
+  // a refetch (e.g. the one fired right after a confirmed write, or the
+  // initial read racing a fast typist) cannot replace an unsaved edit.
+  // Cleared on submit (the typed value is being committed) and whenever
+  // the contract changes (declared before the hydration effect so it runs
+  // first on the same render).
+  const maxBidDirtyRef = useRef(false);
+  useEffect(() => {
+    maxBidDirtyRef.current = false;
+  }, [contract?.address]);
+
   // Hydrate the form from the on-chain CMA record. `cmaRecord === undefined`
   // means the read hasn't resolved yet — do nothing. `null` means the
   // contract is not registered (defaults). Object means registered — echo
@@ -131,13 +143,13 @@ export function AutomatedBiddingSection({
     if (cmaRecord === undefined) return;
     if (cmaRecord === null) {
       setAutomatedBidding(true);
-      setMaxBidAmount('');
+      if (!maxBidDirtyRef.current) setMaxBidAmount('');
       setOriginalMaxBid('0');
       return;
     }
     setAutomatedBidding(cmaRecord.biddingEnabled);
     const maxBidEth = formatEther(cmaRecord.maxBid);
-    setMaxBidAmount(maxBidEth);
+    if (!maxBidDirtyRef.current) setMaxBidAmount(maxBidEth);
     setOriginalMaxBid(maxBidEth);
   }, [contract?.address, cmaRecord, setAutomatedBidding, setMaxBidAmount]);
 
@@ -291,6 +303,7 @@ export function AutomatedBiddingSection({
 
     // Update local state immediately to show typing in real-time
     setInputValue(value);
+    maxBidDirtyRef.current = true;
 
     // Clear the error if input is emptied
     if (!value) {
@@ -444,6 +457,10 @@ export function AutomatedBiddingSection({
       // Store the parameters for retry functionality
       setLastTxParams(txParams);
 
+      // The typed value is now being committed; let the post-confirmation
+      // refetch hydrate the form with whatever the chain confirms.
+      maxBidDirtyRef.current = false;
+
       // Send the transaction
       writeContract(txParams, (hash) => {
         console.log(`Transaction submitted with hash: ${hash}`);
@@ -537,6 +554,9 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
+
+      // The typed value is now being committed (see handleSetAutomation).
+      maxBidDirtyRef.current = false;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
