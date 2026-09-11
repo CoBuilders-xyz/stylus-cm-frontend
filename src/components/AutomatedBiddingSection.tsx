@@ -122,16 +122,14 @@ export function AutomatedBiddingSection({
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
-  // True once the user has typed in the max-bid input since the last
-  // hydration / submit. While set, hydration leaves `maxBidAmount` alone so
-  // a refetch (e.g. the one fired right after a confirmed write, or the
-  // initial read racing a fast typist) cannot replace an unsaved edit.
-  // Cleared on submit (the typed value is being committed) and whenever
-  // the contract changes (declared before the hydration effect so it runs
-  // first on the same render).
+  // Set while the max-bid input holds an unsaved edit; hydration skips the
+  // field until a write that commits it is confirmed.
   const maxBidDirtyRef = useRef(false);
+  // Whether the in-flight write carries a max-bid change (toggle does not).
+  const pendingMaxBidCommitRef = useRef(false);
   useEffect(() => {
     maxBidDirtyRef.current = false;
+    pendingMaxBidCommitRef.current = false;
   }, [contract?.address]);
 
   // Hydrate the form from the on-chain CMA record. `cmaRecord === undefined`
@@ -252,13 +250,15 @@ export function AutomatedBiddingSection({
       }
 
       if (contract?.address) {
-        // Reset transaction state
         reset();
 
-        // Immediately refetch the balance and the CMA record so both this
-        // tab and the Activation tab see the just-updated values. The
-        // hydration effect above then echoes the confirmed on-chain values
-        // into the form.
+        // The submitted max bid is now on-chain; let hydration echo it.
+        if (pendingMaxBidCommitRef.current) {
+          maxBidDirtyRef.current = false;
+          pendingMaxBidCommitRef.current = false;
+        }
+
+        // Refetch so this tab and the Activation tab see the new values.
         refetchBalance();
         refetchCMARecord();
       }
@@ -456,10 +456,7 @@ export function AutomatedBiddingSection({
 
       // Store the parameters for retry functionality
       setLastTxParams(txParams);
-
-      // The typed value is now being committed; let the post-confirmation
-      // refetch hydrate the form with whatever the chain confirms.
-      maxBidDirtyRef.current = false;
+      pendingMaxBidCommitRef.current = true;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -554,9 +551,7 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
-
-      // The typed value is now being committed (see handleSetAutomation).
-      maxBidDirtyRef.current = false;
+      pendingMaxBidCommitRef.current = true;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -629,6 +624,7 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
+      pendingMaxBidCommitRef.current = false;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
