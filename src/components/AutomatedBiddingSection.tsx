@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
@@ -122,6 +122,16 @@ export function AutomatedBiddingSection({
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
+  // Set while the max-bid input holds an unsaved edit; hydration skips the
+  // field until a write that commits it is confirmed.
+  const maxBidDirtyRef = useRef(false);
+  // Whether the in-flight write carries a max-bid change (toggle does not).
+  const pendingMaxBidCommitRef = useRef(false);
+  useEffect(() => {
+    maxBidDirtyRef.current = false;
+    pendingMaxBidCommitRef.current = false;
+  }, [contract?.address]);
+
   // Hydrate the form from the on-chain CMA record. `cmaRecord === undefined`
   // means the read hasn't resolved yet — do nothing. `null` means the
   // contract is not registered (defaults). Object means registered — echo
@@ -131,13 +141,13 @@ export function AutomatedBiddingSection({
     if (cmaRecord === undefined) return;
     if (cmaRecord === null) {
       setAutomatedBidding(true);
-      setMaxBidAmount('');
+      if (!maxBidDirtyRef.current) setMaxBidAmount('');
       setOriginalMaxBid('0');
       return;
     }
     setAutomatedBidding(cmaRecord.biddingEnabled);
     const maxBidEth = formatEther(cmaRecord.maxBid);
-    setMaxBidAmount(maxBidEth);
+    if (!maxBidDirtyRef.current) setMaxBidAmount(maxBidEth);
     setOriginalMaxBid(maxBidEth);
   }, [contract?.address, cmaRecord, setAutomatedBidding, setMaxBidAmount]);
 
@@ -240,13 +250,15 @@ export function AutomatedBiddingSection({
       }
 
       if (contract?.address) {
-        // Reset transaction state
         reset();
 
-        // Immediately refetch the balance and the CMA record so both this
-        // tab and the Activation tab see the just-updated values. The
-        // hydration effect above then echoes the confirmed on-chain values
-        // into the form.
+        // The submitted max bid is now on-chain; let hydration echo it.
+        if (pendingMaxBidCommitRef.current) {
+          maxBidDirtyRef.current = false;
+          pendingMaxBidCommitRef.current = false;
+        }
+
+        // Refetch so this tab and the Activation tab see the new values.
         refetchBalance();
         refetchCMARecord();
       }
@@ -291,6 +303,7 @@ export function AutomatedBiddingSection({
 
     // Update local state immediately to show typing in real-time
     setInputValue(value);
+    maxBidDirtyRef.current = true;
 
     // Clear the error if input is emptied
     if (!value) {
@@ -443,6 +456,7 @@ export function AutomatedBiddingSection({
 
       // Store the parameters for retry functionality
       setLastTxParams(txParams);
+      pendingMaxBidCommitRef.current = true;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -537,6 +551,7 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
+      pendingMaxBidCommitRef.current = true;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -609,6 +624,7 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
+      pendingMaxBidCommitRef.current = false;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
