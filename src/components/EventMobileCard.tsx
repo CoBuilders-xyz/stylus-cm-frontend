@@ -1,14 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Copy } from 'lucide-react';
 import {
   formatTransactionHash,
   formatEventTimestamp,
   formatRelativeTime,
-  getEventTypeBadgeVariant,
   formatEventType,
   formatBlockNumber,
   getBidAmountFromEventData,
@@ -23,10 +21,16 @@ interface Props {
   onSelect?: (event: BlockchainEvent) => void;
 }
 
+/**
+ * One row of the mobile events list. Rendered inside a single bordered card
+ * by the parent (rows separated by hairlines): event identity + metrics on
+ * the left, event type + relative time on the right (one trailing edge).
+ */
 export default function EventMobileCard({ event, onSelect }: Props) {
   const [copied, setCopied] = React.useState(false);
   const bid = getBidAmountFromEventData(event.eventData, event.eventName);
   const size = getSizeFromEventData(event.eventData, event.eventName);
+  const isDelete = event.eventName === 'DeleteBid';
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -55,85 +59,65 @@ export default function EventMobileCard({ event, onSelect }: Props) {
       tabIndex={isSelectable ? 0 : undefined}
       onClick={isSelectable ? handleSelect : undefined}
       onKeyDown={isSelectable ? handleKeyDown : undefined}
-      className={`w-full text-left rounded-lg border border-[#2C2E30] bg-[#0F0F0F] transition-colors p-4 flex flex-col gap-3 outline-none ${
+      className={`w-full text-start px-[14px] py-3 flex items-start justify-between gap-3 outline-none transition-colors ${
         isSelectable
-          ? 'hover:bg-[#161616] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#335CD7]'
+          ? 'cursor-pointer hover:bg-surface-2 focus-visible:bg-surface-2'
           : ''
       }`}
     >
-      <div className='flex items-center justify-between gap-2'>
-        <Badge
-          variant={getEventTypeBadgeVariant(event.eventName)}
-          className='px-2 py-0.5 text-[11px] font-semibold w-fit'
-        >
-          {formatEventType(event.eventName)}
-        </Badge>
-        <div className='text-[11px] text-gray-500 text-right'>
-          <div>{formatEventTimestamp(event.blockTimestamp)}</div>
-          <div className='text-gray-600'>
-            {formatRelativeTime(event.blockTimestamp)}
-          </div>
+      {/* Leading column: tx identity + metrics */}
+      <div className='min-w-0 flex-1'>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <span className='mono-addr !text-ink-2 text-[12px] truncate'>
+            {formatTransactionHash(event.transactionHash)}
+          </span>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={handleCopy}
+            className='p-1 h-auto shrink-0 text-ink-3 hover:text-ink-1 hover:bg-transparent'
+            aria-label='Copy transaction hash'
+          >
+            {copied ? (
+              <span className='text-ok-text text-xs'>✓</span>
+            ) : (
+              <Copy className='w-3 h-3' />
+            )}
+          </Button>
         </div>
-      </div>
-
-      <div>
-        <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-          Contract
-        </div>
-        <div className='text-sm font-mono text-white truncate'>
+        <div className='mono-addr truncate mt-0.5'>
           {event.contractAddress}
         </div>
+        <div className='flex items-center gap-2.5 mt-1.5 text-[11px] text-ink-2 num flex-wrap'>
+          <span>
+            block{' '}
+            <span className='text-ink-1 font-medium'>
+              {formatBlockNumber(event.blockNumber)}
+            </span>
+          </span>
+          {bid ? (
+            <span>
+              bid <span className='text-ink-1 font-medium'>{bid}</span>
+            </span>
+          ) : null}
+          {size ? (
+            <span className='text-ink-1 font-medium'>{formatSize(size)}</span>
+          ) : null}
+        </div>
       </div>
 
-      <div className='flex items-center gap-2 min-w-0'>
-        <div className='min-w-0 flex-1'>
-          <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-            Tx hash
-          </div>
-          <div className='text-sm font-mono text-white truncate'>
-            {formatTransactionHash(event.transactionHash)}
-          </div>
-        </div>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={handleCopy}
-          className='p-1 h-auto shrink-0 hover:bg-gray-800'
-          aria-label='Copy transaction hash'
+      {/* Trailing column: type + time, one shared edge */}
+      <div className='flex flex-col items-end gap-1.5 shrink-0'>
+        <span className={`pill ${isDelete ? 'pill-crit' : 'pill-muted'}`}>
+          <span className={`pill-dot ${isDelete ? 'bg-crit' : 'bg-ok'}`} />
+          {formatEventType(event.eventName)}
+        </span>
+        <span
+          className='text-[10.5px] text-ink-3 num text-end'
+          title={formatEventTimestamp(event.blockTimestamp)}
         >
-          {copied ? (
-            <span className='text-green-400 text-xs'>✓</span>
-          ) : (
-            <Copy className='w-3.5 h-3.5' />
-          )}
-        </Button>
-      </div>
-
-      <div className='grid grid-cols-3 gap-2 text-xs pt-1'>
-        <div>
-          <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-            Block
-          </div>
-          <div className='text-white tabular-nums'>
-            {formatBlockNumber(event.blockNumber)}
-          </div>
-        </div>
-        <div>
-          <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-            Bid
-          </div>
-          <div className='text-white tabular-nums truncate'>
-            {bid || '—'}
-          </div>
-        </div>
-        <div>
-          <div className='text-[10px] uppercase tracking-wider text-gray-500'>
-            Size
-          </div>
-          <div className='text-white tabular-nums'>
-            {size ? formatSize(size) : '—'}
-          </div>
-        </div>
+          {formatRelativeTime(event.blockTimestamp)}
+        </span>
       </div>
     </div>
   );

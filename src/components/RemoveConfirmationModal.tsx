@@ -1,72 +1,78 @@
-import React from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import removeContractImage from 'public/remove-contract.svg';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RemoveConfirmationModalProps {
+  open: boolean;
   isRemoving: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
 export function RemoveConfirmationModal({
+  open,
   isRemoving,
   onCancel,
   onConfirm,
 }: RemoveConfirmationModalProps) {
   return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-      <div className='bg-[#121212] p-6 rounded-lg max-w-md w-full'>
-        {/* Close button */}
-        <div className='flex justify-end mb-2'>
-          <Button
-            onClick={onCancel}
-            variant='ghost'
-            size='icon'
-            className='h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-800'
-          >
-            <X className='h-4 w-4' />
-          </Button>
-        </div>
-
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isRemoving) onCancel();
+      }}
+    >
+      <AlertDialogContent
+        className='gap-0 p-5 sm:p-6'
+        style={{ maxWidth: 'min(448px, calc(100% - 28px))' }}
+      >
         {/* Icon */}
-        <div className='flex justify-center mb-4'>
+        <div className='flex justify-center mb-3 pt-5 sm:pt-3'>
           <Image
             src={removeContractImage}
-            alt={'remove contract'}
-            width={200}
-            height={200}
+            alt='Remove contract'
+            className='h-auto w-[120px] sm:w-[160px]'
           />
         </div>
 
         {/* Title and description */}
-        <h3 className='text-xl font-bold text-center mb-2'>
+        <AlertDialogTitle className='text-center leading-snug mb-2'>
           Remove Contract From Your List?
-        </h3>
-        <p className='text-center text-gray-400 text-sm mb-6'>
+        </AlertDialogTitle>
+        <AlertDialogDescription className='text-center leading-relaxed mb-5'>
           This action will remove the contract from your managed list.
           <br />
           All historical data will remain intact.
-        </p>
+        </AlertDialogDescription>
 
         {/* Action buttons */}
-        <div className='flex justify-center gap-3'>
-          <Button
-            onClick={onCancel}
-            className='bg-transparent border border-gray-600 hover:bg-gray-800 text-white text-sm px-5 py-2 h-9 rounded-md'
-            disabled={isRemoving}
-          >
-            Cancel
-          </Button>
+        <div className='grid grid-cols-1 sm:grid-cols-[auto_auto] justify-center gap-2'>
+          <AlertDialogCancel asChild>
+            <Button
+              variant='outline'
+              className='w-full sm:w-auto px-5 h-9 rounded-lg'
+              disabled={isRemoving}
+            >
+              Cancel
+            </Button>
+          </AlertDialogCancel>
           <Button
             onClick={onConfirm}
-            className='bg-white hover:bg-gray-200 text-black font-medium text-sm px-5 py-2 h-9 rounded-md'
+            variant='destructive'
+            className='w-full sm:w-auto px-5 h-9 rounded-lg'
             disabled={isRemoving}
           >
             {isRemoving ? (
               <>
-                <Loader2 className='h-4 w-4 mr-2 animate-spin text-black' />
+                <Loader2 className='h-4 w-4 me-2 animate-spin' />
                 Removing...
               </>
             ) : (
@@ -74,8 +80,8 @@ export function RemoveConfirmationModal({
             )}
           </Button>
         </div>
-      </div>
-    </div>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

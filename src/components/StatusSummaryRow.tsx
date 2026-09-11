@@ -29,8 +29,8 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className='rounded-lg border border-[#2C2E30] bg-[#0F0F0F] p-4 flex flex-col gap-1'>
-      <div className='flex items-center gap-2 text-gray-400 text-[11px] uppercase tracking-wider'>
+    <div className='app-card p-4 flex flex-col gap-1'>
+      <div className='tile-label flex items-center gap-2'>
         <Icon className='h-3.5 w-3.5' />
         {label}
       </div>
@@ -54,11 +54,11 @@ export default function StatusSummaryRow({
       } gap-3 mb-6`}
     >
       <Card icon={Database} label='Cache Status'>
-        <div className='text-xl font-bold mt-0.5'>
+        <div className='text-lg font-semibold text-ink-1 mt-0.5'>
           {isCached ? 'Cached' : 'Not Cached'}
         </div>
         {lastCachedAt && (
-          <div className='text-xs text-gray-500'>
+          <div className='text-xs text-ink-3'>
             Last cached {formatRelativeTime(lastCachedAt)}
           </div>
         )}
@@ -83,18 +83,18 @@ export default function StatusSummaryRow({
             />
           </span>
           <span
-            className={`text-xl font-bold ${activationTextClass(
+            className={`text-lg font-semibold ${activationTextClass(
               activation.status
             )}`}
           >
             {activationStatusLabel(activation)}
           </span>
         </div>
-        <div className='text-xs text-gray-400'>
+        <div className='text-xs text-ink-2'>
           {activationSubLabel(activation)}
         </div>
         {activation.lastActivatedAt && (
-          <div className='text-xs text-gray-500'>
+          <div className='text-xs text-ink-3'>
             Last activated {formatRelativeTime(activation.lastActivatedAt)}
           </div>
         )}
@@ -103,11 +103,11 @@ export default function StatusSummaryRow({
       {showAlerts && (
         <Card icon={BellRing} label='Alerts'>
           <div className='flex items-baseline gap-2 mt-0.5'>
-            <span className='text-xl font-bold'>{alertsCount}</span>
-            <span className='text-xs text-gray-400'>active</span>
+            <span className='text-lg font-semibold text-ink-1 num'>{alertsCount}</span>
+            <span className='text-xs text-ink-2'>active</span>
           </div>
           <button
-            className='mt-auto self-start text-xs text-[#2D99DD] hover:text-[#5ab2e5] font-medium'
+            className='mt-auto self-start text-xs text-accent-blue hover:text-accent-blue-hover font-medium'
             onClick={onConfigureAlerts}
           >
             Configure →

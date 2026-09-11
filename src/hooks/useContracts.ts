@@ -35,18 +35,6 @@ interface ContractsResult {
 }
 
 /**
- * Default empty pagination meta
- */
-const DEFAULT_PAGINATION: PaginationMeta = {
-  page: 1,
-  limit: 5,
-  totalItems: 0,
-  totalPages: 0,
-  hasNextPage: false,
-  hasPreviousPage: false,
-};
-
-/**
  * Hook to fetch contracts data with pagination and sorting
  * @param type The type of contracts to fetch ('explore' or 'my-contracts')
  * @returns Object with contracts data, pagination, loading state, error, and methods to control data fetching
@@ -54,18 +42,31 @@ const DEFAULT_PAGINATION: PaginationMeta = {
 export function useContracts(
   type: 'explore' | 'my-contracts'
 ): ContractsResult {
+  const [limit, setLimit] = useState(5);
+  const [isLimitReady, setIsLimitReady] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [pagination, setPagination] =
-    useState<PaginationMeta>(DEFAULT_PAGINATION);
+  const [pagination, setPagination] = useState<PaginationMeta>(() => ({
+    page: 1,
+    limit,
+    totalItems: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  }));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(5);
   const [sortBy, setSortBy] = useState<ContractSortField[]>([
     ContractSortField.LAST_BID,
   ]);
   const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  useEffect(() => {
+    const desktopDefault = window.matchMedia('(min-width: 768px)').matches;
+    setLimit(desktopDefault ? 10 : 5);
+    setIsLimitReady(true);
+  }, []);
 
   // Store the current type in a ref to avoid unnecessary re-renders
   const typeRef = useRef(type);
@@ -80,7 +81,7 @@ export function useContracts(
   // Use useCallback to ensure the function reference is stable
   const fetchContracts = useCallback(async () => {
     // Don't fetch if we don't have a blockchain ID yet
-    if (!currentBlockchainId) {
+    if (!currentBlockchainId || !isLimitReady) {
       return;
     }
 
@@ -164,6 +165,7 @@ export function useContracts(
   }, [
     contractService,
     currentBlockchainId,
+    isLimitReady,
     page,
     limit,
     sortBy,
@@ -251,7 +253,7 @@ export function useContracts(
   // Create a stable reference to the result object to avoid unnecessary re-renders
   return {
     contracts,
-    isLoading: isLoading || isBlockchainLoading,
+    isLoading: isLoading || isBlockchainLoading || !isLimitReady,
     error,
     pagination,
     refetch: fetchContracts,

@@ -19,6 +19,9 @@ export default function MyContractsPage() {
   const [selectedContractData, setSelectedContractData] =
     useState<Contract | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [detailsInitialTab, setDetailsInitialTab] = useState<
+    'cache' | 'activation'
+  >('cache');
   const [activePanelContent, setActivePanelContent] = useState<
     'details' | 'add'
   >('details');
@@ -42,6 +45,17 @@ export default function MyContractsPage() {
   const handleContractSelect = (contractId: string, initialData?: Contract) => {
     setSelectedContractId(contractId);
     setSelectedContractData(initialData || null);
+    setDetailsInitialTab('cache');
+    setActivePanelContent('details');
+    setIsPanelOpen(true);
+  };
+
+  // Mobile card "Activate" CTA: open the same details panel, but land on
+  // the Activation tab where the real activation controls live.
+  const handleActivateContract = (contract: Contract) => {
+    setSelectedContractId(contract.id);
+    setSelectedContractData(contract);
+    setDetailsInitialTab('activation');
     setActivePanelContent('details');
     setIsPanelOpen(true);
   };
@@ -119,12 +133,13 @@ export default function MyContractsPage() {
           paddingRight: isDesktop && isPanelOpen ? desktopPanelWidth : '0',
         }}
       >
-        <div className='p-4 sm:p-6 md:p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='page-gutter py-5 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='my-contracts'
             onContractSelect={handleContractSelect}
             onAddNewContract={handleAddNewContract}
+            onActivate={handleActivateContract}
           />
         </div>
       </div>
@@ -134,6 +149,12 @@ export default function MyContractsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel={
+          activePanelContent === 'details'
+            ? 'Contract details'
+            : 'Add contract'
+        }
+        lockBodyScrollOnMobile={activePanelContent === 'details'}
       >
         {isPanelOpen &&
           activePanelContent === 'details' &&
@@ -142,6 +163,7 @@ export default function MyContractsPage() {
               contractId={selectedContractId}
               initialContractData={selectedContractData || undefined}
               viewType='my-contracts'
+              initialTab={detailsInitialTab}
               onShowAlerts={handleShowAlerts}
             />
           )}
@@ -161,6 +183,7 @@ export default function MyContractsPage() {
         onClose={handleCloseAlertsPanel}
         width={panelWidth}
         zIndex={50}
+        ariaLabel='Contract alert settings'
       >
         {isAlertsPanelOpen && (
           <AlertsSettings

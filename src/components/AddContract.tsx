@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSidePanel } from './SidePanel';
@@ -9,17 +9,32 @@ import { useContractsUpdater } from '@/hooks/useContractsUpdater';
 import { useBlockchainService } from '@/hooks/useBlockchainService';
 import { useRouter } from 'next/navigation';
 import { X, Info } from 'lucide-react';
-import { useBytecode, useReadContract } from 'wagmi';
+import { useBytecode } from 'wagmi';
 import { isAddress } from 'viem';
+import {
+  useProgramTimeLeft,
+  type ProgramReason,
+} from '@/hooks/useProgramTimeLeft';
+import { useActivateProgram } from '@/hooks/useActivateProgram';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  ARB_WASM_ABI,
-  ARB_WASM_PRECOMPILE,
-} from '@/config/abis/arbWasm/arbWasm';
+import ActivationRequiredCard from '@/components/ActivationRequiredCard';
+
+// User-facing copy per revert reason. The action is the same in all three
+// cases (call ArbWasm.activateProgram) — only the framing differs so the
+// user understands whether they are activating for the first time,
+// re-activating after expiry, or migrating to a newer Stylus runtime.
+const ACTIVATION_MESSAGE_BY_REASON: Record<ProgramReason, string> = {
+  never_activated:
+    'This WASM contract has not been activated yet. Activate it now to cache it.',
+  expired:
+    "This WASM contract's activation has expired. Reactivate it to be cached.",
+  needs_upgrade:
+    'This WASM contract was activated under an older Stylus version. Reactivate it under the current version to be cached.',
+};
 
 interface AddContractProps {
   onSuccess?: () => void;
@@ -35,7 +50,8 @@ export default function AddContract({
   const { onClose } = useSidePanel();
   const contractService = useContractService();
   const { signalContractUpdated } = useContractsUpdater();
-  const { currentBlockchainId } = useBlockchainService();
+  const { currentBlockchain, currentBlockchainId } = useBlockchainService();
+  const targetChainId = currentBlockchain?.chainId;
   const router = useRouter();
 
   // State for the form - initialize with initialAddress if provided
@@ -58,26 +74,77 @@ export default function AddContract({
     error: bytecodeError,
   } = useBytecode({
     address: contractAddress as `0x${string}`,
+    chainId: targetChainId,
     query: {
       enabled:
-        !!contractAddress && contractAddress.length === 42 && !addressError,
+        !!contractAddress &&
+        contractAddress.length === 42 &&
+        !addressError &&
+        targetChainId != null,
     },
   });
 
-  // Check if WASM contract is active using ArbWasm precompile
+  // Check the program's activation status against the ArbWasm precompile.
+  // useProgramTimeLeft (COB-493) decodes the precompile's typed reverts into
+  // a stable `reason` — this is what lets the amber card handle every
+  // reactivation case (never-activated, expired, needs-upgrade) with a single
+  // `activateProgram` call. Using the shared hook here means the AddContract
+  // validation stays in lockstep with the badge on the contracts tables.
+  const programAddresses = useMemo(
+    () =>
+      isWasmContract && contractAddress.length === 42
+        ? [contractAddress]
+        : undefined,
+    [isWasmContract, contractAddress]
+  );
   const {
-    data: timeLeftSeconds,
+    data: programReadings,
     isLoading: isCheckingWasmActive,
-    error: wasmActiveError,
-  } = useReadContract({
-    address: ARB_WASM_PRECOMPILE,
-    abi: ARB_WASM_ABI,
-    functionName: 'programTimeLeft',
-    args: [contractAddress as `0x${string}`],
-    query: {
-      enabled:
-        isWasmContract && !!contractAddress && contractAddress.length === 42,
-    },
+    refetch: refetchProgramTimeLeft,
+  } = useProgramTimeLeft(programAddresses, targetChainId);
+  const programReading = programReadings[contractAddress.toLowerCase()];
+  const programSeconds = programReading?.seconds ?? null;
+  // Defensive: some ArbWasm precompile builds may return `0n` instead of
+  // reverting for expired programs, and older revert types not covered by
+  // `REASON_BY_ERROR_NAME` in useProgramTimeLeft fall back to `null`. If we
+  // observe a numeric zero without a decoded reason, treat it as expired so
+  // the amber card still surfaces instead of silently blocking the user.
+  const effectiveReason: ProgramReason | undefined =
+    programReading?.reason ??
+    (programSeconds === 0 ? 'expired' : undefined);
+  const isReactivationRequired =
+    isWasmContract && effectiveReason != null;
+  const isProgramActive =
+    isWasmContract &&
+    effectiveReason == null &&
+    programSeconds != null &&
+    programSeconds > 0;
+
+  // On-chain activation flow — shared with the Activation tab (COB-498) via
+  // the `useActivateProgram` hook: chain-mismatch guard, simulate for the
+  // per-program dataFee, write through the project-wide `useWeb3` wrapper
+  // (with the gasLimit override that `activateProgram` needs), and mapping
+  // wallet errors to actionable toasts.
+  const {
+    isConnected,
+    isChainMismatch,
+    isSwitchingChain,
+    switchToTarget: handleSwitchToTargetChain,
+    isSimulating: isSimulatingActivation,
+    simulationError: activationSimulationError,
+    dataFee: activationDataFee,
+    isActivating,
+    txHash: activationTxHash,
+    activate: handleActivateProgram,
+    reset: resetActivationWrite,
+  } = useActivateProgram({
+    address: contractAddress,
+    targetChainId,
+    enabled: isReactivationRequired,
+    // After the tx is mined, re-read programTimeLeft so the validation
+    // effect unlocks the form once the precompile reports a non-zero
+    // remaining lifetime.
+    onConfirmed: refetchProgramTimeLeft,
   });
 
   // Handle all validation logic in one place
@@ -143,7 +210,8 @@ export default function AddContract({
         );
         setIsWasmContract(false);
       } else {
-        // It's a WASM contract, now we need to check if it's active
+        // It's a WASM contract, now we need to check its activation state
+        // against the ArbWasm precompile.
         setIsWasmContract(true);
         // Show loading while checking activation status
         if (isCheckingWasmActive) {
@@ -154,37 +222,23 @@ export default function AddContract({
           return;
         }
 
-        // Handle timeout case
-        if (wasmActiveError) {
-          // programTimeLeft reverts for EVM contracts or non-activated programs
+        // Every "not active" state from the precompile — never activated,
+        // expired, or activated under an older Stylus version — is resolved
+        // by the same `activateProgram` call, so all three surface as the
+        // actionable amber state instead of a hard block. The wording is
+        // tailored per reason so the user understands what actually happened.
+        if (isReactivationRequired && effectiveReason) {
           setValidationState({
-            message: 'Make sure your WASM contract is active',
-            type: 'error',
+            message: ACTIVATION_MESSAGE_BY_REASON[effectiveReason],
+            type: 'warning',
           });
-          setAddressError('Make sure your WASM contract is active');
-          return;
-        }
-
-        // Check if WASM program is expired
-        if (
-          typeof timeLeftSeconds === 'bigint' &&
-          timeLeftSeconds === BigInt(0)
-        ) {
-          setValidationState({
-            message: 'WASM contract has expired and needs reactivation',
-            type: 'error',
-          });
-          setAddressError('WASM contract has expired and needs reactivation');
+          setAddressError(null);
           return;
         }
 
         // WASM contract exists, is active, and still valid
-        if (
-          typeof timeLeftSeconds === 'bigint' &&
-          timeLeftSeconds > BigInt(0)
-        ) {
-          const timeInSeconds = Number(timeLeftSeconds);
-          const daysLeft = Math.floor(timeInSeconds / 86400); // Convert seconds to days
+        if (isProgramActive && programSeconds != null) {
+          const daysLeft = Math.floor(programSeconds / 86400); // Convert seconds to days
           setValidationState({
             message: `Valid WASM contract. Program expires in ${daysLeft} days`,
             type: 'success',
@@ -193,6 +247,16 @@ export default function AddContract({
           setAddressError(null);
           return;
         }
+
+        // Reading came back as "unknown" (RPC error, unrecognised revert,
+        // or wagmi not settled yet). Keep the user in the loading state
+        // rather than falsely surfacing the contract as inactive — the
+        // hook will re-emit once the read resolves.
+        setValidationState({
+          message: 'Checking WASM contract activation status...',
+          type: 'loading',
+        });
+        return;
       }
       return;
     }
@@ -205,9 +269,11 @@ export default function AddContract({
     isBytecodeLoading,
     bytecodeError,
     isWasmContract,
-    timeLeftSeconds,
     isCheckingWasmActive,
-    wasmActiveError,
+    isReactivationRequired,
+    effectiveReason,
+    isProgramActive,
+    programSeconds,
   ]);
 
   // Function to validate Ethereum address
@@ -237,6 +303,7 @@ export default function AddContract({
     // Clear validation states when user types
     setValidationState(null);
     setIsWasmContract(false); // Reset WASM status on address change
+    resetActivationWrite();
 
     // Validate address on every change for immediate feedback
     if (newAddress.trim()) {
@@ -310,37 +377,21 @@ export default function AddContract({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919]'>
-      {/* Title header with gradient background and noise texture */}
-      <div
-        className='relative overflow-hidden'
-        style={{
-          background:
-            'linear-gradient(88.8deg, #275A93 0.24%, #2D99DD 24.41%, #FA9647 59.66%, #E0445B 100.95%)',
-        }}
-      >
-        {/* White noise texture overlay */}
-        <div
-          className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-            backgroundSize: '100px 100px',
-            backgroundRepeat: 'repeat',
-          }}
-        />
-
+    <div className='text-ink-1 flex flex-col h-full bg-surface-1'>
+      {/* Title header */}
+      <div className='bg-surface-1 border-b border-hairline'>
         {/* Header content */}
-        <div className='flex justify-between items-center p-6 relative z-10'>
+        <div className='flex justify-between items-center px-5 py-4'>
           <div>
-            <h2 className='text-2xl font-bold text-white'>Add Contract</h2>
-            <div className='text-white/80 mt-1'>Step {step} of 2</div>
+            <h2 className='text-[15px] font-semibold text-ink-1'>Add Contract</h2>
+            <div className='text-[12.5px] text-ink-2 mt-0.5'>Step {step} of 2</div>
           </div>
           <Button
+            variant='outline'
             size='icon'
             onClick={onClose}
-            className='w-10 h-10 flex items-center justify-center bg-transparent border border-white text-white rounded-md'
           >
-            <X className='h-6 w-6' />
+            <X className='h-4 w-4' />
           </Button>
         </div>
       </div>
@@ -348,18 +399,18 @@ export default function AddContract({
       <div className='p-6 flex-1'>
         {step === 1 && (
           <div>
-            <h3 className='text-lg font-medium mb-2'>Set Contract Details</h3>
-            <p className='text-gray-400 mb-4'>
+            <h3 className='text-[13.5px] font-semibold text-ink-1 mb-2'>Set Contract Details</h3>
+            <p className='text-[12.5px] text-ink-2 mb-4'>
               Enter the contract address and select the active network to
               proceed.
             </p>
 
             <div className='mb-4'>
               <div className='flex items-center gap-2'>
-                <label className='block text-sm mb-1'>Contract Address</label>
+                <label className='block text-xs text-ink-2 mb-1'>Contract Address</label>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className='w-4 h-4 cursor-help mb-1' />
+                    <Info className='w-4 h-4 cursor-help mb-1 text-ink-3' />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className='max-w-xs'>
@@ -378,34 +429,56 @@ export default function AddContract({
                 placeholder='0x...'
                 value={contractAddress}
                 onChange={handleAddressChange}
-                className={`bg-black text-white border ${
-                  addressError ? 'border-red-500' : 'border-gray-700'
-                } rounded-md p-2 w-full`}
+                className={`w-full ${
+                  addressError ? 'border-crit' : ''
+                }`}
               />
               {addressError && (
-                <p className='text-red-500 text-sm mt-1'>{addressError}</p>
+                <p className='text-crit-text text-xs mt-1'>{addressError}</p>
               )}
-              {validationState && (
+              {validationState && validationState.type !== 'warning' && (
                 <p
-                  className={`text-sm mt-1 ${
+                  className={`text-xs mt-1 ${
                     validationState.type === 'loading'
-                      ? 'text-yellow-500'
+                      ? 'text-warn'
                       : validationState.type === 'success'
-                      ? 'text-green-500'
-                      : validationState.type === 'warning'
-                      ? 'text-orange-500'
-                      : 'text-red-500'
+                      ? 'text-ok-text'
+                      : 'text-crit-text'
                   }`}
                 >
                   {validationState.message}
                 </p>
               )}
+              {isReactivationRequired && (
+                <ActivationRequiredCard
+                  message={
+                    validationState?.message ??
+                    'This WASM contract is expired and needs to be reactivated to be cached.'
+                  }
+                  isConnected={isConnected}
+                  isSimulating={isSimulatingActivation}
+                  simulationError={activationSimulationError}
+                  dataFee={activationDataFee}
+                  isActivating={isActivating}
+                  isChainMismatch={isChainMismatch}
+                  isSwitchingChain={isSwitchingChain}
+                  chainName={currentBlockchain?.name}
+                  onSwitchChain={handleSwitchToTargetChain}
+                  txHash={activationTxHash}
+                  chainId={targetChainId}
+                  onActivate={handleActivateProgram}
+                />
+              )}
             </div>
 
             <div className='mt-6'>
               <Button
-                className='w-full px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                disabled={!contractAddress || !!addressError}
+                className='w-full h-9 rounded-lg'
+                disabled={
+                  !contractAddress ||
+                  !!addressError ||
+                  validationState?.type !== 'success'
+                }
                 onClick={handleNextStep}
               >
                 Next: Name Your Contract
@@ -416,8 +489,8 @@ export default function AddContract({
 
         {step === 2 && (
           <div>
-            <h3 className='text-lg font-medium mb-2'>Name Your Contract</h3>
-            <p className='text-gray-400 mb-4'>
+            <h3 className='text-[13.5px] font-semibold text-ink-1 mb-2'>Name Your Contract</h3>
+            <p className='text-[12.5px] text-ink-2 mb-4'>
               Assign a custom name for your contract. This name is private to
               you and can be updated anytime.
             </p>
@@ -425,10 +498,10 @@ export default function AddContract({
             {initialAddress && (
               <div className='mb-4'>
                 <div className='flex items-center gap-2'>
-                  <label className='block text-sm'>Contract Address</label>
+                  <label className='block text-xs text-ink-2'>Contract Address</label>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className='w-4 h-4 cursor-help' />
+                      <Info className='w-4 h-4 cursor-help text-ink-3' />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className='max-w-xs'>
@@ -446,21 +519,19 @@ export default function AddContract({
                   type='text'
                   value={contractAddress}
                   disabled
-                  className='bg-gray-800 text-gray-400 border border-gray-700 rounded-md p-2 w-full cursor-not-allowed'
+                  className='w-full text-ink-3 cursor-not-allowed'
                 />
                 {addressError && (
-                  <p className='text-red-500 text-sm mt-1'>{addressError}</p>
+                  <p className='text-crit-text text-xs mt-1'>{addressError}</p>
                 )}
-                {validationState && (
+                {validationState && validationState.type !== 'warning' && (
                   <p
-                    className={`text-sm mt-1 ${
+                    className={`text-xs mt-1 ${
                       validationState.type === 'loading'
-                        ? 'text-yellow-500'
+                        ? 'text-warn'
                         : validationState.type === 'success'
-                        ? 'text-green-500'
-                        : validationState.type === 'warning'
-                        ? 'text-orange-500'
-                        : 'text-red-500'
+                        ? 'text-ok-text'
+                        : 'text-crit-text'
                     }`}
                   >
                     {validationState.message}
@@ -469,23 +540,49 @@ export default function AddContract({
               </div>
             )}
 
+            {/* Prefilled-address flow can drop the user straight into Step 2
+                with an expired contract; render the activation card here as
+                well so the same on-chain activate flow is available and the
+                Add Contract button stays gated until programTimeLeft > 0. */}
+            {isReactivationRequired && (
+              <ActivationRequiredCard
+                message={
+                  validationState?.message ??
+                  'This WASM contract is expired and needs to be reactivated to be cached.'
+                }
+                isConnected={isConnected}
+                isSimulating={isSimulatingActivation}
+                simulationError={activationSimulationError}
+                dataFee={activationDataFee}
+                isActivating={isActivating}
+                isChainMismatch={isChainMismatch}
+                isSwitchingChain={isSwitchingChain}
+                chainName={currentBlockchain?.name}
+                onSwitchChain={handleSwitchToTargetChain}
+                txHash={activationTxHash}
+                chainId={targetChainId}
+                onActivate={handleActivateProgram}
+              />
+            )}
+
             <div className='mb-4'>
-              <label className='block text-sm mb-1'>Contract Name</label>
+              <label className='block text-xs text-ink-2 mb-1'>Contract Name</label>
               <Input
                 type='text'
                 placeholder='Protocol v1.5'
                 value={contractName}
                 onChange={handleNameChange}
-                className='bg-black text-white border border-gray-700 rounded-md p-2 w-full'
+                className='w-full'
               />
             </div>
 
-            {error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
+            {error && <p className='text-crit-text text-xs mb-4'>{error}</p>}
 
             <div className='flex space-x-4 mt-6'>
               {!initialAddress && (
                 <Button
-                  className='flex-1 px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
+                  variant='outline'
+                  className='flex-1 h-9 rounded-lg'
                   onClick={handlePrevStep}
                   disabled={isLoading}
                 >
@@ -496,9 +593,9 @@ export default function AddContract({
               <Button
                 className={`${
                   !initialAddress ? 'flex-1' : 'w-full'
-                } px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md`}
+                } h-9 rounded-lg`}
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || validationState?.type !== 'success'}
               >
                 {isLoading ? 'Adding...' : 'Add Contract'}
               </Button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useWeb3, TransactionStatus } from '@/hooks/useWeb3';
@@ -11,7 +11,7 @@ import {
   ChevronUp,
   Info,
 } from 'lucide-react';
-import cacheManagerAutomationAbi from '@/config/abis/cacheManagerAutomation/CacheManagerAutomation.json';
+import { CACHE_MANAGER_AUTOMATION_ABI } from '@/config/abis/cacheManagerAutomation/cacheManagerAutomation';
 import { formatEther, parseEther } from 'viem';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -27,13 +27,18 @@ import {
 } from '@/components/Toast';
 
 import { useReadContract, useAccount } from 'wagmi';
+import { useUserCMAContract } from '@/hooks/useUserCMAContract';
 
 interface AutomatedBiddingSectionProps {
   maxBidAmount?: string;
   setMaxBidAmount?: (value: string) => void;
   automationFunding?: string;
   setAutomationFunding?: (value: string) => void;
-  contract?: { address: string; maxBid?: string; isAutomated?: boolean };
+  contract?: {
+    address: string;
+    maxBid?: string;
+    isAutomated?: boolean;
+  };
   onSuccess?: () => void;
 }
 
@@ -54,7 +59,6 @@ export function AutomatedBiddingSection({
 
   // Separate state for controlling panel visibility
   const [showAutomationPanel, setShowAutomationPanel] = useState(false);
-  const [contractExists, setContractExists] = useState(false);
   const [originalMaxBid, setOriginalMaxBid] = useState('0');
 
   // Local state for the automated bidding toggle within the form - enabled by default
@@ -64,81 +68,88 @@ export function AutomatedBiddingSection({
   const { currentBlockchain } = useBlockchainService();
 
   // Get the connected account
-  const { address: userAddress, isConnected } = useAccount();
+  const {
+    address: userAddress,
+    isConnected,
+    chainId: walletChainId,
+  } = useAccount();
+  const isChainMismatch =
+    isConnected &&
+    currentBlockchain != null &&
+    walletChainId !== currentBlockchain.chainId;
+
+  // Chain-authoritative read of this contract's CMA record. Sourcing the
+  // activation fields we must preserve (`autoActivate`, `maxActivationCost`)
+  // from the backend `contract` prop instead would let backend indexer lag
+  // silently clobber a just-submitted change from the Activation tab —
+  // exactly the COB-499 regression class. Refetches on write confirmation.
+  const {
+    data: cmaRecord,
+    minMaxBidAmount,
+    refetch: refetchCMARecord,
+  } = useUserCMAContract({
+    chainId: currentBlockchain?.chainId,
+    cmaAddress: currentBlockchain?.cacheManagerAutomationAddress as
+      | `0x${string}`
+      | undefined,
+    contractAddress: contract?.address,
+  });
 
   // Get user balance from cache manager automation contract
   const { data: userBalance, refetch: refetchBalance } = useReadContract({
     address: currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-    abi: cacheManagerAutomationAbi.abi as Abi,
+    abi: CACHE_MANAGER_AUTOMATION_ABI,
     functionName: 'getUserBalance',
     account: userAddress, // Include the user's address to properly sign the request
+    chainId: currentBlockchain?.chainId,
     query: {
       enabled:
         !!currentBlockchain?.cacheManagerAutomationAddress &&
         isConnected &&
-        !!userAddress,
+        !!userAddress &&
+        !isChainMismatch,
     },
   });
 
-  // Get user's automated contracts
-  const { data: userContracts, refetch: refetchUserContracts } =
-    useReadContract({
-      address:
-        currentBlockchain?.cacheManagerAutomationAddress as `0x${string}`,
-      abi: cacheManagerAutomationAbi.abi as Abi,
-      functionName: 'getUserContracts',
-      account: userAddress,
-      query: {
-        enabled:
-          !!currentBlockchain?.cacheManagerAutomationAddress &&
-          isConnected &&
-          !!userAddress,
-      },
-    });
+  // `contractExists` used to be derived from a duplicate `getUserContracts`
+  // read that ran in parallel with `useUserCMAContract`. Now both derive
+  // from the same hook — wagmi dedupes the RPC call and both surfaces
+  // agree on the source of truth (COB-499 CodeRabbit finding).
+  const contractExists = cmaRecord != null;
 
   // Format user balance for display
   const formattedUserBalance = userBalance
     ? formatEther(BigInt(userBalance.toString()))
     : '0';
 
-  // Check if current contract is automated
+  // Set while the max-bid input holds an unsaved edit; hydration skips the
+  // field until a write that commits it is confirmed.
+  const maxBidDirtyRef = useRef(false);
+  // Whether the in-flight write carries a max-bid change (toggle does not).
+  const pendingMaxBidCommitRef = useRef(false);
   useEffect(() => {
-    // Only proceed if we have the necessary data
-    if (
-      contract?.address &&
-      userContracts &&
-      Array.isArray(userContracts)
-      // Check if this is a new contract or different from the last checked one
-    ) {
-      console.log('Checking contract automation status for:', contract.address);
+    maxBidDirtyRef.current = false;
+    pendingMaxBidCommitRef.current = false;
+  }, [contract?.address]);
 
-      // Remember this contract address to detect future changes
-
-      // Look for the contract in user's automated contracts
-      const existingContract = userContracts.find(
-        (c) =>
-          c.contractAddress.toLowerCase() === contract.address.toLowerCase()
-      );
-
-      if (existingContract) {
-        // Update UI with the automated contract's values
-        setAutomatedBidding(existingContract.enabled);
-
-        // Format the max bid to ETH for display
-        const maxBidEth = formatEther(existingContract.maxBid.toString());
-        setMaxBidAmount(maxBidEth);
-        setOriginalMaxBid(maxBidEth);
-        setContractExists(true);
-      } else {
-        console.log('Contract is not automated:', contract.address);
-        // If not found, reset to default values
-        setAutomatedBidding(true);
-        setMaxBidAmount('');
-        setOriginalMaxBid('0');
-        setContractExists(false);
-      }
+  // Hydrate the form from the on-chain CMA record. `cmaRecord === undefined`
+  // means the read hasn't resolved yet — do nothing. `null` means the
+  // contract is not registered (defaults). Object means registered — echo
+  // the values into the form.
+  useEffect(() => {
+    if (!contract?.address) return;
+    if (cmaRecord === undefined) return;
+    if (cmaRecord === null) {
+      setAutomatedBidding(true);
+      if (!maxBidDirtyRef.current) setMaxBidAmount('');
+      setOriginalMaxBid('0');
+      return;
     }
-  }, [contract?.address, userContracts, setAutomatedBidding, setMaxBidAmount]);
+    setAutomatedBidding(cmaRecord.biddingEnabled);
+    const maxBidEth = formatEther(cmaRecord.maxBid);
+    if (!maxBidDirtyRef.current) setMaxBidAmount(maxBidEth);
+    setOriginalMaxBid(maxBidEth);
+  }, [contract?.address, cmaRecord, setAutomatedBidding, setMaxBidAmount]);
 
   // Store the last transaction parameters for retry functionality
   const [lastTxParams, setLastTxParams] = useState<{
@@ -147,6 +158,7 @@ export function AutomatedBiddingSection({
     functionName: string;
     args: [string, bigint, boolean, boolean, bigint];
     value: string;
+    chainId: number;
   } | null>(null);
 
   // Use the web3 hook
@@ -193,6 +205,17 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (
+      !currentBlockchain ||
+      lastTxParams.chainId !== currentBlockchain.chainId
+    ) {
+      showErrorToast({
+        message:
+          'The selected network changed since this transaction failed. Submit the configuration again on the current network.',
+      });
+      return;
+    }
+
     // Reset any previous error states
     reset();
 
@@ -200,7 +223,7 @@ export function AutomatedBiddingSection({
     writeContract(lastTxParams, (hash) => {
       console.log(`Retry transaction submitted with hash: ${hash}`);
     });
-  }, [lastTxParams, writeContract, reset]);
+  }, [currentBlockchain, lastTxParams, writeContract, reset]);
 
   // Show error toast if transaction fails
   useEffect(() => {
@@ -226,28 +249,18 @@ export function AutomatedBiddingSection({
         onSuccess();
       }
 
-      // Instead of just refetching, first update our local state with the values we just set
-      // This ensures that the values stay consistent with what the user just set
       if (contract?.address) {
-        // If we just completed a successful transaction, we should keep the user's input value
-        // rather than allowing it to be overwritten by outdated contract data
-
-        // Store current values before reset
-        const currentInputValue = inputValue;
-        const currentAutomatedBidding = automatedBidding;
-
-        // Reset transaction state
         reset();
 
-        // Immediately refetch the balance and contracts to get updated data
-        refetchBalance();
-        refetchUserContracts();
+        // The submitted max bid is now on-chain; let hydration echo it.
+        if (pendingMaxBidCommitRef.current) {
+          maxBidDirtyRef.current = false;
+          pendingMaxBidCommitRef.current = false;
+        }
 
-        // Log the values we're keeping
-        console.log('Keeping user values after successful transaction:', {
-          maxBidAmount: currentInputValue,
-          automatedBidding: currentAutomatedBidding,
-        });
+        // Refetch so this tab and the Activation tab see the new values.
+        refetchBalance();
+        refetchCMARecord();
       }
     }
   }, [
@@ -255,9 +268,7 @@ export function AutomatedBiddingSection({
     onSuccess,
     reset,
     refetchBalance,
-    refetchUserContracts,
-    inputValue,
-    automatedBidding,
+    refetchCMARecord,
     contract?.address,
   ]);
 
@@ -292,6 +303,7 @@ export function AutomatedBiddingSection({
 
     // Update local state immediately to show typing in real-time
     setInputValue(value);
+    maxBidDirtyRef.current = true;
 
     // Clear the error if input is emptied
     if (!value) {
@@ -322,6 +334,27 @@ export function AutomatedBiddingSection({
     setAutomationFunding(value);
   };
 
+  // The CMA reverts `insertContract` / `updateContract` with `InvalidBid`
+  // whenever `_maxBid < minMaxBidAmount`, even when bidding is disabled.
+  // Check the floor client-side so the user sees the real reason instead
+  // of a generic wallet error (and does not burn gas on a doomed tx).
+  const validateMaxBidFloor = (value: string): boolean => {
+    if (minMaxBidAmount === undefined) {
+      showErrorToast({
+        message:
+          'Could not read the minimum bid amount. Try again in a moment.',
+      });
+      return false;
+    }
+    if (parseEther(value) < minMaxBidAmount) {
+      setInputError(
+        `Maximum bid must be at least ${formatEther(minMaxBidAmount)} ETH`
+      );
+      return false;
+    }
+    return true;
+  };
+
   // Handle set bid button click
   const handleSetAutomation = () => {
     let hasError = false;
@@ -346,6 +379,10 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (!validateMaxBidFloor(inputValue)) {
+      return;
+    }
+
     if (!currentBlockchain) {
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
@@ -354,9 +391,37 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before configuring automated bidding.`,
+      });
+      return;
+    }
+
     if (!contract || !contract.address) {
       console.error('No contract address provided');
       showSomethingWentWrongToast();
+      return;
+    }
+
+    // Refuse to `insertContract` unless the on-chain read has definitively
+    // resolved to "not registered". `undefined` means the CMA read is
+    // still in flight — the button is visible because `contractExists`
+    // defaults to false while loading, but firing `insertContract`
+    // against an already-registered contract would revert on-chain and
+    // burn the user's gas.
+    if (cmaRecord === undefined) {
+      showErrorToast({
+        message:
+          'Still reading the on-chain configuration. Try again in a moment.',
+      });
+      return;
+    }
+    if (cmaRecord !== null) {
+      showErrorToast({
+        message:
+          'This contract is already automated. Refresh to see its current config, then use Update.',
+      });
       return;
     }
 
@@ -367,24 +432,31 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
-      // Create transaction parameters
+      // `insertContract` is safe here — the guard above proved the
+      // contract is not yet in CMA. There's nothing on-chain to preserve,
+      // so the activation fields default to (false, 0) — same defaults
+      // an Activation-first flow would pass when it initialises a fresh
+      // record.
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
+        abi: CACHE_MANAGER_AUTOMATION_ABI,
         functionName: 'insertContract',
+        // CMA input order: (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost)
         args: [
           contract.address,
-          parseEther(inputValue),
-          automatedBidding,
-          false,
-          BigInt(0),
+          parseEther(inputValue), // _maxBid
+          automatedBidding, // _biddingEnabled
+          false, // _autoActivate
+          BigInt(0), // _maxActivationCost
         ] as [string, bigint, boolean, boolean, bigint],
         value: fundingValue,
+        chainId: currentBlockchain.chainId,
       };
 
       // Store the parameters for retry functionality
       setLastTxParams(txParams);
+      pendingMaxBidCommitRef.current = true;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -413,11 +485,22 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (!validateMaxBidFloor(inputValue)) {
+      return;
+    }
+
     if (!currentBlockchain) {
       console.error(
         'No blockchain connected. Please connect your wallet to the correct network.'
       );
       showSomethingWentWrongToast();
+      return;
+    }
+
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before updating automated bidding.`,
+      });
       return;
     }
 
@@ -434,19 +517,33 @@ export function AutomatedBiddingSection({
         automatedBidding: automatedBidding,
       });
 
+      // Preserve auto-activation fields from the chain-authoritative CMA
+      // read (COB-499). If the read hasn't resolved yet, we refuse the
+      // write — defaulting to (false, 0) here would silently wipe a
+      // config the user set from the Activation tab.
+      if (cmaRecord == null) {
+        showErrorToast({
+          message:
+            'Still reading the on-chain configuration. Try again in a moment.',
+        });
+        return;
+      }
+
       // Create transaction parameters for updateContract
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
+        abi: CACHE_MANAGER_AUTOMATION_ABI,
         functionName: 'updateContract',
+        // CMA input order: (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost)
         args: [
           contract.address,
-          parseEther(inputValue),
-          automatedBidding,
-          false,
-          BigInt(0),
+          parseEther(inputValue), // _maxBid
+          automatedBidding, // _biddingEnabled
+          cmaRecord.autoActivate, // _autoActivate (preserved from chain)
+          cmaRecord.maxActivationCost, // _maxActivationCost (preserved from chain)
         ] as [string, bigint, boolean, boolean, bigint],
+        chainId: currentBlockchain.chainId,
       };
 
       // Store the parameters for retry functionality
@@ -454,6 +551,7 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
+      pendingMaxBidCommitRef.current = true;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -474,6 +572,13 @@ export function AutomatedBiddingSection({
       return;
     }
 
+    if (isChainMismatch) {
+      showErrorToast({
+        message: `Switch your wallet to ${currentBlockchain.name} before changing automated bidding.`,
+      });
+      return;
+    }
+
     if (!contract || !contract.address) {
       console.error('No contract address provided');
       showSomethingWentWrongToast();
@@ -488,19 +593,30 @@ export function AutomatedBiddingSection({
         automatedBidding: newAutomatedBidding,
       });
 
+      // Same chain-read preservation as `handleUpdateAutomation` (COB-499).
+      if (cmaRecord == null) {
+        showErrorToast({
+          message:
+            'Still reading the on-chain configuration. Try again in a moment.',
+        });
+        return;
+      }
+
       // Create transaction parameters for updateContract with funding = 0
       const txParams = {
         address:
           currentBlockchain.cacheManagerAutomationAddress as `0x${string}`,
-        abi: cacheManagerAutomationAbi.abi as Abi,
+        abi: CACHE_MANAGER_AUTOMATION_ABI,
         functionName: 'updateContract',
+        // CMA input order: (_contract, _maxBid, _biddingEnabled, _autoActivate, _maxActivationCost)
         args: [
           contract.address,
-          parseEther(originalMaxBid),
-          newAutomatedBidding,
-          false,
-          BigInt(0),
+          parseEther(originalMaxBid), // _maxBid (unchanged)
+          newAutomatedBidding, // _biddingEnabled
+          cmaRecord.autoActivate, // _autoActivate (preserved from chain)
+          cmaRecord.maxActivationCost, // _maxActivationCost (preserved from chain)
         ] as [string, bigint, boolean, boolean, bigint],
+        chainId: currentBlockchain.chainId,
       };
 
       // Store the parameters for retry functionality
@@ -508,6 +624,7 @@ export function AutomatedBiddingSection({
         ...txParams,
         value: '0', // updateContract is nonpayable, so no ETH value needed
       });
+      pendingMaxBidCommitRef.current = false;
 
       // Send the transaction
       writeContract(txParams, (hash) => {
@@ -520,27 +637,12 @@ export function AutomatedBiddingSection({
   };
 
   return (
-    <div
-      className='relative rounded-md p-4 overflow-hidden'
-      style={{
-        background: 'linear-gradient(89.49deg, #3E71C6 0%, #5897B2 103.8%)',
-      }}
-    >
-      {/* White noise texture overlay */}
-      <div
-        className='absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none'
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' fill='white'/%3E%3C/svg%3E")`,
-          backgroundSize: '100px 100px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
-
+    <div className='relative rounded-[10px] p-4 overflow-hidden bg-surface-2 border border-hairline'>
       {/* Gas Price Warning */}
       {isGasPriceHigh && (
-        <div className='bg-red-900/70 text-white p-2 rounded-md mb-3 flex items-center relative z-10'>
-          <AlertTriangle className='w-5 h-5 mr-2 text-red-300' />
-          <span className='text-sm'>
+        <div className='bg-crit-soft text-crit-text p-2 rounded-md mb-3 flex items-center relative z-10'>
+          <AlertTriangle className='w-4 h-4 me-2 shrink-0' />
+          <span className='text-[12px]'>
             Warning: Network fees are extremely high{' '}
             {gasPriceGwei && `(${gasPriceGwei} Gwei)`}. Consider waiting for
             lower gas prices.
@@ -550,31 +652,35 @@ export function AutomatedBiddingSection({
 
       <div className='flex flex-wrap justify-between items-start gap-3 relative z-10'>
         <div className='min-w-0 flex-1'>
-          <p className='font-bold'>Automated Bidding Configuration</p>
-          <p className='text-sm text-blue-200'>
+          <p className='text-[13px] font-semibold text-ink-1'>
+            Automated Bidding Configuration
+          </p>
+          <p className='text-[11.5px] text-ink-3'>
             Configure automated bidding to maintain your position in the cache
             without manual intervention.
           </p>
         </div>
         <button
           onClick={() => setShowAutomationPanel(!showAutomationPanel)}
-          className='flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors'
+          className='flex items-center justify-center w-8 h-8 rounded-lg border border-hairline bg-transparent text-ink-2 hover:text-ink-1 hover:border-hairline-strong transition-colors'
           disabled={isTransactionInProgress}
         >
           {showAutomationPanel ? (
-            <ChevronUp className='w-5 h-5 text-white' />
+            <ChevronUp className='w-4 h-4' />
           ) : (
-            <ChevronDown className='w-5 h-5 text-white' />
+            <ChevronDown className='w-4 h-4' />
           )}
         </button>
       </div>
 
       {/* Display user balance */}
-      <div className='mt-2 text-sm text-white relative z-10'>
+      <div className='mt-2 text-[12px] text-ink-2 relative z-10'>
         <div className='flex items-center justify-between'>
           <div>
             <span>Automation balance: </span>
-            <span className='font-semibold'>{formattedUserBalance} ETH</span>
+            <span className='font-medium text-ink-1 num'>
+              {formattedUserBalance} ETH
+            </span>
           </div>
         </div>
 
@@ -583,15 +689,19 @@ export function AutomatedBiddingSection({
           <div className='flex items-center justify-left mt-1'>
             <div>
               <span>Automation is currently: </span>
-              <span className='font-semibold'>
+              <span className='font-medium text-ink-1'>
                 {automatedBidding ? 'Enabled' : 'Disabled'}
               </span>
             </div>
             <div className='flex items-center px-2'>
               <Button
+                variant='outline'
+                size='sm'
                 onClick={handleToggleAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center px-2 mx-2 py-1 h-6'
-                disabled={isTransactionInProgress || isSuccess}
+                className='mx-2 h-6 px-2'
+                disabled={
+                  isTransactionInProgress || isSuccess || isChainMismatch
+                }
               >
                 {isTransactionInProgress ? (
                   <div className='flex items-center'>
@@ -638,7 +748,9 @@ export function AutomatedBiddingSection({
               <>
                 <div className='self-center'>
                   <div className='flex items-center space-x-2'>
-                    <p className='font-bold'>Automation Funding</p>
+                    <p className='text-[13px] font-medium text-ink-2'>
+                      Automation Funding
+                    </p>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className='w-4 h-4 cursor-help' />
@@ -665,21 +777,21 @@ export function AutomatedBiddingSection({
                         placeholder='Enter amount'
                         value={fundingValue}
                         onChange={handleFundingChange}
-                        className={`pr-12 bg-white border-none text-gray-500 ${
-                          fundingError ? 'border-red-500' : ''
+                        className={`pe-12 h-9 bg-surface-1 border-hairline rounded-lg text-[13px] text-ink-1 placeholder:text-ink-3 focus:border-accent-blue ${
+                          fundingError ? 'border-crit' : ''
                         } ${
                           isTransactionInProgress
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                            ? 'cursor-not-allowed opacity-60'
                             : ''
                         }`}
                         disabled={isTransactionInProgress}
                       />
-                      <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                      <div className='absolute end-3 top-0 bottom-0 flex items-center pointer-events-none text-ink-3'>
                         ETH
                       </div>
                     </div>
                     {fundingError && (
-                      <div className='text-white text-xs italic text-left mt-1'>
+                      <div className='text-crit-text text-[11px] text-start mt-1'>
                         {fundingError}
                       </div>
                     )}
@@ -692,7 +804,9 @@ export function AutomatedBiddingSection({
             {/* Row 2: Maximum Bid Amount */}
             <div className='self-center'>
               <div className='flex items-center space-x-2'>
-                <p className='font-bold'>Maximum Bid Amount</p>
+                <p className='text-[13px] font-medium text-ink-2'>
+                  Maximum Bid Amount
+                </p>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className='w-4 h-4 cursor-help' />
@@ -722,21 +836,21 @@ export function AutomatedBiddingSection({
                     placeholder='Enter amount'
                     value={inputValue}
                     onChange={handleInputChange}
-                    className={`pr-12 bg-white border-none text-gray-500 ${
-                      inputError ? 'border-red-500' : ''
+                    className={`pe-12 h-9 bg-surface-1 border-hairline rounded-lg text-[13px] text-ink-1 placeholder:text-ink-3 focus:border-accent-blue ${
+                      inputError ? 'border-crit' : ''
                     } ${
                       isTransactionInProgress
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                        ? 'cursor-not-allowed opacity-60'
                         : ''
                     }`}
                     disabled={isTransactionInProgress}
                   />
-                  <div className='absolute right-3 top-0 bottom-0 flex items-center pointer-events-none text-gray-500'>
+                  <div className='absolute end-3 top-0 bottom-0 flex items-center pointer-events-none text-ink-3'>
                     ETH
                   </div>
                 </div>
                 {inputError && (
-                  <div className='text-white text-xs italic text-left mt-1'>
+                  <div className='text-crit-text text-[11px] text-start mt-1'>
                     {inputError}
                   </div>
                 )}
@@ -755,11 +869,11 @@ export function AutomatedBiddingSection({
                   onCheckedChange={(checked) =>
                     setDisclaimerChecked(checked === true)
                   }
-                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                  className='mt-1 data-[state=checked]:bg-accent-blue data-[state=checked]:text-white border-hairline-strong'
                 />
                 <Label
                   htmlFor='disclaimer'
-                  className='text-sm font-medium leading-tight'
+                  className='text-[11.5px] text-ink-3 leading-tight'
                 >
                   I understand this is an experimental feature pending audit
                   completion, and I accept the associated risks of using
@@ -769,9 +883,12 @@ export function AutomatedBiddingSection({
               </div>
               <Button
                 onClick={handleSetAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                className='shrink-0'
                 disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                  isTransactionInProgress ||
+                  isSuccess ||
+                  isChainMismatch ||
+                  !disclaimerChecked
                 }
               >
                 {isTransactionInProgress ? (
@@ -795,11 +912,11 @@ export function AutomatedBiddingSection({
                   onCheckedChange={(checked) =>
                     setDisclaimerChecked(checked === true)
                   }
-                  className='mt-1 data-[state=checked]:bg-white data-[state=checked]:text-blue-600 border-white'
+                  className='mt-1 data-[state=checked]:bg-accent-blue data-[state=checked]:text-white border-hairline-strong'
                 />
                 <Label
                   htmlFor='disclaimer'
-                  className='text-sm font-medium leading-tight'
+                  className='text-[11.5px] text-ink-3 leading-tight'
                 >
                   I understand this is an experimental feature pending audit
                   completion, and I accept the associated risks of using
@@ -809,9 +926,12 @@ export function AutomatedBiddingSection({
               </div>
               <Button
                 onClick={handleUpdateAutomation}
-                className='bg-transparent border border-white text-xs text-white hover:bg-gray-500 flex items-center shrink-0'
+                className='shrink-0'
                 disabled={
-                  isTransactionInProgress || isSuccess || !disclaimerChecked
+                  isTransactionInProgress ||
+                  isSuccess ||
+                  isChainMismatch ||
+                  !disclaimerChecked
                 }
               >
                 {isTransactionInProgress ? (

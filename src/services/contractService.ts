@@ -76,6 +76,47 @@ export interface Alert {
 }
 
 /**
+ * Persisted activation status as stored by the backend.
+ * Derived states (`expiring`, `inactive`) are computed from `programTimeLeft`
+ * via `getEffectiveActivationStatus` (see `src/lib/activation.ts`).
+ */
+export type PersistedActivationStatus = 'unknown' | 'active' | 'error';
+
+/**
+ * Decoded revert reason from the ArbWasm precompile's `programTimeLeft` call.
+ * Returned by the backend alongside `programTimeLeft` on both list and detail
+ * endpoints (COB-490). Mirrors the union used by the on-chain hook in
+ * `useProgramTimeLeft` and by `ActivationDetail` in `lib/activation.ts`.
+ */
+export type ProgramTimeLeftReason =
+  | 'never_activated'
+  | 'expired'
+  | 'needs_upgrade';
+
+/**
+ * A single activation-related event indexed from the CacheManagerAutomation
+ * contract. Returned by the backend's user-contract detail endpoint (not on
+ * list endpoints). Wei-denominated amounts (`dataFee`, `spent`, `refund`,
+ * `userBalance`) are strings so they survive JSON round-trips without
+ * `Number` precision loss — format with `viem.formatEther` at render time.
+ */
+export interface ActivationHistoryItem {
+  contractAddress: string;
+  eventType: 'ActivationPerformed' | 'ActivationError';
+  timestamp: string;
+  blockNumber: number;
+  transactionHash: string;
+  user: string;
+  version?: string;
+  dataFee?: string;
+  spent?: string;
+  refund?: string;
+  userBalance?: string;
+  /** Only populated on `ActivationError` — the on-chain revert reason. */
+  reason?: string;
+}
+
+/**
  * Contract data interface
  */
 export interface Contract {
@@ -98,6 +139,25 @@ export interface Contract {
   userContractId?: string; // Optional user contract ID
   isSavedByUser?: boolean; // Flag to indicate if the contract is already saved by the user
   savedContractName?: string | null; // Name of the saved contract
+  activationStatus: PersistedActivationStatus;
+  autoActivate: boolean;
+  maxActivationCost: string | null;
+  lastActivationTimestamp: string | null;
+  lastActivationBlockNumber: number | null;
+  activationRetryCount: number;
+  // Returned by both list and detail endpoints. Backend computes it via a
+  // live `ArbWasm.programTimeLeft` call per request (cached ~30s server-side),
+  // so the value is authoritative for both surfaces and no FE multicall
+  // fallback is needed for these contexts (COB-490).
+  programTimeLeft: string | null;
+  // The decoded revert reason when `programTimeLeft` is `null`. `null` when
+  // the program is active or when the reader could not classify the failure.
+  // Same three cases the ArbWasm precompile can revert with.
+  programTimeLeftReason: ProgramTimeLeftReason | null;
+  // Populated by the backend detail endpoint only. `undefined` = list-endpoint
+  // response (not requested yet). `[]` = detail-endpoint response with no
+  // events indexed for this contract.
+  activationHistory?: ActivationHistoryItem[];
   biddingHistory?: Array<{
     bytecodeHash: string;
     contractAddress: string;
