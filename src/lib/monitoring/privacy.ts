@@ -59,6 +59,8 @@ export function sanitizeEvent<T extends Event>(event: T): T {
     platform: event.platform,
     level: event.level,
     environment: event.environment,
+    // Prevent Relay from deriving a location from the ingestion connection.
+    user: { ip_address: '0.0.0.0' },
     release: event.release,
     dist: event.dist,
     type: event.type,

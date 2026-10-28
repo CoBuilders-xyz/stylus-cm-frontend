@@ -93,6 +93,7 @@ describe('telemetry privacy', () => {
     });
     expect(sanitized.debug_meta).toEqual(event.debug_meta);
     expect(sanitized.release).toBe('test-release');
+    expect(sanitized.user).toEqual({ ip_address: '0.0.0.0' });
     expect(event.message).toBe(sensitive); // No mutation of the SDK input.
   });
 

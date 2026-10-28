@@ -116,6 +116,7 @@ Client source maps are deleted after upload. Verify readable stacks in the deplo
 Privacy defaults disable PII, logs, metrics, replay, browser sessions, breadcrumbs, and outgoing trace propagation.
 An event allowlist removes request data, cookies, headers, wallet data, arbitrary context, and attachments.
 It also removes error messages, function names, and source snippets, which can contain authentication or RPC data.
+A fixed `0.0.0.0` IP placeholder prevents Sentry from inferring location from the ingestion connection.
 Standard error types, code locations, line numbers, and source-map debug IDs remain available for diagnosis.
 Tracing defaults to zero. When enabled, it retains root timings and known page routes, but discards child spans.
 This deliberately limits diagnostic detail to protect wallet and authentication data.
