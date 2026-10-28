@@ -1,10 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import logo from 'public/logo.svg';
-import { Megaphone, Menu, MessageCircle } from 'lucide-react';
+import { Megaphone, Menu, MessageCircle, Search } from 'lucide-react';
 import { useAlertSettings } from '@/context/AlertSettingsProvider';
 import { GasTankModal } from './GasTankModal';
 import BlockchainSelector from './BlockchainSelector';
@@ -39,40 +37,40 @@ export default function Header() {
 
   return (
     <>
-      <div className='w-full bg-black text-white z-10 flex items-center justify-between p-4 px-4 sm:px-10 fixed'>
+      <div
+        id='app-header'
+        className='w-full h-14 bg-page/90 backdrop-blur-md border-b border-hairline text-ink-1 z-10 flex items-center justify-between gap-3 px-[14px] sm:px-6 fixed top-0'
+      >
         {/* Left section - Logo and Navigation */}
-        <div className='flex items-center space-x-4 text-xs'>
-          <span className='flex items-center'>
-            <Link href='/cache-status'>
-              <Image src={logo} alt='logo' className='mr-2' />
-            </Link>
-          </span>
+        <div className='flex items-center min-w-0'>
+          <Link
+            href='/cache-status'
+            className='flex items-center gap-2 shrink-0'
+          >
+            <span className='text-[13px] font-bold tracking-tight whitespace-nowrap text-ink-1'>
+              Stylus Manager
+            </span>
+          </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}
-          <div className='hidden lg:flex items-center space-x-4'>
+          <div className='hidden lg:flex items-center gap-px ms-3'>
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative pb-1 ${
+                className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors ${
                   isActive(item.href)
-                    ? 'text-white'
-                    : 'text-white hover:text-gray-300'
+                    ? 'bg-surface-3 text-ink-1 font-medium'
+                    : 'text-ink-2 hover:text-ink-1 hover:bg-surface-2'
                 }`}
               >
                 {item.label}
-                {isActive(item.href) && (
-                  <div
-                    className='absolute bottom-0 left-0 w-full h-0.5'
-                    style={{ backgroundColor: '#2D99DD' }}
-                  />
-                )}
               </Link>
             ))}
             <Link
               href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
               target='_blank'
-              className='text-white hover:text-gray-300 pb-1'
+              className='whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:text-ink-1 hover:bg-surface-2 transition-colors'
             >
               Docs
             </Link>
@@ -82,7 +80,8 @@ export default function Header() {
                   <Link
                     href={FEEDBACK_FORM_URL}
                     target='_blank'
-                    className='text-white hover:text-gray-300 pb-1 inline-flex items-center'
+                    aria-label='Give us feedback'
+                    className='rounded-md p-1.5 text-ink-2 hover:text-ink-1 hover:bg-surface-2 inline-flex items-center transition-colors'
                   >
                     <MessageCircle className='w-4 h-4' />
                   </Link>
@@ -96,52 +95,76 @@ export default function Header() {
         </div>
 
         {/* Right section - Actions (Always visible) */}
-        <div className='flex space-x-2 sm:space-x-4 text-xs items-center'>
+        <div className='flex gap-2 items-center min-w-0 shrink-0'>
           {/* Mobile-only alert settings */}
           <button
-            className='lg:hidden border border-white rounded-[10px] p-2 flex items-center justify-center hover:bg-gray-900'
-            style={{ borderWidth: '1px' }}
+            type='button'
+            className='lg:hidden size-8 border border-hairline rounded-lg flex items-center justify-center text-ink-2 hover:text-ink-1 hover:border-hairline-strong bg-surface-1'
             onClick={openAlertSettings}
             title='Alert Settings'
+            aria-label='Open alert settings'
           >
             <Megaphone className='w-4 h-4' />
           </button>
 
           {/* Desktop actions */}
-          <div className='hidden lg:flex space-x-4 items-center'>
+          <div className='hidden lg:flex gap-2 items-center'>
+            <button
+              type='button'
+              className='h-8 rounded-lg border border-hairline bg-surface-1 px-2.5 text-ink-2 outline-none transition-colors hover:border-hairline-strong hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-accent-blue/50 flex items-center gap-2'
+              onClick={() =>
+                window.dispatchEvent(
+                  new Event('stylus:open-command-palette')
+                )
+              }
+              aria-label='Open command palette'
+            >
+              <Search className='size-3.5' aria-hidden='true' />
+              <span className='text-[11px]'>Commands</span>
+              <kbd className='rounded border border-hairline px-1 py-0.5 text-[9px] text-ink-3'>
+                Ctrl+K / ⌘K
+              </kbd>
+            </button>
             <GasTankModal />
-            <div
-              className='border border-white rounded-[10px] p-2 flex items-center justify-center cursor-pointer hover:bg-gray-900'
-              style={{ borderWidth: '1px' }}
+            <button
+              type='button'
+              className='size-8 border border-hairline rounded-lg flex items-center justify-center text-ink-2 hover:text-ink-1 hover:border-hairline-strong bg-surface-1'
               onClick={openAlertSettings}
               title='Alert Settings'
+              aria-label='Open alert settings'
             >
               <Megaphone className='w-4 h-4' />
-            </div>
+            </button>
           </div>
 
-          {/* Always visible */}
-          <BlockchainSelector />
+          {/* BlockchainSelector hidden on the smallest viewports to make room
+              for ConnectWallet + hamburger. Available via the mobile menu. */}
+          <div className='hidden sm:block'>
+            <BlockchainSelector />
+          </div>
           <ConnectWallet />
           {/* Mobile Menu Trigger - Shown only on mobile */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <button className='lg:hidden p-2 hover:bg-gray-800 rounded-md'>
-                <Menu className='w-5 h-5' />
+              <button
+                className='lg:hidden min-h-[36px] min-w-[36px] border border-hairline rounded-lg bg-surface-1 text-ink-2 hover:text-ink-1 hover:border-hairline-strong flex items-center justify-center'
+                aria-label='Open navigation menu'
+              >
+                <Menu className='w-4 h-4' />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              align='start'
-              className='w-64 bg-black border-gray-800 text-white'
+              align='end'
+              className='w-64 bg-surface-2 border-hairline-strong text-ink-1'
             >
               {navItems.map((item) => (
                 <DropdownMenuItem key={item.href} className='p-0'>
                   <Link
                     href={item.href}
-                    className={`w-full px-2 py-2 ${
+                    className={`w-full px-3 py-3 rounded-sm text-[13px] ${
                       isActive(item.href)
-                        ? 'text-white font-medium bg-gray-800'
-                        : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                        ? 'text-ink-1 font-medium bg-surface-3'
+                        : 'text-ink-2 hover:text-ink-1 hover:bg-surface-3'
                     }`}
                   >
                     {item.label}
@@ -152,20 +175,27 @@ export default function Header() {
                 <Link
                   href='https://cobuilders-xyz.github.io/stylus-cm-deploy/'
                   target='_blank'
-                  className='w-full px-2 py-2 text-gray-300 hover:text-white hover:bg-gray-800'
+                  className='w-full px-3 py-3 rounded-sm text-[13px] text-ink-2 hover:text-ink-1 hover:bg-surface-3'
                 >
                   Docs
                 </Link>
+              </DropdownMenuItem>
+              {/* BlockchainSelector inside the mobile menu — don't let
+                  DropdownMenuItem close the menu when the selector opens. */}
+              <DropdownMenuItem
+                className='p-0 sm:hidden focus:bg-transparent'
+                onSelect={(e) => e.preventDefault()}
+              >
+                <div className='w-full px-3 py-3'>
+                  <BlockchainSelector />
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* ConnectionBanner - always below header for all screen sizes */}
-      <div className='w-full fixed top-16 z-10'>
-        <ConnectionBanner />
-      </div>
+      <ConnectionBanner />
     </>
   );
 }

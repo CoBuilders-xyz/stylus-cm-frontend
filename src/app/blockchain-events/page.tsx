@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import BlockchainEventsTable from '@/components/BlockchainEventsTable';
 import SidePanel from '@/components/SidePanel';
 import { BlockchainEvent } from '@/types/blockchainEvents';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -13,7 +12,6 @@ import {
   formatContractAddress,
   formatEventTimestamp,
   formatRelativeTime,
-  getEventTypeBadgeVariant,
   formatEventType,
   formatBlockNumber,
   getBidAmountFromEventData,
@@ -23,6 +21,7 @@ import {
 } from '@/utils/blockchainEventFormatting';
 import { formatSize } from '@/utils/formatting';
 import { Copy, Info, X } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   Tooltip,
   TooltipContent,
@@ -38,14 +37,14 @@ export default function BlockchainEventsPage() {
   const [copySuccess, setCopySuccess] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const panelWidth = '50%';
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const desktopPanelWidth = '50%';
+  const panelWidth = isDesktop ? desktopPanelWidth : '100%';
 
   // Set CSS variable for header height
   useEffect(() => {
     const setHeaderHeight = () => {
-      const header = document.querySelector(
-        'div[class*="bg-black text-white z-10 flex"]'
-      );
+      const header = document.querySelector('#app-header');
       if (header) {
         document.documentElement.style.setProperty(
           '--header-height',
@@ -86,12 +85,17 @@ export default function BlockchainEventsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-72px)] pt-18 flex flex-col'>
+    <div
+      className='flex-1 flex flex-col min-h-0'
+      style={{ paddingTop: 'var(--app-chrome-h, 64px)' }}
+    >
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
-        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
+        style={{
+          paddingRight: isDesktop && isPanelOpen ? desktopPanelWidth : '0',
+        }}
       >
-        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='page-gutter py-5 flex-1 flex flex-col overflow-hidden'>
           <BlockchainEventsTable onEventSelect={handleEventSelect} />
         </div>
       </div>
@@ -100,47 +104,60 @@ export default function BlockchainEventsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel='Event details'
       >
         {isPanelOpen && selectedEvent && (
-          <div className='text-white flex flex-col h-full bg-[#1A1919]'>
+          <div className='text-ink-1 flex flex-col h-full bg-surface-1'>
             {/* Sticky Header */}
-            <div className='flex-shrink-0 bg-[#1A1919] p-6'>
+            <div className='flex-shrink-0 bg-surface-1 border-b border-hairline px-5 py-4'>
               <div className='flex justify-between items-center'>
                 <div className='flex items-center space-x-3'>
-                  <Badge
-                    variant={getEventTypeBadgeVariant(selectedEvent.eventName)}
-                    className='px-3 py-1 text-sm font-semibold'
+                  <span
+                    className={`pill ${
+                      selectedEvent.eventName === 'DeleteBid'
+                        ? 'pill-crit'
+                        : 'pill-muted'
+                    }`}
                   >
+                    <span
+                      className={`pill-dot ${
+                        selectedEvent.eventName === 'DeleteBid'
+                          ? 'bg-crit'
+                          : 'bg-ok'
+                      }`}
+                    />
                     {formatEventType(selectedEvent.eventName)}
-                  </Badge>
-                  <h2 className='text-xl font-bold'>Event Details</h2>
+                  </span>
+                  <h2 className='text-[15px] font-semibold'>Event Details</h2>
                 </div>
                 <Button
-                  className='rounded-md border border-white hover:bg-gray-900'
+                  variant='outline'
+                  size='icon'
                   onClick={handleClosePanel}
+                  aria-label='Close event details'
                 >
-                  <X className='h-5 w-5' />
+                  <X className='h-4 w-4' />
                 </Button>
               </div>
             </div>
 
             {/* Scrollable Content */}
             <ScrollArea className='flex-1'>
-              <div className='p-6'>
+              <div className='p-4 sm:p-6 min-w-0'>
                 {/* Transaction Information */}
                 <div className='mb-6'>
-                  <h3 className='text-lg font-semibold mb-4'>
+                  <h3 className='text-[13.5px] font-semibold mb-2 text-ink-1'>
                     Transaction Information
                   </h3>
-                  <Table>
+                  <Table className='table-fixed [&_td]:whitespace-normal'>
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Transaction Hash
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='flex items-center space-x-2'>
-                            <span className='font-mono text-sm'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <span className='font-mono text-sm truncate min-w-0'>
                               {formatTransactionHash(
                                 selectedEvent.transactionHash,
                                 10,
@@ -153,10 +170,10 @@ export default function BlockchainEventsPage() {
                               onClick={() =>
                                 handleCopy(selectedEvent.transactionHash, 'tx')
                               }
-                              className='p-1 h-auto hover:bg-gray-800'
+                              className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
                             >
                               {copySuccess.tx ? (
-                                <span className='text-green-400 text-xs'>
+                                <span className='text-ok-text text-xs'>
                                   ✓
                                 </span>
                               ) : (
@@ -167,37 +184,37 @@ export default function BlockchainEventsPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Block Number
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-mono'>
                             {formatBlockNumber(selectedEvent.blockNumber)}
                           </span>
                         </TableCell>
                       </TableRow>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Block Timestamp
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <div className='flex flex-col'>
                             <span>
                               {formatEventTimestamp(
                                 selectedEvent.blockTimestamp
                               )}
                             </span>
-                            <span className='text-xs text-gray-400'>
+                            <span className='text-xs text-ink-3'>
                               {formatRelativeTime(selectedEvent.blockTimestamp)}
                             </span>
                           </div>
                         </TableCell>
                       </TableRow>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Log Index
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-mono'>
                             {selectedEvent.logIndex}
                           </span>
@@ -209,18 +226,18 @@ export default function BlockchainEventsPage() {
 
                 {/* Contract Information */}
                 <div className='mb-6'>
-                  <h3 className='text-lg font-semibold mb-4'>
+                  <h3 className='text-[13.5px] font-semibold mb-2 text-ink-1'>
                     Contract Information
                   </h3>
-                  <Table>
+                  <Table className='table-fixed [&_td]:whitespace-normal'>
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Cache Manager Address
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='flex items-center space-x-2'>
-                            <span className='font-mono text-sm'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <span className='font-mono text-sm truncate min-w-0'>
                               {formatContractAddress(
                                 selectedEvent.contractAddress,
                                 10,
@@ -236,10 +253,10 @@ export default function BlockchainEventsPage() {
                                   'address'
                                 )
                               }
-                              className='p-1 h-auto hover:bg-gray-800'
+                              className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
                             >
                               {copySuccess.address ? (
-                                <span className='text-green-400 text-xs'>
+                                <span className='text-ok-text text-xs'>
                                   ✓
                                 </span>
                               ) : (
@@ -251,12 +268,12 @@ export default function BlockchainEventsPage() {
                       </TableRow>
 
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Bidder Address
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='flex items-center space-x-2'>
-                            <span className='font-mono text-sm'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <span className='font-mono text-sm truncate min-w-0'>
                               {formatContractAddress(
                                 selectedEvent.originAddress,
                                 10,
@@ -272,10 +289,10 @@ export default function BlockchainEventsPage() {
                                   'origin'
                                 )
                               }
-                              className='p-1 h-auto hover:bg-gray-800'
+                              className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
                             >
                               {copySuccess.origin ? (
-                                <span className='text-green-400 text-xs'>
+                                <span className='text-ok-text text-xs'>
                                   ✓
                                 </span>
                               ) : (
@@ -291,14 +308,14 @@ export default function BlockchainEventsPage() {
 
                 {/* Event Data */}
                 <div className='mb-6'>
-                  <h3 className='text-lg font-semibold mb-4'>Event Data</h3>
-                  <Table>
+                  <h3 className='text-[13.5px] font-semibold mb-2 text-ink-1'>Event Data</h3>
+                  <Table className='table-fixed [&_td]:whitespace-normal'>
                     <TableBody>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Event Name
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-medium'>
                             {selectedEvent.eventName}
                           </span>
@@ -309,7 +326,7 @@ export default function BlockchainEventsPage() {
                         selectedEvent.eventName
                       ) && (
                         <TableRow className='hover:bg-transparent'>
-                          <TableCell className='font-medium text-gray-400 w-1/3'>
+                          <TableCell className='text-ink-3 w-1/3'>
                             <div className='flex items-center gap-2'>
                               Bid Amount
                               <TooltipProvider>
@@ -341,7 +358,7 @@ export default function BlockchainEventsPage() {
                               </TooltipProvider>
                             </div>
                           </TableCell>
-                          <TableCell className='text-left w-2/3'>
+                          <TableCell className='text-start w-2/3'>
                             <span className='font-mono text-sm'>
                               {getBidAmountFromEventData(
                                 selectedEvent.eventData,
@@ -356,10 +373,10 @@ export default function BlockchainEventsPage() {
                         selectedEvent.eventName
                       ) && (
                         <TableRow className='hover:bg-transparent'>
-                          <TableCell className='font-medium text-gray-400 w-1/3'>
+                          <TableCell className='text-ink-3 w-1/3'>
                             Size
                           </TableCell>
-                          <TableCell className='text-left w-2/3'>
+                          <TableCell className='text-start w-2/3'>
                             <span className='font-medium'>
                               {formatSize(
                                 getSizeFromEventData(
@@ -375,12 +392,12 @@ export default function BlockchainEventsPage() {
                         selectedEvent.eventData
                       ) && (
                         <TableRow className='hover:bg-transparent'>
-                          <TableCell className='font-medium text-gray-400 w-1/3'>
+                          <TableCell className='text-ink-3 w-1/3'>
                             Bytecode Hash
                           </TableCell>
-                          <TableCell className='text-left w-2/3'>
-                            <div className='flex items-center space-x-2'>
-                              <span className='font-mono text-sm'>
+                          <TableCell className='text-start w-2/3 min-w-0'>
+                            <div className='flex items-center gap-2 min-w-0'>
+                              <span className='font-mono text-sm truncate min-w-0'>
                                 {formatContractAddress(
                                   getBytecodeHashFromEventData(
                                     selectedEvent.eventData
@@ -400,10 +417,10 @@ export default function BlockchainEventsPage() {
                                     'bytecode'
                                   )
                                 }
-                                className='p-1 h-auto hover:bg-gray-800'
+                                className='p-1 h-auto text-ink-3 hover:text-ink-1 hover:bg-transparent'
                               >
                                 {copySuccess.bytecode ? (
-                                  <span className='text-green-400 text-xs'>
+                                  <span className='text-ok-text text-xs'>
                                     ✓
                                   </span>
                                 ) : (
@@ -415,22 +432,22 @@ export default function BlockchainEventsPage() {
                         </TableRow>
                       )}
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Blockchain
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
+                        <TableCell className='text-start w-2/3'>
                           <span className='font-medium'>
                             {selectedEvent.blockchainName}
                           </span>
                         </TableCell>
                       </TableRow>
                       <TableRow className='hover:bg-transparent'>
-                        <TableCell className='font-medium text-gray-400 w-1/3'>
+                        <TableCell className='text-ink-3 w-1/3'>
                           Raw Event Data
                         </TableCell>
-                        <TableCell className='text-left w-2/3'>
-                          <div className='bg-black rounded p-3 border border-gray-700'>
-                            <pre className='text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto'>
+                        <TableCell className='text-start w-2/3 min-w-0'>
+                          <div className='bg-surface-2 rounded-lg p-3 border border-hairline min-w-0'>
+                            <pre className='text-xs text-ink-2 whitespace-pre-wrap break-all overflow-x-hidden'>
                               {JSON.stringify(selectedEvent.eventData, null, 2)}
                             </pre>
                           </div>

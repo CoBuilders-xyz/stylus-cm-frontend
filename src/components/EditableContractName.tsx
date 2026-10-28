@@ -102,40 +102,39 @@ function EditableContractName(
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className='text-2xl font-bold bg-transparent outline-none border-0 border-b-2 border-[#3E71C6] w-full'
+            className='text-[15px] font-semibold text-ink-1 bg-surface-2 rounded-t-md outline-none border-0 border-b-2 border-accent-blue w-full placeholder:text-ink-3'
             placeholder={name || 'Contract Name'}
-            style={{ backgroundColor: '#494949' }}
             autoFocus
             disabled={isLoading}
           />
-          <div className='flex ml-2'>
+          <div className='flex ms-2'>
             <Button
               onClick={handleSave}
-              className='text-white hover:text-green-400 bg-transparent p-0 h-auto'
+              className='text-ink-2 hover:text-ok-text bg-transparent hover:bg-transparent p-0 h-auto'
               disabled={isLoading}
             >
-              <Check className='h-5 w-5' />
+              <Check className='h-4 w-4' />
             </Button>
             <Button
               onClick={handleCancel}
-              className='text-white hover:text-red-400 bg-transparent p-0 h-auto ml-1'
+              className='text-ink-2 hover:text-crit-text bg-transparent hover:bg-transparent p-0 h-auto ms-1'
               disabled={isLoading}
             >
-              <X className='h-5 w-5' />
+              <X className='h-4 w-4' />
             </Button>
           </div>
         </div>
       ) : (
         <div className='flex items-center'>
-          <div className='text-2xl font-bold mb-1'>
+          <div className='text-[15px] font-semibold text-ink-1 mb-1'>
             {name || 'Contract Name'}
           </div>
           {showPencil && !isEditing && (
             <Button
               onClick={handleEditClick}
-              className='opacity-0 group-hover:opacity-100 transition-opacity bg-transparent p-0 h-auto ml-2'
+              className='opacity-0 group-hover:opacity-100 transition-opacity bg-transparent hover:bg-transparent p-0 h-auto ms-2'
             >
-              <Pencil className='h-3 w-3 text-gray-400 hover:text-white' />
+              <Pencil className='h-3 w-3 text-ink-3 hover:text-ink-1' />
             </Button>
           )}
         </div>

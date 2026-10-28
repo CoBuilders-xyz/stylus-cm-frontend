@@ -51,19 +51,19 @@ export default function NotificationChannelWarning({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg',
+        'flex items-center gap-3 p-4 bg-warn/10 border border-warn/20 rounded-[10px]',
         className
       )}
     >
-      <AlertTriangle className='h-5 w-5 text-yellow-500 flex-shrink-0' />
+      <AlertTriangle className='h-5 w-5 text-warn flex-shrink-0' />
       <div className='flex-1 min-w-0'>
-        <p className='text-sm text-yellow-200 font-medium'>{title}</p>
-        <p className='text-xs text-yellow-200/80 mt-1'>{displayMessage}</p>
+        <p className='text-[13px] text-warn font-medium'>{title}</p>
+        <p className='text-xs text-ink-2 mt-1'>{displayMessage}</p>
       </div>
       <Button
         onClick={handleConfigureClick}
         size='sm'
-        className='bg-yellow-500 text-black hover:bg-yellow-400 whitespace-nowrap'
+        className='whitespace-nowrap'
       >
         Configure
       </Button>
@@ -85,7 +85,7 @@ export function NotificationChannelBlockingOverlay({
   return (
     <div
       className={cn(
-        'absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10',
+        'absolute inset-0 bg-page/70 backdrop-blur-sm flex items-center justify-center z-10',
         className
       )}
     >
@@ -96,7 +96,7 @@ export function NotificationChannelBlockingOverlay({
           message='Configure at least one notification channel to receive alerts for your contracts.'
           showDetails={false}
           onConfigureChannels={onConfigureChannels}
-          className='bg-black/80 border-yellow-500/30'
+          className='bg-surface-1 border-warn/30'
         />
       </div>
     </div>

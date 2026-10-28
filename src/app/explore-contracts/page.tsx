@@ -11,6 +11,7 @@ import { Contract } from '@/services/contractService';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ConnectWallet from '@/components/ConnectWallet';
 import authRequiredImage from 'public/auth-required.svg';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 export default function ExploreContractsPage() {
   const [selectedContractId, setSelectedContractId] = useState<string | null>(
@@ -26,16 +27,16 @@ export default function ExploreContractsPage() {
     string | undefined
   >(undefined);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const panelWidth = '53%'; // Changed to 53% of screen width
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const desktopPanelWidth = '53%';
+  const panelWidth = isDesktop ? desktopPanelWidth : '100%';
 
   const { isAuthenticated } = useAuthentication();
 
   // Set CSS variable for header height
   useEffect(() => {
     const setHeaderHeight = () => {
-      const header = document.querySelector(
-        'div[class*="bg-black text-white z-10 flex"]'
-      );
+      const header = document.querySelector('#app-header');
       if (header) {
         document.documentElement.style.setProperty(
           '--header-height',
@@ -91,12 +92,17 @@ export default function ExploreContractsPage() {
   };
 
   return (
-    <div className='h-[calc(100vh-72px)] pt-18 flex flex-col'>
+    <div
+      className='flex-1 flex flex-col min-h-0'
+      style={{ paddingTop: 'var(--app-chrome-h, 64px)' }}
+    >
       <div
         className={`transition-all duration-300 ease-in-out flex-1 flex flex-col overflow-hidden`}
-        style={{ paddingRight: isPanelOpen ? panelWidth : '0' }}
+        style={{
+          paddingRight: isDesktop && isPanelOpen ? desktopPanelWidth : '0',
+        }}
       >
-        <div className='p-10 flex-1 flex flex-col overflow-hidden'>
+        <div className='page-gutter py-5 flex-1 flex flex-col overflow-hidden'>
           <ContractsTable
             contracts={[]}
             viewType='explore-contracts'
@@ -111,6 +117,12 @@ export default function ExploreContractsPage() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         width={panelWidth}
+        ariaLabel={
+          activePanelContent === 'details'
+            ? 'Contract details'
+            : 'Add contract'
+        }
+        lockBodyScrollOnMobile={activePanelContent === 'details'}
       >
         {isPanelOpen &&
           activePanelContent === 'details' &&
@@ -133,7 +145,7 @@ export default function ExploreContractsPage() {
       </SidePanel>
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className='bg-black border-gray-700 max-w-md'>
+        <DialogContent className='bg-surface-1 border-hairline-strong sm:max-w-md'>
           <DialogTitle className='sr-only'>Authentication Required</DialogTitle>
           <div className='p-4'>
             <NoticeBanner
@@ -142,11 +154,7 @@ export default function ExploreContractsPage() {
               description='Please connect to your wallet and sign the transaction to add contracts.'
             />
             <div className='flex justify-center'>
-              <div className='px-4 py-2 bg-black text-white border border-white rounded-md inline-flex items-center gap-2'>
-                <ConnectWallet
-                  customCallback={() => setIsAuthModalOpen(false)}
-                />
-              </div>
+              <ConnectWallet customCallback={() => setIsAuthModalOpen(false)} />
             </div>
           </div>
         </DialogContent>

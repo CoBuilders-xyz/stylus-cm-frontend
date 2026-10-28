@@ -108,6 +108,43 @@ export const formatDate = (dateString: string): string => {
   }
 };
 
+const eventTimeFmt = new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+const eventDateFmt = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const parseEventDate = (value: string): Date | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/**
+ * Locale-safe HH:MM formatter for history-row timestamps. Prefer this over
+ * string-slicing `formatDate` output — `toLocaleString()`'s shape depends on
+ * the runtime locale, so splitting on `,` / space silently produced blank
+ * cells outside `en-US`.
+ */
+export const formatEventTime = (value: string): string => {
+  const d = parseEventDate(value);
+  return d ? eventTimeFmt.format(d) : '';
+};
+
+/**
+ * Locale-safe YYYY-MM-DD-style formatter for history-row timestamps. Same
+ * rationale as {@link formatEventTime}.
+ */
+export const formatEventDate = (value: string): string => {
+  const d = parseEventDate(value);
+  return d ? eventDateFmt.format(d) : '';
+};
+
 /**
  * Convert eviction risk level to appropriate color class
  * @param risk The risk level string ('high', 'medium', 'low', etc.)

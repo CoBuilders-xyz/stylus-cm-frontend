@@ -9,7 +9,9 @@ export default function ConnectionBanner() {
   const { isConnecting, isConnected } = useAccount();
   const { isLoading: isAuthLoading, isAuthenticated } = useAuthentication();
   const [isOnline, setIsOnline] = useState(true); // Default to true for SSR
+  const [showLoading, setShowLoading] = useState(false);
   const [showConnectedBanner, setShowConnectedBanner] = useState(false);
+  const isLoading = isConnecting || isAuthLoading;
 
   // Check internet connection - only run in browser
   useEffect(() => {
@@ -30,7 +32,18 @@ export default function ConnectionBanner() {
     }
   }, []);
 
-  // Show connected banner for 3 seconds
+  // Avoid flashing a loading notice for authentication that completes quickly.
+  useEffect(() => {
+    if (!isLoading) {
+      setShowLoading(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setShowLoading(true), 500);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  // Show the successful connection notice briefly.
   useEffect(() => {
     if (isAuthenticated) {
       setShowConnectedBanner(true);
@@ -43,49 +56,46 @@ export default function ConnectionBanner() {
   }, [isAuthenticated]);
 
   // Don't render anything if all conditions are normal
-  if (isOnline && !isConnecting && !isAuthLoading && !showConnectedBanner) {
+  if (isOnline && !showLoading && !showConnectedBanner) {
     return null;
   }
 
+  const notice = !isOnline
+    ? {
+        icon: <WifiOff className='size-4' />,
+        label: 'No internet connection',
+        mobileLabel: 'No internet',
+        className: 'bg-warn-soft text-warn',
+      }
+    : showLoading
+      ? {
+          icon: <LoaderCircle className='size-4 animate-spin' />,
+          label:
+            isConnected && isAuthLoading
+              ? 'Please sign message to authenticate'
+              : 'Connecting wallet',
+          mobileLabel:
+            isConnected && isAuthLoading
+              ? 'Sign to authenticate'
+              : 'Connecting',
+          className: 'bg-accent-soft text-accent-blue',
+        }
+      : {
+          icon: <Check className='size-4' />,
+          label: 'Wallet connected successfully!',
+          mobileLabel: 'Wallet connected',
+          className: 'bg-ok-soft text-ok-text',
+        };
+
   return (
     <div
-      className={`w-full mt-2 py-2 px-4 text-center font-medium text-sm transition-all duration-300 ease-in-out ${
-        !isOnline
-          ? 'bg-[#FFC470] text-black'
-          : isConnecting
-          ? 'bg-[#335CD7] text-white'
-          : isAuthLoading
-          ? 'bg-[#335CD7] text-white'
-          : 'bg-[#10B981] text-black'
-      }`}
+      role='status'
+      aria-live='polite'
+      className={`fixed z-50 top-16 end-[14px] sm:end-auto sm:left-1/2 sm:-translate-x-1/2 min-h-9 w-max max-w-[calc(100vw-28px)] px-3.5 rounded-lg border border-hairline-strong flex items-center justify-center gap-2 whitespace-nowrap text-center font-medium text-[12.5px] shadow-lg ${notice.className}`}
     >
-      {!isOnline && (
-        <span className='flex items-center justify-center'>
-          <WifiOff className='w-4 h-4 mr-2' />
-          No internet connection
-        </span>
-      )}
-
-      {isOnline && isConnecting && (
-        <span className='flex items-center justify-center'>
-          <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
-          Loading
-        </span>
-      )}
-
-      {isOnline && isConnected && isAuthLoading && (
-        <span className='flex items-center justify-center'>
-          <LoaderCircle className='w-4 h-4 mr-2 animate-spin' />
-          Please sign message to authenticate
-        </span>
-      )}
-
-      {isOnline && !isConnecting && showConnectedBanner && (
-        <span className='flex items-center justify-center'>
-          <Check className='w-4 h-4 mr-2' />
-          Wallet connected successfully!
-        </span>
-      )}
+      {notice.icon}
+      <span className='sm:hidden'>{notice.mobileLabel}</span>
+      <span className='hidden sm:inline'>{notice.label}</span>
     </div>
   );
 }

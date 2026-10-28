@@ -1,29 +1,35 @@
 import React from 'react';
 import { formatEther } from 'viem';
 import { Contract } from '@/services/contractService';
-import type { Alert as ContractAlert } from '@/services/contractService';
-import { AlertType } from '@/types/alerts';
 import {
   formatSize,
   formatRiskLevel,
-  getRiskBadgeVariant,
   formatRoundedEth,
 } from '@/utils/formatting';
-import { PlusCircle, Edit } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+
+// Styling-only mapping: eviction-risk level -> status pill class.
+const riskPillClass = (risk?: string | null): string => {
+  switch (risk?.toLowerCase()) {
+    case 'high':
+      return 'pill pill-crit';
+    case 'medium':
+      return 'pill pill-warn';
+    case 'low':
+      return 'pill pill-ok';
+    default:
+      return 'pill pill-muted';
+  }
+};
 
 interface ContractInfoProps {
   contractData: Contract;
-  onManageAlerts: () => void;
   isLoading?: boolean;
   viewType?: 'explore-contracts' | 'my-contracts';
 }
 
 export function ContractInfo({
   contractData,
-  onManageAlerts,
   isLoading = false,
   viewType = 'my-contracts',
 }: ContractInfoProps) {
@@ -35,12 +41,12 @@ export function ContractInfo({
             {Array(viewType === 'my-contracts' ? 4 : 3)
               .fill(0)
               .map((_, index) => (
-                <TableRow key={index} className='hover:bg-transparent'>
+                <TableRow key={index} className='hover:bg-transparent border-hairline'>
                   <TableCell className='p-2 w-1/3'>
-                    <div className='h-4 bg-gray-700 rounded w-24'></div>
+                    <div className='h-4 bg-surface-3 rounded w-24'></div>
                   </TableCell>
                   <TableCell className='p-2 w-2/3'>
-                    <div className='h-4 bg-gray-700 rounded w-24'></div>
+                    <div className='h-4 bg-surface-3 rounded w-24 ms-auto'></div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -57,19 +63,14 @@ export function ContractInfo({
       content: (
         <>
           {contractData.evictionRisk ? (
-            <Badge
-              variant={getRiskBadgeVariant(contractData.evictionRisk.riskLevel)}
-              className='px-3 py-1 text-sm font-semibold w-fit'
+            <span
+              className={riskPillClass(contractData.evictionRisk.riskLevel)}
             >
+              <i className='pill-dot' aria-hidden />
               {formatRiskLevel(contractData.evictionRisk.riskLevel)}
-            </Badge>
+            </span>
           ) : (
-            <Badge
-              variant='outline'
-              className='px-3 py-1 text-sm font-semibold w-fit'
-            >
-              N/A
-            </Badge>
+            <span className='pill pill-muted'>N/A</span>
           )}
         </>
       ),
@@ -77,7 +78,7 @@ export function ContractInfo({
     {
       label: 'Total Spent',
       content: (
-        <span className='font-medium'>
+        <span className='font-medium text-ink-1 num'>
           {formatRoundedEth(
             formatEther(BigInt(contractData.totalBidInvestment))
           ) + ' ETH'}
@@ -87,81 +88,25 @@ export function ContractInfo({
     {
       label: 'Size',
       content: (
-        <span className='font-medium'>
+        <span className='font-medium text-ink-1 num'>
           {formatSize(contractData.bytecode.size)}
         </span>
       ),
     },
   ];
 
-  // Add alerts row only for my-contracts view
-  if (viewType === 'my-contracts') {
-    rows.push({
-      label: 'Active Alerts',
-      content: (
-        <div className='flex items-center gap-2 flex-wrap'>
-          {!contractData.alerts ||
-          !contractData.alerts.some((alert) => alert.isActive) ? (
-            <Button
-              onClick={onManageAlerts}
-              className='px-3 py-1 border border-dashed border-gray-600 text-gray-400 bg-transparent hover:bg-gray-800 rounded-md text-xs flex items-center gap-1'
-            >
-              <PlusCircle className='h-3 w-3' />
-              Add alerts
-            </Button>
-          ) : (
-            <>
-              {contractData.alerts
-                .filter((alert) => alert.isActive)
-                .map((alert) => {
-                  // Helper to format alert display text
-                  const getAlertText = (alert: ContractAlert) => {
-                    switch (alert.type) {
-                      case AlertType.EVICTION:
-                        return 'Eviction';
-                      case AlertType.NO_GAS:
-                        return 'No gas';
-                      case AlertType.LOW_GAS:
-                        return `Low gas: ${alert.value} ETH`;
-                      case AlertType.BID_SAFETY:
-                        return `Bid Safety: ${alert.value}%`;
-                      default:
-                        return alert.type;
-                    }
-                  };
-
-                  return (
-                    <div
-                      key={alert.id}
-                      className='px-3 py-2 text-white text-xs rounded-md inline-block bg-[#1A1A1A] border border-[#333]'
-                    >
-                      {getAlertText(alert)}
-                    </div>
-                  );
-                })}
-              <Button
-                className='p-1 rounded-md bg-transparent border border-gray-700 hover:bg-gray-900'
-                onClick={onManageAlerts}
-              >
-                <Edit className='h-4 w-4' />
-              </Button>
-            </>
-          )}
-        </div>
-      ),
-    });
-  }
-
   return (
     <div className='mb-6'>
       <Table>
         <TableBody>
           {rows.map((row, index) => (
-            <TableRow key={index} className='hover:bg-transparent'>
-              <TableCell className='font-medium text-gray-400 w-1/3'>
+            <TableRow key={index} className='hover:bg-transparent border-hairline'>
+              <TableCell className='py-2.5 px-0 text-[13px] text-ink-3 w-1/3'>
                 {row.label}
               </TableCell>
-              <TableCell className='text-left w-2/3'>{row.content}</TableCell>
+              <TableCell className='py-2.5 px-0 text-end text-[13px] w-2/3'>
+                {row.content}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

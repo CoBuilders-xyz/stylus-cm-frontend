@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { formatEther } from 'viem';
-import { formatDate, formatRoundedEth } from '@/utils/formatting';
+import { formatRoundedEth } from '@/utils/formatting';
 import { Contract, Alert } from '@/services/contractService';
 import {
   MoreHorizontal,
@@ -31,33 +31,63 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import BiddingHistory, { BiddingHistoryItem } from './BiddingHistory';
 import ContractInfo from './ContractInfo';
 import RemoveConfirmationModal from './RemoveConfirmationModal';
+import { ContractAlertsOverview } from './ContractAlertsSummary';
 import EditableContractName, {
   EditableContractNameRef,
 } from './EditableContractName';
 import BidNowSection from './BidNowSection';
 import AutomatedBiddingSection from './AutomatedBiddingSection';
-import ContractStatus from './ContractStatus';
 import { showSomethingWentWrongToast } from '@/components/Toast';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import ActivationTab from '@/components/ActivationTab';
+import CacheHero from '@/components/CacheHero';
+import {
+  activationHistoryItemToEvent,
+  backendProgramTimeLeft,
+  buildActivationInfo,
+  type ActivationEvent,
+  type ActivationInfo,
+} from '@/lib/activation';
+import { explorerAddressUrl } from '@/utils/explorer';
 
-// Auxiliary function to get explorer URL and enabled state
-const getExplorerLinkInfo = (
-  chainId: string | null,
-  contractAddress: string
-) => {
-  let explorerUrl = '';
-  let isEnabled = false;
-  console.log('chainId', chainId);
-  if (chainId === '42161') {
-    explorerUrl = `https://arbiscan.io/address/${contractAddress}`;
-    isEnabled = true;
-  } else if (chainId === '421614') {
-    explorerUrl = `https://sepolia.arbiscan.io/address/${contractAddress}`;
-    isEnabled = true;
+/**
+ * Compose an {@link ActivationInfo} from the enriched contract detail. The
+ * backend detail endpoint returns both `programTimeLeft` and the decoded
+ * `programTimeLeftReason` since COB-490, so no FE multicall is needed —
+ * `buildActivationInfo` reads the reason off the contract directly.
+ */
+function resolveActivationInfo(
+  contract: Contract | null | undefined
+): ActivationInfo {
+  if (!contract) {
+    return { status: 'unknown', secondsRemaining: null, lastActivatedAt: null };
   }
+  return buildActivationInfo(
+    contract,
+    backendProgramTimeLeft(contract.programTimeLeft)
+  );
+}
 
-  return { explorerUrl, isEnabled };
-};
+function buildActivationHistory(
+  contract: Contract | null | undefined
+): ActivationEvent[] {
+  const raw = contract?.activationHistory;
+  if (!raw || raw.length === 0) return [];
+  // Backend is expected to return events already sorted, but a defensive
+  // desc-by-timestamp sort keeps the UI stable if the ordering changes.
+  return [...raw]
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+    .map(activationHistoryItemToEvent);
+}
 
 // Explorer Link Button Component
 interface ExplorerLinkButtonProps {
@@ -69,20 +99,24 @@ const ExplorerLinkButton: React.FC<ExplorerLinkButtonProps> = ({
   chainId,
   contractAddress,
 }) => {
-  const { explorerUrl, isEnabled } = getExplorerLinkInfo(
-    chainId,
-    contractAddress
-  );
+  const explorerUrl = explorerAddressUrl(chainId, contractAddress);
+  const isEnabled = explorerUrl != null;
 
   return (
     <button
-      className={`${
+      type='button'
+      aria-label={
         isEnabled
-          ? 'hover:text-white cursor-pointer'
+          ? 'View contract on block explorer'
+          : 'Block explorer unavailable for this network'
+      }
+      className={`text-ink-3 ${
+        isEnabled
+          ? 'hover:text-ink-1 cursor-pointer'
           : 'opacity-50 cursor-not-allowed'
       }`}
       onClick={() => {
-        if (isEnabled) {
+        if (explorerUrl) {
           window.open(explorerUrl, '_blank');
         }
       }}
@@ -102,6 +136,8 @@ interface ContractDetailsProps {
   contractId: string;
   initialContractData?: Contract;
   viewType?: 'explore-contracts' | 'my-contracts';
+  /** Tab shown when the panel opens (my-contracts view only). */
+  initialTab?: 'cache' | 'activation';
   onAddContract?: (contract: Contract) => void;
   onShowAlerts?: (
     userContractId: string,
@@ -114,6 +150,7 @@ export default function ContractDetails({
   contractId,
   initialContractData,
   viewType = 'explore-contracts',
+  initialTab = 'cache',
   onAddContract,
   onShowAlerts,
 }: ContractDetailsProps) {
@@ -158,6 +195,16 @@ export default function ContractDetails({
     isRemoving: false,
     showConfirmation: false,
   });
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const removeDialogFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (removeDialogFrameRef.current !== null) {
+        window.cancelAnimationFrame(removeDialogFrameRef.current);
+      }
+    };
+  }, []);
 
   // Initialize contract data from initialContractData whenever it changes
   useEffect(() => {
@@ -221,6 +268,24 @@ export default function ContractDetails({
     fetchContractData();
   }, [contractService, contractId, viewType, initialContractData]);
 
+  // Chain id used by the Activation tab for its on-chain writes (Activate
+  // now, auto-activation config). Prefer the contract's own chain over the
+  // header selector so writes target the right chain even before the
+  // header selector settles.
+  const activationChainId =
+    contractData?.blockchain?.chainId ?? currentBlockchain?.chainId;
+
+  // The Activation tab is "loading" while the enriched contract fetch is
+  // in flight. `isLoadingContract` is the honest signal — the previous
+  // proxy (`activationHistory === undefined`) left the tab stuck on the
+  // skeleton in the explore-contracts view, where `initialContractData`
+  // comes from the list endpoint (no `activationHistory` field) and no
+  // detail fetch ever runs. Post-COB-490 all badge-relevant fields
+  // (`programTimeLeft`, `programTimeLeftReason`, `activationStatus`)
+  // arrive on both endpoints, so gating on `activationHistory` was
+  // over-eager anyway.
+  const isActivationTabLoading = isLoadingContract;
+
   // Transform bidding history data for display
   const processBiddingHistory = (): BiddingHistoryItem[] => {
     if (!contractData || !contractData.biddingHistory) return [];
@@ -243,8 +308,11 @@ export default function ContractDetails({
         historyItem.originAddress.substring(
           historyItem.originAddress.length - 4
         );
-      // Format the date using the formatDate utility for consistency
-      const formattedDate = formatDate(historyItem.timestamp);
+      // Keep the raw ISO timestamp — `BiddingHistory` renders it with
+      // locale-safe `Intl.DateTimeFormat` helpers, so pre-formatting with
+      // `toLocaleString()` here would only make it re-parse a locale
+      // string it can't reliably decode.
+      const formattedDate = historyItem.timestamp;
 
       // Format bid amount
       const bidAmount = formatRoundedEth(
@@ -275,9 +343,9 @@ export default function ContractDetails({
   // If we're still loading and don't have contract data, show a loading state
   if (isLoadingContract && !contractData) {
     return (
-      <div className='text-white flex flex-col h-full bg-[#1A1919] items-center justify-center'>
-        <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white'></div>
-        <p className='mt-4'>Loading contract details...</p>
+      <div className='text-ink-1 flex flex-col h-full bg-surface-1 items-center justify-center'>
+        <div className='animate-spin rounded-full h-10 w-10 border-2 border-hairline-strong border-t-accent-blue'></div>
+        <p className='mt-4 text-[12.5px] text-ink-2'>Loading contract details...</p>
       </div>
     );
   }
@@ -285,17 +353,14 @@ export default function ContractDetails({
   // If we failed to load contract data, show an error
   if (!contractData) {
     return (
-      <div className='text-white flex flex-col h-full bg-[#1A1919] items-center justify-center p-6'>
-        <div className='text-red-500 text-6xl mb-4'>!</div>
-        <h3 className='text-xl font-bold mb-2'>Contract Not Found</h3>
-        <p className='text-gray-400 text-center mb-6'>
+      <div className='text-ink-1 flex flex-col h-full bg-surface-1 items-center justify-center p-6'>
+        <div className='text-crit-text text-5xl mb-4'>!</div>
+        <h3 className='text-[15px] font-semibold mb-2'>Contract Not Found</h3>
+        <p className='text-ink-3 text-[12.5px] text-center mb-6'>
           We couldn&apos;t find details for this contract. It may have been
           removed or there was an error.
         </p>
-        <Button
-          onClick={onClose}
-          className='px-4 py-2 bg-black text-white border border-white rounded-md'
-        >
+        <Button variant='outline' onClick={onClose}>
           Close
         </Button>
       </div>
@@ -390,8 +455,11 @@ export default function ContractDetails({
   };
 
   const handleRemoveContract = () => {
-    // Show confirmation dialog
-    setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+    setIsActionsMenuOpen(false);
+    removeDialogFrameRef.current = window.requestAnimationFrame(() => {
+      removeDialogFrameRef.current = null;
+      setRemoveState((prev) => ({ ...prev, showConfirmation: true }));
+    });
   };
 
   const cancelRemoveContract = () => {
@@ -449,15 +517,15 @@ export default function ContractDetails({
   };
 
   return (
-    <div className='text-white flex flex-col h-full bg-[#1A1919]'>
+    <div className='text-ink-1 flex flex-col h-full bg-surface-1'>
       {/* Sticky Header */}
-      <div className='flex-shrink-0  bg-[#1A1919] p-6'>
-        <div className='flex justify-between items-center'>
-          <div>
+      <div className='flex-shrink-0 bg-surface-1 border-b border-hairline px-5 py-4'>
+        <div className='flex justify-between items-center gap-3'>
+          <div className='min-w-0 flex-1'>
             {viewType === 'my-contracts' ? (
               <>
-                <div className='text-sm font-mono text-gray-300 flex items-center gap-2'>
-                  {contractData.address}
+                <div className='mono-addr flex items-center gap-2 min-w-0'>
+                  <span className='truncate'>{contractData.address}</span>
                   <ExplorerLinkButton
                     chainId={currentBlockchain?.chainId.toString() || null}
                     contractAddress={contractData.address}
@@ -472,50 +540,54 @@ export default function ContractDetails({
               </>
             ) : contractData.isSavedByUser ? (
               <>
-                <div className='text-sm font-mono text-gray-300'>
+                <div className='mono-addr truncate'>
                   {contractData.address}
                 </div>
-                <div className='text-2xl font-bold bg-transparent outline-none border-0 w-full'>
+                <div className='text-[15px] font-semibold text-ink-1 bg-transparent outline-none border-0 w-full truncate'>
                   {contractData.savedContractName}
                 </div>
               </>
             ) : (
-              <div className='text-2xl font-mono mb-1'>
+              <div className='font-mono text-sm text-ink-1 mb-1 truncate'>
                 {contractData.address}
               </div>
             )}
           </div>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 shrink-0'>
             {/* Dropdown Menu */}
-            <DropdownMenu>
+            <DropdownMenu
+              modal={false}
+              open={isActionsMenuOpen}
+              onOpenChange={setIsActionsMenuOpen}
+            >
               <DropdownMenuTrigger asChild>
-                <Button className='p-2 rounded-md border border-white hover:bg-gray-900'>
-                  <MoreHorizontal className='h-5 w-5' />
+                <Button variant='outline' size='icon'>
+                  <MoreHorizontal className='h-4 w-4' />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className='bg-[#1E1E1E] border border-[#2C2E30] text-white'>
+              <DropdownMenuContent className='bg-surface-2 border border-hairline text-ink-1'>
                 {viewType === 'my-contracts' ? (
                   <>
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer'
+                      className='hover:bg-surface-3 cursor-pointer'
                       onClick={handleContractAlerts}
                     >
-                      <BellRing className='h-4 w-4 mr-2' />
+                      <BellRing className='h-4 w-4 me-2' />
                       Contract Alerts
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer'
+                      className='hover:bg-surface-3 cursor-pointer'
                       onClick={handleRenameContract}
                     >
-                      <Edit2 className='h-4 w-4 mr-2' />
+                      <Edit2 className='h-4 w-4 me-2' />
                       Rename Contract
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className='bg-[#2C2E30]' />
+                    <DropdownMenuSeparator className='bg-hairline' />
                     <DropdownMenuItem
-                      className='hover:bg-gray-800 cursor-pointer text-red-500'
-                      onClick={handleRemoveContract}
+                      className='hover:bg-surface-3 cursor-pointer text-crit-text'
+                      onSelect={handleRemoveContract}
                     >
-                      <Trash2 className='h-4 w-4 mr-2' />
+                      <Trash2 className='h-4 w-4 me-2' />
                       Remove Contract
                     </DropdownMenuItem>
                   </>
@@ -523,7 +595,7 @@ export default function ContractDetails({
                   <DropdownMenuItem
                     className={`${
                       !contractData.isSavedByUser
-                        ? 'hover:bg-gray-800 cursor-pointer'
+                        ? 'hover:bg-surface-3 cursor-pointer'
                         : 'cursor-not-allowed opacity-50'
                     }`}
                     onClick={
@@ -532,7 +604,7 @@ export default function ContractDetails({
                         : undefined
                     }
                   >
-                    <PlusCircle className='h-4 w-4 mr-2' />
+                    <PlusCircle className='h-4 w-4 me-2' />
                     {contractData.isSavedByUser
                       ? 'Contract Already Added'
                       : 'Manage This Contract'}
@@ -540,94 +612,159 @@ export default function ContractDetails({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              className='rounded-md border border-white hover:bg-gray-900'
-              onClick={onClose}
-            >
-              <ChevronLast className='h-5 w-5' />
+            <Button variant='outline' size='icon' onClick={onClose}>
+              <ChevronLast className='h-4 w-4' />
             </Button>
           </div>
         </div>
       </div>
 
       {/* Scrollable Main Content */}
-      <ScrollArea className='flex-1'>
-        <div className='p-6'>
+      <ScrollArea className='panel-scroll-area flex-1 min-w-0 overscroll-contain'>
+        <div className='px-5 py-4 min-w-0 overflow-x-hidden'>
           {viewType === 'my-contracts' ? (
-            <>
-              {/* Main statistics in a 2-column grid layout */}
-              <ContractStatus
-                isLoading={isLoadingContract}
-                isCached={contractData?.bytecode.isCached}
-                bidBlockTimestamp={contractData?.bidBlockTimestamp}
-                effectiveBid={contractData?.effectiveBid}
-                lastBid={contractData?.lastBid}
-                viewType='my-contracts'
-              />
+            <Tabs defaultValue={initialTab} className='w-full'>
+              <TabsList className='bg-surface-2 border border-hairline rounded-lg p-[2px] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+                <TabsTrigger
+                  value='cache'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
+                >
+                  Cache
+                </TabsTrigger>
+                <TabsTrigger
+                  value='activation'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
+                >
+                  Activation
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Replace the flex items with the ContractDetailsTable */}
-              <ContractInfo
-                contractData={contractData}
+              <ContractAlertsOverview
+                alerts={contractData.alerts}
                 onManageAlerts={handleContractAlerts}
-                isLoading={isLoadingContract}
-                viewType='my-contracts'
               />
 
-              {/* Bidding Section Header */}
-              <div className='mb-3'>
-                <h3 className='text-lg'>Bidding</h3>
-              </div>
-
-              {/* Bidding Section */}
-              <div className='space-y-4 mb-8'>
-                {/* Bid now section */}
-                <BidNowSection
-                  contract={contractData}
-                  bidAmount={bidAmount}
-                  setBidAmount={setBidAmount}
-                  onSuccess={reloadContractData}
+              <TabsContent value='cache'>
+                <CacheHero
+                  isCached={!!contractData?.bytecode.isCached}
+                  bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                  effectiveBid={contractData?.effectiveBid}
+                  lastBid={contractData?.lastBid}
                 />
 
-                {/* Automated Bidding section */}
-                <AutomatedBiddingSection
-                  maxBidAmount={maxBidAmount}
-                  setMaxBidAmount={setMaxBidAmount}
-                  automationFunding={automationFunding}
-                  setAutomationFunding={setAutomationFunding}
-                  contract={contractData}
-                  onSuccess={reloadContractData}
+                <ContractInfo
+                  contractData={contractData}
+                  isLoading={isLoadingContract}
+                  viewType='my-contracts'
                 />
-              </div>
 
-              {/* Use the BiddingHistory component */}
-              <BiddingHistory
-                isLoading={isLoadingContract}
-                biddingHistory={displayBidHistory}
-              />
-            </>
+                <div className='mb-3'>
+                  <h3 className='text-[15px] font-semibold text-ink-1'>Bidding</h3>
+                </div>
+
+                <div className='space-y-4 mb-8'>
+                  <BidNowSection
+                    contract={contractData}
+                    bidAmount={bidAmount}
+                    setBidAmount={setBidAmount}
+                    onSuccess={reloadContractData}
+                  />
+
+                  <AutomatedBiddingSection
+                    maxBidAmount={maxBidAmount}
+                    setMaxBidAmount={setMaxBidAmount}
+                    automationFunding={automationFunding}
+                    setAutomationFunding={setAutomationFunding}
+                    contract={contractData}
+                    onSuccess={reloadContractData}
+                  />
+                </div>
+
+                <BiddingHistory
+                  isLoading={isLoadingContract}
+                  biddingHistory={displayBidHistory}
+                />
+              </TabsContent>
+
+              <TabsContent value='activation'>
+                {/*
+                  Key on the contract address so switching contracts inside
+                  the same side panel remounts the tab — the auto-activation
+                  form is user-owned local state (no re-sync from props by
+                  design) and would otherwise leak the previous contract's
+                  edits into a Save against the new contract.
+                */}
+                <ActivationTab
+                  key={contractData?.address}
+                  activation={resolveActivationInfo(contractData)}
+                  history={buildActivationHistory(contractData)}
+                  autoActivate={contractData?.autoActivate}
+                  maxActivationCost={contractData?.maxActivationCost}
+                  chainId={activationChainId}
+                  chainName={
+                    contractData?.blockchain?.name ??
+                    currentBlockchain?.name
+                  }
+                  contractAddress={contractData?.address}
+                  cmaAddress={
+                    contractData?.blockchain?.cacheManagerAutomationAddress as
+                      | `0x${string}`
+                      | undefined
+                  }
+                  onActivated={reloadContractData}
+                  onConfigSaved={reloadContractData}
+                  isLoading={isActivationTabLoading}
+                />
+              </TabsContent>
+
+            </Tabs>
           ) : (
             /* Explore Contracts View */
             <>
-              {/* Main statistics in a 2-column grid layout */}
-              <ContractStatus
-                isLoading={isLoadingContract}
-                isCached={contractData?.bytecode.isCached}
-                bidBlockTimestamp={contractData?.bidBlockTimestamp}
-                effectiveBid={contractData?.effectiveBid}
-                lastBid={contractData?.lastBid}
-                viewType='explore-contracts'
-              />
+            <Tabs defaultValue='cache' className='w-full'>
+              <TabsList className='bg-surface-2 border border-hairline rounded-lg p-[2px] mb-4 overflow-x-auto max-w-full flex-nowrap'>
+                <TabsTrigger
+                  value='cache'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
+                >
+                  Cache
+                </TabsTrigger>
+                <TabsTrigger
+                  value='activation'
+                  className='rounded-md data-[state=active]:bg-surface-3 data-[state=active]:text-ink-1 data-[state=active]:font-medium text-ink-2'
+                >
+                  Activation
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Replace the flex items with the ContractDetailsTable */}
-              <ContractInfo
-                contractData={contractData}
-                onManageAlerts={handleContractAlerts}
-                isLoading={isLoadingContract}
-                viewType='explore-contracts'
-              />
+              <TabsContent value='cache'>
+                <CacheHero
+                  isCached={!!contractData?.bytecode.isCached}
+                  bidBlockTimestamp={contractData?.bidBlockTimestamp}
+                  effectiveBid={contractData?.effectiveBid}
+                  lastBid={contractData?.lastBid}
+                />
 
-              {/* Add to My Contracts Section */}
-              <div className='px-6 text-center'>
+                <ContractInfo
+                  contractData={contractData}
+                  isLoading={isLoadingContract}
+                  viewType='explore-contracts'
+                />
+              </TabsContent>
+
+              <TabsContent value='activation'>
+                <ActivationTab
+                  activation={resolveActivationInfo(contractData)}
+                  history={buildActivationHistory(contractData)}
+                  chainId={activationChainId}
+                  isLoading={isActivationTabLoading}
+                  readOnly
+                />
+              </TabsContent>
+            </Tabs>
+
+            {/* Add to My Contracts Section */}
+              <div className='px-4 text-center'>
                 {!contractData.isSavedByUser ? (
                   <>
                     <div className='flex justify-center'>
@@ -638,17 +775,14 @@ export default function ContractDetails({
                         height={200}
                       />
                     </div>
-                    <h3 className='text-xl font-bold mb-2'>
+                    <h3 className='text-[15px] font-semibold text-ink-1 mb-2'>
                       Add this contract to place bids
                     </h3>
-                    <p className='text-gray-400 text-sm mb-4'>
+                    <p className='text-ink-3 text-[12.5px] mb-4'>
                       Add this contract to your managed list to place bids, set
                       automations and more.
                     </p>
-                    <Button
-                      className='px-4 py-2 bg-black text-white border border-[#2C2E30] hover:bg-gray-900 rounded-md'
-                      onClick={handleManageContract}
-                    >
+                    <Button onClick={handleManageContract}>
                       Add to My Contracts
                     </Button>
                   </>
@@ -657,7 +791,7 @@ export default function ContractDetails({
                     <div className='flex justify-center'>
                       <Badge
                         variant='secondary'
-                        className='px-4 py-2 text-base font-semibold'
+                        className='px-3 py-1.5 text-[12.5px] font-medium'
                       >
                         Contract already added to your list
                       </Badge>
@@ -671,13 +805,12 @@ export default function ContractDetails({
       </ScrollArea>
 
       {/* Confirmation Dialog */}
-      {removeState.showConfirmation && (
-        <RemoveConfirmationModal
-          isRemoving={removeState.isRemoving}
-          onCancel={cancelRemoveContract}
-          onConfirm={confirmRemoveContract}
-        />
-      )}
+      <RemoveConfirmationModal
+        open={removeState.showConfirmation}
+        isRemoving={removeState.isRemoving}
+        onCancel={cancelRemoveContract}
+        onConfirm={confirmRemoveContract}
+      />
     </div>
   );
 }
