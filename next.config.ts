@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs/config';
+import { monitoringBuild } from './src/lib/monitoring/build';
 
 // Optional same-origin dev proxy. Set BACKEND_PROXY_TARGET in .env.local to a
 // backend URL (e.g. the staging nginx) and API calls hitting /api-proxy/* on
@@ -8,7 +10,10 @@ import type { NextConfig } from 'next';
 // proxy can't be turned on by accident in a preview / production deployment.
 const proxyTarget = process.env.BACKEND_PROXY_TARGET;
 
+const monitoring = monitoringBuild(process.env);
+
 const nextConfig: NextConfig = {
+  env: monitoring.publicEnv,
   async rewrites() {
     if (process.env.NODE_ENV !== 'development' || !proxyTarget) return [];
     return [
@@ -20,4 +25,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, monitoring.sentry);
